@@ -1,0 +1,20 @@
+name: Deploy Worker
+on:
+  push:
+    branches:
+      - master
+      - develop
+      - beta
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Deploy Worker
+        run: |
+          exit 1
