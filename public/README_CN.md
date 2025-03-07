@@ -60,6 +60,8 @@
 - [ ] 彻底重构项目外部数据源，适配更多数据源（e.g. MySQL...）
 - [ ] 支持一键部署到Docker、Cloudflare、Kubernetes等平台
 - [ ] 原生支持更多AI服务商（目前仅支持openai兼容的API接入）
+- [ ] 彻底重构项目代码，支持Typescript-style ESLINT
+- [ ] 支持一键部署Cloudflare脚本
 
 # 🤝 How to Contribution
 

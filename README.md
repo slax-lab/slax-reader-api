@@ -60,6 +60,8 @@ This is the Slax Reader API service developed based on Cloudflare Worker, design
 - [ ] Complete refactoring of external data sources to adapt to more data sources (e.g., MySQL...)
 - [ ] Support for one-click deployment to Docker, Cloudflare, Kubernetes, and other platforms
 - [ ] Native support for more AI service providers (currently only supports OpenAI-compatible API integration)
+- [ ] Complete Typescript-style ESLINT code
+- [ ] Support for one-click deployment of cloudflare scripts
 
 # 🤝 How to Contribute
 
