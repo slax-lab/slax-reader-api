@@ -1,6 +1,7 @@
-const ts = require('typescript')
-const pathUtils = require('path')
-const fsUtils = require('fs')
+import fsUtils from 'fs'
+import pathUtils from 'path'
+
+import ts from 'typescript'
 
 interface RouteConfig {
   controllers: string[]

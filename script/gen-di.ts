@@ -1,6 +1,7 @@
-const { Project, SyntaxKind } = require('ts-morph')
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
+import path from 'path'
+
+import { Project, SyntaxKind } from 'ts-morph'
 
 const GENERATED_PATH = path.resolve(process.cwd(), 'src/di/generated/dependency.ts')
 

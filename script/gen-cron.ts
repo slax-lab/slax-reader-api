@@ -1,6 +1,7 @@
-const cronGenTS = require('typescript')
-const cronGenPath = require('path')
-const cronGenFS = require('fs')
+import cronGenFS from 'fs'
+import cronGenPath from 'path'
+
+import cronGenTS from 'typescript'
 
 interface CronGenTask {
   expression: string

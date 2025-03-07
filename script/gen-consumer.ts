@@ -1,6 +1,7 @@
-const consumerTS = require('typescript')
-const consumerPath = require('path')
-const consumerFS = require('fs')
+import consumerFS from 'fs'
+import consumerPath from 'path'
+
+import consumerTS from 'typescript'
 
 interface QueueTask {
   queueName: string
@@ -37,7 +38,9 @@ function scanDirectory(dirPath: string, tasks: QueueTask[], imports: Map<string,
       return
     }
 
-    if (!file.endsWith('.ts')) return
+    if (!file.endsWith('.ts')) {
+      return
+    }
     processFiles(filePath, tasks, imports)
   })
 }
@@ -59,7 +62,9 @@ function processFiles(filePath: string, tasks: QueueTask[], imports: Map<string,
       const decorators = consumerTS.getDecorators?.(node)
       if (decorators && decorators.length > 0) {
         decorators.forEach((decorator: any) => {
-          if (!consumerTS.isDecorator(decorator)) return
+          if (!consumerTS.isDecorator(decorator)) {
+            return
+          }
 
           const expression = decorator.expression
           if (consumerTS.isCallExpression(expression)) {
@@ -70,6 +75,7 @@ function processFiles(filePath: string, tasks: QueueTask[], imports: Map<string,
               let channelValue = ''
               let isBatch = false
 
+              // @ts-ignore
               queueExpr.properties.forEach((prop: any) => {
                 if (consumerTS.isPropertyAssignment(prop)) {
                   const propName = prop.name.getText(sourceFile)
