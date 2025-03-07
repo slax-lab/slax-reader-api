@@ -18,8 +18,8 @@ importers:
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
       '@slax-lab/readability':
-        specifier: 0.6.1
-        version: 0.6.1
+        specifier: 0.6.2
+        version: 0.6.2
       '@types/node':
         specifier: ^20.16.5
         version: 20.16.5
@@ -820,8 +820,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@slax-lab/readability@0.6.1':
-    resolution: {integrity: sha512-ECqE5x6aOd1dRS62ajCwj4njbbXf1es0WhkyGk5u1s2XP9PqBc4nICZjlMs+QSp/s9zQsq+HAr0RnyeBsPC8Dw==, tarball: https://npm.pkg.github.com/download/@slax-lab/readability/0.6.1/fd690f88a565c5c5d98b2fda016e1f271523cd38}
+  '@slax-lab/readability@0.6.2':
+    resolution: {integrity: sha512-FZrnvgJH0S2gAtFQk8vTo05FOLSOLxf6b66MHZMXHD2t4Ii4twXVyEIRQgh08bazQZlVuVs5bZCKgXPMvHOGHw==}
     engines: {node: '>=14.0.0'}
 
   '@tootallnate/quickjs-emscripten@0.23.0':
@@ -2826,7 +2826,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.34.9':
     optional: true
 
-  '@slax-lab/readability@0.6.1': {}
+  '@slax-lab/readability@0.6.2': {}
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 
