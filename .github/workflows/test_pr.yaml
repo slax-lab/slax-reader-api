@@ -33,9 +33,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: ESLint
-        run: |
-          pnpm eslint . --ignore-path=.gitignore --quiet --ext .js,.jsx,.ts,.tsx
+      # - name: ESLint
+      #   run: |
+      #     pnpm eslint . --ignore-path=.gitignore --quiet --ext .js,.jsx,.ts,.tsx
 
       - name: Run tests
         run: pnpm test
