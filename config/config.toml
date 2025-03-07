@@ -1,0 +1,245 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "slax-read-api"
+main = "../src/worker.ts"
+workers_dev = true
+compatibility_date = "2024-08-06"
+compatibility_flags = ["nodejs_compat_v2"]
+
+browser = { binding = "BROWSER" }
+
+kv_namespaces = [
+  { binding = "KV", id = "${KV_ID}", preview_id = "${KV_PREVIEW_ID}" },
+]
+
+# smart placement
+placement = { mode = "smart" }
+
+# observability
+[observability]
+enabled = true
+
+[vars]
+RUN_ENV = "prod"
+RUN_TYPE = "prod"
+
+JWT_ALGORITHMS = "${JWT_ALGORITHMS}"
+JWT_EXPIRES = "${JWT_EXPIRES}"
+JWT_ISSUER = "${JWT_ISSUER}"
+
+IMAGER_CHECK_DIGST_SALT = "${IMAGER_CHECK_DIGST_SALT}"
+
+GOOGLE_AUTH_PREFIX = "${GOOGLE_AUTH_PREFIX}"
+SEARCH_GOOGLE_API = "${SEARCH_GOOGLE_API}"
+
+IMAGE_PREFIX = "${IMAGE_PREFIX}"
+PROXY_IMAGE_PREFIX = "${PROXY_IMAGE_PREFIX}"
+OPENAI_GATEWAY = "${OPENAI_GATEWAY}"
+PROXY_OPENAI_GATEWAY = "${PROXY_OPENAI_GATEWAY}"
+
+SLAX_READER_BOT_NAME = "${SLAX_READER_BOT_NAME}"
+SLAX_READER_BOT_ID = "${SLAX_READER_BOT_ID}"
+SLAX_READER_BOT_API_ROOT = "${SLAX_READER_BOT_API_ROOT}"
+FRONT_END_URL = "${FRONT_END_URL}"
+
+[ai]
+binding = "AI"
+[[d1_databases]]
+binding = "DB"
+database_name = "slax-reader-backend"
+database_id = "${DB_ID}"
+preview_database_id = "${DB_PREVIEW_ID}"
+migrations_dir = "../migrations"
+[[d1_databases]]
+binding = "DB_FULLTEXT"
+database_name = "slax-reader-backend-fulltext"
+database_id = "${DB_FULLTEXT_ID}"
+migrations_dir = "../migrations/fulltext"
+[[r2_buckets]]
+binding = "OSS"
+bucket_name = "${OSS_NAME}"
+[[r2_buckets]]
+binding = "OSS_PREVIEW"
+bucket_name = "${OSS_PREVIEW_NAME}"
+[[vectorize]]
+binding = "VECTORIZE1"
+index_name = "${VECTORIZE1_NAME}"
+[[vectorize]]
+binding = "VECTORIZE2"
+index_name = "${VECTORIZE2_NAME}"
+[[vectorize]]
+binding = "VECTORIZE3"
+index_name = "${VECTORIZE3_NAME}"
+[[vectorize]]
+binding = "VECTORIZE4"
+index_name = "${VECTORIZE4_NAME}"
+[[vectorize]]
+binding = "VECTORIZE5"
+index_name = "${VECTORIZE5_NAME}"
+[[durable_objects.bindings]]
+name = "SLAX_BROWSER"
+class_name = "SlaxBrowser"
+[[durable_objects.bindings]]
+name = "SLAX_JIEBA"
+class_name = "SlaxJieba"
+[[durable_objects.bindings]]
+name = "WEBSOCKET_SERVER"
+class_name = "SlaxWebSocketServer"
+
+[[queues.consumers]]
+queue = "${TWITTER_PARSER_QUEUE}"
+max_batch_size = 10
+max_concurrency = 2
+max_batch_timeout = 5
+max_retries = 0
+[[queues.consumers]]
+queue = "${FETCH_RETRY_PARSER_QUEUE}"
+max_batch_timeout = 6
+max_batch_size = 12
+max_retries = 0
+[[queues.consumers]]
+queue = "${IMPORT_OTHER_QUEUE}"
+max_retries = 0
+max_concurrency = 10
+max_batch_size = 1
+max_batch_timeout = 0
+
+[[queues.producers]]
+queue = "${TWITTER_PARSER_QUEUE}"
+binding = "TWITTER_PARSER"
+[[queues.producers]]
+queue = "${FETCH_RETRY_PARSER_QUEUE}"
+binding = "FETCH_RETRY_PARSER"
+[[queues.producers]]
+queue = "${IMPORT_OTHER_QUEUE}"
+binding = "IMPORT_OTHER"
+
+[triggers]
+crons = ["*/5 * * * *", "0 */1 * * *", "*/15 * * * *"]
+[[rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+fallthrough = false
+
+
+## 本地开发
+[dev]
+port = 8787
+[env.dev.ai]
+binding = "AI"
+[[env.dev.queues.producers]]
+binding = "PRODUCER"
+queue = "slax-reader-parser-dev"
+[[env.dev.queues.consumers]]
+queue = "slax-reader-parser-dev"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 10
+dead_letter_queue = "slax-reader-parser-dlq"
+max_concurrency = 5
+retry_delay = 120
+[env.dev]
+kv_namespaces = [
+  { binding = "KV", id = "26103b7c12ad40ae830893611e5a4c2f", preview_id = "949019d15661410baba87a48969a18bd" },
+  { binding = "PI_CACHE", id = "acf780683bef4b67a32ee4f0041f8345", preview_id = "3a8eb4e3699440d495fa5cc03b44dde3" },
+]
+services = [{ binding = "SlaxNote", service = "slax-note" }]
+[[env.dev.d1_databases]]
+binding = "DB"
+database_name = "slax-reader-backend"
+database_id = "88a6e8ef-4ccb-4f16-a188-f3f815efbedb"
+migrations_dir = "../migrations"
+[[env.dev.d1_databases]]
+binding = "DB_FULLTEXT"
+database_name = "slax-reader-backend-fulltext"
+database_id = "56f791d4-403d-4d43-9749-1496c4248d90"
+migrations_dir = "../migrations/fulltext"
+[[env.dev.vectorize]]
+binding = "VECTORIZE1"
+index_name = "bookmark-1"
+[[env.dev.vectorize]]
+binding = "VECTORIZE2"
+index_name = "bookmark-2"
+[[env.dev.vectorize]]
+binding = "VECTORIZE3"
+index_name = "bookmark-3"
+[[env.dev.vectorize]]
+binding = "VECTORIZE4"
+index_name = "bookmark-4"
+[[env.dev.vectorize]]
+binding = "VECTORIZE5"
+index_name = "bookmark-5"
+[[env.dev.durable_objects.bindings]]
+name = "SLAX_JIEBA"
+class_name = "SlaxJieba"
+[[env.dev.rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+fallthrough = false
+[[env.dev.r2_buckets]]
+binding = "OSS"
+bucket_name = "slax-reader-backend"
+[env.dev.vars]
+RUN_TYPE = "dev"
+RUN_ENV = "development"
+JWT_ALGORITHMS = "HS256"
+JWT_EXPIRES = "999999999999"
+JWT_ISSUER = "slax-reader-dev"
+APPLE_SIGN_KEY_ID = "FXYV5RRAR8"
+APPLE_SIGN_TEAM_ID = "8G3A932HJG"
+APPLE_SIGN_CLIENT_ID = "app.slax.reader"
+IMAGER_CHECK_DIGST_SALT = "slax-reader"
+GOOGLE_AUTH_PREFIX = "http://localhost:8080/?transport=https%3A%2F%2Foauth2.googleapis.com"
+IMAGE_PREFIX = "http://localhost:8787/local/image?key="
+PROXY_IMAGE_PREFIX = "http://localhost:8787/static/image"
+PROXY_OPENAI_GATEWAY = "http://localhost:8080/?transport=https%3A%2F%2Fapi-telegram-sg.slax.app%2Fv1"
+OPENAI_GATEWAY = 'http://localhost:8080/?transport=https%3A%2F%2Fapi.openai.com%2Fv1'
+SLAX_READER_BOT_NAME = "slax_reader_bot"
+STRIPE_ISSUANCE_SCRIPTION_PRICE_ID = "price_1PqV7vFgBPcC9kF5d1kv2XHr"
+STRIPE_SUBSCRIPTION_HOME = "https://billing.stripe.com/p/login/test_7sI6oFefc4RybGU9AA"
+SEARCH_GOOGLE_API = "http://localhost:8080/?transport=https%3A%2F%2Fwww.googleapis.com%2Fcustomsearch%2Fv1"
+FRONT_END_URL = "http://localhost:3000"
+SES_SMTP_FROM_ADDRESS = "no_reply@slax.com"
+SES_SMTP_HOST = "email-smtp.ap-southeast-1.amazonaws.com"
+[env.dev.triggers]
+crons = ["*/5 * * * *", "0 */1 * * *", "*/15 * * * *"]
+[[env.dev.durable_objects.bindings]]
+name = "WEBSOCKET_SERVER"
+class_name = "SlaxWebSocketServer"
+[[env.dev.migrations]]
+tag = "v1"
+new_classes = ["SlaxWebSocketServer"]
+
+[[env.dev.queues.consumers]]
+queue = "slax-reader-parser-twitter"
+max_batch_size = 10
+max_concurrency = 2
+max_batch_timeout = 5
+max_retries = 0
+[[env.dev.queues.consumers]]
+queue = "slax-reader-parser-fetch-retry-prod"
+max_batch_timeout = 6
+max_batch_size = 12
+max_retries = 0
+[[env.dev.queues.consumers]]
+queue = "slax-reader-parser-stripe"
+max_concurrency = 1
+max_batch_size = 5
+max_batch_timeout = 1
+max_retries = 0
+[[env.dev.queues.consumers]]
+queue = "slax-reader-import-other"
+max_retries = 0
+max_concurrency = 10
+
+[[env.dev.queues.producers]]
+queue = "slax-reader-parser-twitter"
+binding = "TWITTER_PARSER"
+[[env.dev.queues.producers]]
+queue = "slax-reader-parser-fetch-retry-prod"
+binding = "FETCH_RETRY_PARSER"
+[[env.dev.queues.producers]]
+queue = "slax-reader-parser-stripe"
+binding = "STRIPE_QUEUE"
+[[env.dev.queues.producers]]
+queue = "slax-reader-import-other"
+binding = "IMPORT_OTHER"
