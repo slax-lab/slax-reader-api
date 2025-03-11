@@ -20,9 +20,7 @@
     "gen:router": "tsx ./script/gen-routers.ts",
     "gen:all": "pnpm gen:model && pnpm types && pnpm gen:cron && pnpm gen:consumer && pnpm gen:router && pnpm gen:di && pnpm prettier --write ./src/di/generated && pnpm prettier --write ./worker-configuration.d.ts",
     "migration:local": "wrangler d1 migrations apply slax-reader-backend --local -c ./config/config.toml",
-    "migration:local:fulltext": "wrangler d1 migrations apply slax-reader-backend-fulltext --local -c ./config/config.toml",
-    "migration:preview": "wrangler d1 migrations apply slax-reader-backend --remote --preview -c ./config/config.toml",
-    "migration:remote": "wrangler d1 migrations apply slax-reader-backend --remote -c ./config/config.toml"
+    "migration:local:fulltext": "wrangler d1 migrations apply slax-reader-backend-fulltext --local -c ./config/config.toml"
   },
   "dependencies": {
     "@cloudflare/ai-utils": "^1.0.1",
@@ -52,6 +50,7 @@
     "@types/nodemailer": "^6.4.17",
     "@typescript-eslint/eslint-plugin": "^8.26.0",
     "@typescript-eslint/parser": "^7.18.0",
+    "cloudflare": "^4.1.0",
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.1.0",
     "eslint-config-typescript": "^3.0.0",

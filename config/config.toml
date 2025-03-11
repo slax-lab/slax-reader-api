@@ -7,10 +7,6 @@ compatibility_flags = ["nodejs_compat_v2"]
 
 browser = { binding = "BROWSER" }
 
-kv_namespaces = [
-  { binding = "KV", id = "${KV_ID}", preview_id = "${KV_PREVIEW_ID}" },
-]
-
 # smart placement
 placement = { mode = "smart" }
 
@@ -43,38 +39,7 @@ FRONT_END_URL = "${FRONT_END_URL}"
 
 [ai]
 binding = "AI"
-[[d1_databases]]
-binding = "DB"
-database_name = "slax-reader-backend"
-database_id = "${DB_ID}"
-preview_database_id = "${DB_PREVIEW_ID}"
-migrations_dir = "../migrations"
-[[d1_databases]]
-binding = "DB_FULLTEXT"
-database_name = "slax-reader-backend-fulltext"
-database_id = "${DB_FULLTEXT_ID}"
-migrations_dir = "../migrations/fulltext"
-[[r2_buckets]]
-binding = "OSS"
-bucket_name = "${OSS_NAME}"
-[[r2_buckets]]
-binding = "OSS_PREVIEW"
-bucket_name = "${OSS_PREVIEW_NAME}"
-[[vectorize]]
-binding = "VECTORIZE1"
-index_name = "${VECTORIZE1_NAME}"
-[[vectorize]]
-binding = "VECTORIZE2"
-index_name = "${VECTORIZE2_NAME}"
-[[vectorize]]
-binding = "VECTORIZE3"
-index_name = "${VECTORIZE3_NAME}"
-[[vectorize]]
-binding = "VECTORIZE4"
-index_name = "${VECTORIZE4_NAME}"
-[[vectorize]]
-binding = "VECTORIZE5"
-index_name = "${VECTORIZE5_NAME}"
+
 [[durable_objects.bindings]]
 name = "SLAX_BROWSER"
 class_name = "SlaxBrowser"
@@ -85,37 +50,14 @@ class_name = "SlaxJieba"
 name = "WEBSOCKET_SERVER"
 class_name = "SlaxWebSocketServer"
 
-[[queues.consumers]]
-queue = "${TWITTER_PARSER_QUEUE}"
-max_batch_size = 10
-max_concurrency = 2
-max_batch_timeout = 5
-max_retries = 0
-[[queues.consumers]]
-queue = "${FETCH_RETRY_PARSER_QUEUE}"
-max_batch_timeout = 6
-max_batch_size = 12
-max_retries = 0
-[[queues.consumers]]
-queue = "${IMPORT_OTHER_QUEUE}"
-max_retries = 0
-max_concurrency = 10
-max_batch_size = 1
-max_batch_timeout = 0
-
-[[queues.producers]]
-queue = "${TWITTER_PARSER_QUEUE}"
-binding = "TWITTER_PARSER"
-[[queues.producers]]
-queue = "${FETCH_RETRY_PARSER_QUEUE}"
-binding = "FETCH_RETRY_PARSER"
-[[queues.producers]]
-queue = "${IMPORT_OTHER_QUEUE}"
-binding = "IMPORT_OTHER"
-
 [triggers]
 crons = ["*/5 * * * *", "0 */1 * * *", "*/15 * * * *"]
+
 [[rules]]
 type = "CompiledWasm"
 globs = ["**/*.wasm"]
 fallthrough = false
+
+## auto-complete
+
+## auto-complete

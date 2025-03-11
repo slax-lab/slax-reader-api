@@ -2,9 +2,7 @@ name: Deploy Worker
 on:
   push:
     branches:
-      - master
-      - develop
-      - beta
+      - main
 
 jobs:
   deploy:
@@ -15,6 +13,47 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Deploy Worker
+      - name: Check Secrets
+        id: check_secrets
         run: |
-          exit 1
+          if [ -z "${{ secrets.CLOUDFLARE_EMAIL }}" ] || \
+            [ -z "${{ secrets.CLOUDFLARE_API_KEY }}" ] || \
+            [ -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
+            echo "One or more required Cloudflare secrets are not set"
+            echo "secrets_available=false" >> $GITHUB_OUTPUT
+          else
+            echo "secrets_available=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install pnpm
+        if: steps.check_secrets.outputs.secrets_available == 'true'
+        run: |
+          npm install -g pnpm
+          pnpm install
+          pnpm install tsx
+
+      - name: Generate config
+        if: steps.check_secrets.outputs.secrets_available == 'true'
+        run: |
+          pnpm tsx script/gen-config.ts
+
+      - name: Migrate D1
+        if: steps.check_secrets.outputs.secrets_available == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          pnpm wrangler d1 migrations apply slax-reader-backend --local -c ./config/config.toml
+          pnpm wrangler d1 migrations apply slax-reader-backend --remote -c ./config/config.toml
+          pnpm wrangler d1 migrations apply slax-reader-backend-fulltext --local -c ./config/config.toml
+          pnpm wrangler d1 migrations apply slax-reader-backend-fulltext --remote -c ./config/config.toml
+
+      - name: Deploy Worker
+        if: steps.check_secrets.outputs.secrets_available == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          echo "Deploying worker"
+          pnpm run gen:all
+          pnpm wrangler deploy --minify -c ./config/config.toml
