@@ -50,7 +50,6 @@ When you're ready to make code changes, please create a Pull Request:
    - ...[See more](https://gist.github.com/parmentf/035de27d6ed1dce0b36a)
 
 5. Push your changes to your remote branch and open a Pull Request
-   > We encourage submitting small patches and only accept PRs containing a single commit.
 
 ### 📜 Contributor Agreement
 
