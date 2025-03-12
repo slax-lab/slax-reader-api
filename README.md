@@ -1,7 +1,7 @@
 <div align="center">
 <img src="https://r-beta.slax.com/icon.png" />
 <h1> <a href="https://slax.com/slax-reader.html">Slax Reader API </a> </h1>
-<h1>Simple tools, relax life, Read It Later </h1>
+<h1>Simple tools for a relaxed life</h1>
 
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/slax-lab/slax-reader-api?style=flat)](https://github.com/slax-lab/slax-reader-api/pulls) [![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/slax-lab/slax-reader-api?style=flat)](https://github.com/slax-lab/slax-reader-api/pulls?q=is%3Apr+is%3Aclosed) [![GitHub issues](https://img.shields.io/github/issues/slax-lab/slax-reader-api?style=flat)](https://github.com/slax-lab/slax-reader-api/issues) [![GitHub closed issues](https://img.shields.io/github/issues-closed/slax-lab/slax-reader-api?style=flat)](https://github.com/slax-lab/slax-reader-api/issues?q=is%3Aissue+is%3Aclosed) ![Stars](https://img.shields.io/github/stars/slax-lab/slax-reader-api?style=flat) ![Forks](https://img.shields.io/github/forks/slax-lab/slax-reader-api?style=flat)
 
@@ -25,13 +25,24 @@ This is the Slax Reader API service developed based on Cloudflare Worker, design
 
 # ✨ Get Slax Reader
 
-- [Chrome Web Store](https://chromewebstore.google.com/detail/slax-reader/gdnhaajlomjkhahnmiijphnodkcfikfd)
-- [Slax Reader](https://r.slax.com)
-- [Slax Reader Bot](https://t.me/slax_reader_bot)
-- ~~Slax Reader APP~~ (WIP)
-- ~~Slax Reader Desktop~~ (WIP)
+> If you want to use Slax Reader directly, you can:
 
-# 🚀 Self Deploy
+#### Read on web
+
+- Web: visit [Slax Reader](https://r.slax.com) to create your free account (no downloads needed).
+
+- Browser Extensions (save links in one click):
+  - [Chrome Web Store](https://chromewebstore.google.com/detail/slax-reader/gdnhaajlomjkhahnmiijphnodkcfikfd) (also works on Edge)
+
+#### Read on mobile
+
+- [Slax Reader Bot](https://t.me/slaxreaderbot): save articles directly from your phone.
+
+#### Coming soon
+
+- iOS/Android/Desktop apps (under active development).
+
+# 🚀 Self-Deploy
 
 [Cloudflare Deploy](./public/CLOUDFLARE-DEPLOY-EN.md)
 
@@ -72,7 +83,6 @@ You can contribute code to make our product better by understanding our developm
 💖 [Thank you to every contributor who helps make Slax Reader better](https://github.com/slax-lab/slax-reader-api/graphs/contributors) 💖
 
 <img src="https://contrib.rocks/image?repo=slax-lab/slax-reader-api" alt="contributors">
-</a>
 
 # 🙏 Acknowledgements
 
@@ -92,4 +102,4 @@ During the development of Slax Reader API, we have used many excellent open-sour
 
 # 📝 License
 
-`Slax Reader` is licensed under the [Apache License 2.0](LICENSE), the community version is 100% free and open source, forever.
+`Slax Reader` is licensed under the [Apache License 2.0](LICENSE). The community version is completely free, open-source, and will remain so forever.

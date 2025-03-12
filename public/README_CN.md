@@ -1,7 +1,7 @@
 <div align="center">
 <img src="https://r-beta.slax.com/icon.png" />
 <h1> <a href="https://slax.com/slax-reader.html">Slax Reader API </a> </h1>
-<h1>Simple tools, relax life, Read It Later </h1>
+<h1>Simple tools for a relaxed life</h1>
 
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/slax-lab/slax-reader-api?style=flat)](https://github.com/slax-lab/slax-reader-api/pulls) [![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/slax-lab/slax-reader-api?style=flat)](https://github.com/slax-lab/slax-reader-api/pulls?q=is%3Apr+is%3Aclosed) [![GitHub issues](https://img.shields.io/github/issues/slax-lab/slax-reader-api?style=flat)](https://github.com/slax-lab/slax-reader-api/issues) [![GitHub closed issues](https://img.shields.io/github/issues-closed/slax-lab/slax-reader-api?style=flat)](https://github.com/slax-lab/slax-reader-api/issues?q=is%3Aissue+is%3Aclosed) ![Stars](https://img.shields.io/github/stars/slax-lab/slax-reader-api?style=flat) ![Forks](https://img.shields.io/github/forks/slax-lab/slax-reader-api?style=flat)
 
@@ -72,7 +72,6 @@
 💖 [感谢每一位贡献者，让Slax Reader变得更好](https://github.com/slax-lab/slax-reader-api/graphs/contributors) 💖
 
 <img src="https://contrib.rocks/image?repo=slax-lab/slax-reader-api" alt="contributors">
-</a>
 
 # 🙏 鸣谢
 
@@ -92,4 +91,4 @@
 
 # 📝 License
 
-`Slax Reader` is licensed under the [Apache License 2.0](../LICENSE), 社区版 100% 免费且开源, forever.
+`Slax Reader` is licensed under the [Apache License 2.0](../LICENSE). The community version is completely free, open-source, and will remain so forever.
