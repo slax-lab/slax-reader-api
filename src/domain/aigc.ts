@@ -21,7 +21,7 @@ import { ChatCompletion } from '../infra/external/chatCompletion'
 import { BucketClient } from '../infra/repository/bucketClient'
 import { MultiLangError } from '../utils/multiLangError'
 
-type deltaType = {
+export type deltaType = {
   role?: 'system' | 'user' | 'assistant' | 'tool'
   content?: string
   function_call?: { name: string; arguments: string }
@@ -35,7 +35,7 @@ export type completionQuote = {
   content: string
 }
 
-enum toolStatus {
+export enum toolStatus {
   PROCESSING = 'processing',
   SUCCESSFULLY = 'finished_successfully',
   FAILED = 'finished_failed'

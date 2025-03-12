@@ -9,7 +9,7 @@ import { i18n } from '../const/i18n'
 import { inject, injectable } from '../decorators/di'
 import { BookmarkRepo } from '../infra/repository/dbBookmark'
 
-interface callbackPayload {
+export interface callbackPayload {
   chat_id: number
   origin_message_id: number
 }

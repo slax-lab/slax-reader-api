@@ -9,18 +9,18 @@ import { BookmarkRepo, bookmarkShardPO } from '../infra/repository/dbBookmark'
 import { inject, injectable } from '../decorators/di'
 import { VectorizeRepo } from '../infra/repository/dbVectorize'
 
-interface userBookmarkItem {
+export interface userBookmarkItem {
   bmId: number
   shardIdx: number
   rowId: number
 }
 
-interface vectorizeMatcheItem {
+export interface vectorizeMatcheItem {
   id: string
   score: number
 }
 
-interface fulltextMatchItem {
+export interface fulltextMatchItem {
   bookmark_id: number
   score: number
   content_snippet: string
@@ -29,12 +29,12 @@ interface fulltextMatchItem {
   raw_title: string
 }
 
-interface shardBucket {
+export interface shardBucket {
   userBookmarkIds: number[]
   shardIdx: number
 }
 
-interface hybridSearchItem {
+export interface hybridSearchItem {
   vs_score: number
   fts_score: number
   bookmark_id: number
