@@ -25,7 +25,7 @@ export interface omnivoreData {
   publishedAt: string
 }
 
-interface importProcessResponse {
+export interface importProcessResponse {
   id: number
   batch_count: number
   current_count: number

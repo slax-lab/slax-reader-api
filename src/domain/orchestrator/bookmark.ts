@@ -1,18 +1,16 @@
 import { inject, injectable } from '../../decorators/di'
 import { ContextManager } from '../../utils/context'
-import { BookmarkNotFoundError, ErrorParam } from '../../const/err'
+import { BookmarkNotFoundError } from '../../const/err'
 import { BookmarkService } from '../bookmark'
 import { TagService } from '../tag'
 import { MarkService } from '../mark'
-import { NotificationService } from '../notification'
 
 @injectable()
 export class BookmarkOrchestrator {
   constructor(
     @inject(BookmarkService) private bookmarkService: BookmarkService,
     @inject(TagService) private tagService: TagService,
-    @inject(MarkService) private markService: MarkService,
-    @inject(NotificationService) private notificationService: NotificationService
+    @inject(MarkService) private markService: MarkService
   ) {}
 
   /** 获取收藏详情 */
@@ -48,6 +46,6 @@ export class BookmarkOrchestrator {
 
   // 书签加星标
   public async bookmarkStar(ctx: ContextManager, bmId: number, status: 'star' | 'unstar') {
-    const res = await this.bookmarkService.updateBookmarkStarStatus(ctx.getUserId(), bmId, status === 'star')
+    return await this.bookmarkService.updateBookmarkStarStatus(ctx.getUserId(), bmId, status === 'star')
   }
 }

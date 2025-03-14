@@ -39,7 +39,7 @@ export interface reportInfoReq {
   share_code?: string
 }
 
-interface userBindPlatformItem {
+export interface userBindPlatformItem {
   platform: string
   user_name: string
   created_at: Date
