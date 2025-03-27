@@ -238,6 +238,7 @@ export class MarkService {
     const userId = ctx.getUserId()
 
     const mark = await this.markRepo.get(markId)
+    console.log(mark, markId)
     if (!mark || mark.is_deleted) throw ErrorParam()
     if (mark.user_id !== userId) {
       // 非本人则去校验文章所有权
