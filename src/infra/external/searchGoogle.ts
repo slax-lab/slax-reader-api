@@ -22,7 +22,7 @@ export class GoogleSearch {
   constructor(env: Env) {
     this.cx = env.GOOGLE_SEARCH_ENAGINE_ID
     this.key = env.GOOGLE_SEARCH_KEY
-    this.searchApi = env.SEARCH_GOOGLE_API ?? GoogleSearch.GOOGLE_SEARCH_API
+    this.searchApi = env.SEARCH_GOOGLE_API.length > 0 ? env.SEARCH_GOOGLE_API : GoogleSearch.GOOGLE_SEARCH_API
   }
 
   async search(params: string) {

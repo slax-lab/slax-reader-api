@@ -49,7 +49,7 @@ class GoogleAuth {
         this.clientId = env.GOOGLE_CLIENT_ID_TEXT
         this.clientSecret = env.GOOGLE_CLIENT_SECRET_TEXT
     }
-    this.authPrefix = env.GOOGLE_AUTH_PREFIX ?? GoogleAuth.GOOGLE_AUTH_PREFIX
+    this.authPrefix = env.GOOGLE_AUTH_PREFIX.length > 0 ? env.GOOGLE_AUTH_PREFIX : GoogleAuth.GOOGLE_AUTH_PREFIX
   }
 
   verifyGoogleToken = async (idToken: string): Promise<tokenInfo> => {
