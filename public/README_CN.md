@@ -5,7 +5,7 @@
 
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/slax-lab/slax-reader-api?style=flat)](https://github.com/slax-lab/slax-reader-api/pulls) [![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/slax-lab/slax-reader-api?style=flat)](https://github.com/slax-lab/slax-reader-api/pulls?q=is%3Apr+is%3Aclosed) [![GitHub issues](https://img.shields.io/github/issues/slax-lab/slax-reader-api?style=flat)](https://github.com/slax-lab/slax-reader-api/issues) [![GitHub closed issues](https://img.shields.io/github/issues-closed/slax-lab/slax-reader-api?style=flat)](https://github.com/slax-lab/slax-reader-api/issues?q=is%3Aissue+is%3Aclosed) ![Stars](https://img.shields.io/github/stars/slax-lab/slax-reader-api?style=flat) ![Forks](https://img.shields.io/github/forks/slax-lab/slax-reader-api?style=flat)
 
-简体中文 | [English](../README.md)
+简体中文 | [English](../README.md) | [Japanese](./README_JP.md)
 
 </div>
 
