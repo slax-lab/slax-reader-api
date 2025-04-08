@@ -231,7 +231,8 @@ export class BookmarkRepo {
       where: { user_id: userId, deleted_at: null, is_starred: true, updated_at: { lte: subscribeEndTime } },
       skip: offset,
       take: limit,
-      include: { bookmark: true }
+      include: { bookmark: true },
+      orderBy: { updated_at: 'desc' }
     })
   }
 
