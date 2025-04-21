@@ -21,9 +21,9 @@ import { ReportRepo } from '../../infra/repository/dbReport'
 import { BookmarkService } from '../../domain/bookmark'
 import { TagService } from '../../domain/tag'
 import { MarkService } from '../../domain/mark'
-import { NotificationService } from '../../domain/notification'
 import { ImportService } from '../../domain/import'
 import { UrlParserHandler } from '../../domain/orchestrator/urlParser'
+import { NotificationService } from '../../domain/notification'
 import { ShareService } from '../../domain/share'
 import { UserService } from '../../domain/user'
 import { AigcService } from '../../domain/aigc'
@@ -41,7 +41,6 @@ import { StripeClient } from '../../infra/external/stripe'
 import { QueueClient } from '../../infra/queue/queueClient'
 import { BucketClient } from '../../infra/repository/bucketClient'
 import { KVClient } from '../../infra/repository/KVClient'
-import { RedisClient } from '../../infra/repository/redisClient'
 import { AigcController } from '../../handler/http/aigcController'
 import { BookmarkController } from '../../handler/http/bookmarkController'
 import { CallbackController } from '../../handler/http/callbackController'
@@ -122,8 +121,7 @@ container.register(UserService, {
 })
 
 container.register(BookmarkOrchestrator, {
-  useFactory: container =>
-    new BookmarkOrchestrator(container.resolve(BookmarkService), container.resolve(TagService), container.resolve(MarkService), container.resolve(NotificationService))
+  useFactory: container => new BookmarkOrchestrator(container.resolve(BookmarkService), container.resolve(TagService), container.resolve(MarkService))
 })
 
 container.register(ImportOrchestrator, {
@@ -217,10 +215,6 @@ container.register(VectorizeRepo, {
 
 container.register(KVClient, {
   useClass: KVClient
-})
-
-container.register(RedisClient, {
-  useClass: RedisClient
 })
 
 container.register(AigcController, {
