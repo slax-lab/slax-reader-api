@@ -727,6 +727,44 @@ export class BookmarkService {
     return await this.bookmarkRepo.updateBookmarkStatus(bmId, status)
   }
 
+  public async getAllBookmarkChangesLog(ctx: ContextManager, userId: number) {
+    const res = (await this.bookmarkRepo.getAllBookmarkChanges(userId)) || []
+
+    const logs = []
+    for (const item of res) {
+      logs.push({
+        target_url: item.target_url,
+        bookmark_id: ctx.hashIds.encodeId(item.bookmark_id)
+      })
+    }
+
+    const end_time = res.length > 0 ? res[0].created_at.getTime() : null
+
+    return {
+      logs,
+      ...(end_time ? { end_time } : {})
+    }
+  }
+
+  public async getPartialBookmarkChangesLog(ctx: ContextManager, userId: number, time: number) {
+    const res = (await this.bookmarkRepo.getPartialBookmarkChanges(userId, time)) || []
+
+    const logs = []
+    for (const item of res) {
+      logs.push({
+        target_url: item.target_url,
+        bookmark_id: ctx.hashIds.encodeId(item.bookmark_id),
+        log_action: item.action
+      })
+    }
+
+    const end_time = res.length > 0 ? res[0].created_at.getTime() : null
+
+    return {
+      logs,
+      ...(end_time ? { end_time } : {})
+    }
+  }
   public getQueue(): LazyInstance<QueueClient> {
     return this.queue
   }

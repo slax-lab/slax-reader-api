@@ -289,4 +289,29 @@ export class BookmarkController {
     await this.tagService.deleteBookmarkTag(ctx, req.bookmark_id, req.tag_id)
     return Successed(null)
   }
+
+  /**
+   * 获取全量书签记录
+   */
+  @Get('/all_changes')
+  public async handleUserGetAllBookmarkChangesRequest(ctx: ContextManager, request: Request) {
+    const res = await this.bookmarkService.getAllBookmarkChangesLog(ctx, ctx.getUserId())
+    return Successed(res)
+  }
+
+  /**
+   * 获取增量书签记录
+   */
+  @Get('/partial_changes')
+  public async handleUserGetPartialBookmarkChangesRequest(ctx: ContextManager, request: Request) {
+    const req = await RequestUtils.query<{ end_time: number }>(request)
+
+    // 校验end_time的时间戳合法性
+    if (!req.end_time || isNaN(req.end_time) || req.end_time < 0) {
+      return Failed(ErrorParam())
+    }
+
+    const res = await this.bookmarkService.getPartialBookmarkChangesLog(ctx, ctx.getUserId(), Number(req.end_time))
+    return Successed(res)
+  }
 }
