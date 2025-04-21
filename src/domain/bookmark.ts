@@ -16,6 +16,10 @@ import { MarkRepo } from '../infra/repository/dbMark'
 import { UserRepo } from '../infra/repository/dbUser'
 import type { bookmarkParsePO, bookmarkPO } from '../infra/repository/dbBookmark'
 import { MultiLangError } from '../utils/multiLangError'
+import { authToken } from '../middleware/auth'
+import { randomUUID } from 'crypto'
+import { selectDORegion } from '../utils/location'
+import { NotificationMessage } from '../infra/message/notification'
 
 export interface BookmarkDetailResp {
   bookmark_id?: number
@@ -96,7 +100,8 @@ export class BookmarkService {
     @inject(VectorizeRepo) private dbVectorize: VectorizeRepo,
     @inject(MarkRepo) private markRepo: MarkRepo,
     @inject(UserRepo) private userRepo: UserRepo,
-    @inject(QueueClient) private queue: LazyInstance<QueueClient>
+    @inject(QueueClient) private queue: LazyInstance<QueueClient>,
+    @inject(NotificationMessage) private notifyMessage: NotificationMessage
   ) {}
 
   public async createBookmarkBase(options: {
@@ -149,6 +154,24 @@ export class BookmarkService {
 
     if (relation.deleted_at) {
       await this.trashRevertBookmark(options.ctx, relation.bookmark_id)
+    }
+
+    if (relation) {
+      // 在数据库中增加收藏添加记录
+      try {
+        await Promise.all([
+          this.bookmarkRepo.createBookmarkChangeLog(options.ctx.getUserId(), options.targetUrl, relation.id, 'add', relation.created_at),
+          this.notifyMessage.sendBookmarkChange(options.ctx.env, {
+            user_id: options.ctx.getUserId(),
+            bookmark_id: relation.id,
+            created_at: relation.created_at,
+            target_url: options.targetUrl,
+            action: 'add'
+          })
+        ])
+      } catch (e) {
+        console.error('create bookmark change log error:', e)
+      }
     }
 
     return bmInfo
@@ -332,7 +355,7 @@ export class BookmarkService {
   }
 
   /**
-   * 删除收藏
+   * 删除收藏（跟移入垃圾箱不同，这个是从表中彻底删除收藏）
    */
   public async deleteBookmark(ctx: ContextManager, userId: number, bmId: number): Promise<string> {
     const bmRepo = this.bookmarkRepo
@@ -340,7 +363,7 @@ export class BookmarkService {
 
     // 删除slax_user_bookmark ， slax_user_bookmark_tag 标签数据
     const deleteUserBookmark = async () => {
-      const bmInfo = await bmRepo.getUserBookmark(bmId, userId)
+      const bmInfo = await bmRepo.getUserBookmarkWithDetail(bmId, userId)
       if (!bmInfo) {
         console.log('delete user bookmark not found:', bmId, ' user:', userId)
         return null
@@ -348,7 +371,19 @@ export class BookmarkService {
 
       console.log('delete user bookmark:', bmId, ' user:', userId, ' deleted_at: ', bmInfo.deleted_at, ' id: ', bmInfo.id)
 
-      const [resErr, _] = await Promise.all([bmRepo.deleteUserBookmark(bmId, userId), searchRepo.deleteUserBookmark(userId, bmId), this.markRepo.deleteByBookmarkId(bmInfo.id)])
+      const [resErr, _] = await Promise.all([
+        bmRepo.deleteUserBookmark(bmId, userId),
+        searchRepo.deleteUserBookmark(userId, bmId),
+        this.markRepo.deleteByBookmarkId(bmInfo.id),
+        bmRepo.createBookmarkChangeLog(userId, bmInfo.bookmark?.target_url, bmInfo.id, 'delete', new Date()),
+        this.notifyMessage.sendBookmarkChange(ctx.env, {
+          user_id: userId,
+          bookmark_id: bmInfo.id,
+          created_at: bmInfo.created_at,
+          target_url: bmInfo.bookmark?.target_url,
+          action: 'delete'
+        })
+      ])
 
       if (resErr instanceof MultiLangError) {
         console.error('delete user bookmark error:', resErr)
@@ -765,6 +800,35 @@ export class BookmarkService {
       ...(end_time ? { end_time } : {})
     }
   }
+
+  public async connectNotification(ctx: ContextManager, request: Request, token: string) {
+    await authToken(ctx, token)
+
+    let pushToken = String(randomUUID())
+    const headers = new Headers(request.headers)
+    const locationHint = selectDORegion(request)
+    const doId = ctx.env.WEBSOCKET_SERVER.idFromName('global')
+    const stub = ctx.env.WEBSOCKET_SERVER.get(doId, { locationHint })
+
+    headers.set('uuid', pushToken)
+    headers.set('region', locationHint)
+    headers.set('user_id', ctx.getUserId().toString())
+    headers.set('connect_type', 'extensions')
+    console.log(`locationHint, user ${ctx.getUserId()} from ${request.cf?.country} match ${locationHint}, push uuid ${pushToken}`)
+
+    return stub
+      .fetch(
+        new Request(request, {
+          headers
+        })
+      )
+      .catch(async e => {
+        pushToken = ''
+        console.log('fetch error', e)
+        return new Response(null, { status: 500 })
+      })
+  }
+
   public getQueue(): LazyInstance<QueueClient> {
     return this.queue
   }

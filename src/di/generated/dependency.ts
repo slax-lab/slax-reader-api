@@ -69,7 +69,8 @@ container.register(BookmarkService, {
       container.resolve(VectorizeRepo),
       container.resolve(MarkRepo),
       container.resolve(UserRepo),
-      lazy(() => container.resolve(QueueClient))
+      lazy(() => container.resolve(QueueClient)),
+      container.resolve(NotificationMessage)
     )
 })
 
