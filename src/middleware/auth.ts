@@ -12,6 +12,7 @@ const whiteList = [
   '/v1/user/verification_codes',
   '/v1/user/silent/sessions',
   '/v1/user/messages',
+  '/v1/bookmark/connect_changes',
   '/ping',
   '/static/image',
   '/callback/telegram'

@@ -6,6 +6,7 @@ import { noticeType, userNoticePO } from '../repository/dbUser'
 import { inject, injectable } from '../../decorators/di'
 import { UserRepo } from '../repository/dbUser'
 import type { PushSubscription } from '../../utils/webpush/webpush'
+import { bookmarkActionChangePO } from '../repository/dbBookmark'
 
 @injectable()
 export class NotificationMessage {
@@ -119,5 +120,17 @@ export class NotificationMessage {
       }
     }
     await Promise.all(pushPromise)
+  }
+
+  // 下发新的书签收藏记录更新数据
+  public async sendBookmarkChange(env: Env, payload: bookmarkActionChangePO) {
+    const doId = env.WEBSOCKET_SERVER.idFromName('global')
+    const dObj = env.WEBSOCKET_SERVER.get(doId)
+    await dObj.sendBookmarkChange(payload.user_id, {
+      bookmark_id: payload.bookmark_id,
+      target_url: payload.target_url,
+      action: payload.action,
+      created_at: payload.created_at
+    })
   }
 }

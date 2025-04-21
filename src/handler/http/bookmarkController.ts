@@ -1,6 +1,6 @@
 import { Failed, Successed } from '../../utils/responseUtils'
 import { ContextManager } from '../../utils/context'
-import { ErrorParam } from '../../const/err'
+import { ErrorConnectionParam, ErrorParam } from '../../const/err'
 import { RequestUtils } from '../../utils/requestUtils'
 import { callbackType } from '../../infra/queue/queueClient'
 import { bookmarkPO } from '../../infra/repository/dbBookmark'
@@ -313,5 +313,18 @@ export class BookmarkController {
 
     const res = await this.bookmarkService.getPartialBookmarkChangesLog(ctx, ctx.getUserId(), Number(req.end_time))
     return Successed(res)
+  }
+
+  /**
+   * 获取连接实时增量书签记录 socket
+   */
+  @Get('/connect_changes')
+  public async handleUserGetConnectBookmarkChangesRequest(ctx: ContextManager, request: Request) {
+    const upgradeHeader = request.headers.get('Upgrade')
+    if (!upgradeHeader || upgradeHeader !== 'websocket') return Failed(ErrorConnectionParam())
+    const query = await RequestUtils.query<{ token: string }>(request)
+    if (!query.token) return Failed(ErrorConnectionParam())
+
+    return await this.bookmarkService.connectNotification(ctx, request, query.token)
   }
 }
