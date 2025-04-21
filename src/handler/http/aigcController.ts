@@ -26,6 +26,19 @@ interface CompletionsRequest {
   quote?: completionQuote[]
 }
 
+interface RawContentSummaryRequest {
+  raw_content: string
+  collectionCode: string
+  force: boolean
+}
+
+interface RawContentCompletionsRequest {
+  title: string
+  raw_content: string
+  messages: ChatCompletionMessageParam[]
+  quote?: completionQuote[]
+}
+
 @Controller('/v1/aigc')
 export class AigcController {
   constructor(
@@ -91,6 +104,62 @@ export class AigcController {
     if (!bmId || bmId < 1) throw ErrorParam()
 
     ctx.execution.waitUntil(aiSvc.chatBookmark(ctx, bmId, req.messages, writable, req.quote || []))
+
+    return new Response(readable, {
+      headers: { 'Content-Type': 'text/event-stream; charset=utf-8', ...corsHeader }
+    })
+  }
+
+  @Post('/raw_content_summaries')
+  public async handleRawContentSummariesRequest(ctx: ContextManager, request: Request): Promise<Response> {
+    let req: RawContentSummaryRequest
+    try {
+      req = await request.json<RawContentSummaryRequest>()
+    } catch (err) {
+      console.error(`Get raw content summaries failed: ${err}`)
+      throw ErrorParam()
+    }
+
+    // 校验权限
+    if (!req.raw_content) throw ErrorParam()
+
+    // 设置上下文
+    ctx.set('country', request.cf?.country || '')
+    ctx.set('continent', request.cf?.continent || '')
+
+    const aiSvc = this.aigcService
+    const { readable, writable } = new TransformStream({
+      transform: (chunk, controller) => aiSvc.recordChunks(chunk, controller)
+    })
+
+    ctx.execution.waitUntil(aiSvc.summaryRawContent(ctx, req.raw_content, writable))
+
+    return new Response(readable, {
+      headers: { 'Content-Type': 'text/event-stream; charset=utf-8', ...corsHeader }
+    })
+  }
+
+  @Post('/raw_content_chat')
+  public async handleRawContentCompletionsRequest(ctx: ContextManager, request: Request): Promise<Response> {
+    // TODO 拿到CTX中的user_id进行速率限制
+    let req: RawContentCompletionsRequest
+    try {
+      req = await request.json<RawContentCompletionsRequest>()
+    } catch (err) {
+      console.error(`Generate question failed: ${err}`)
+      throw ErrorParam()
+    }
+
+    if (!req.title || !req.raw_content) throw ErrorParam()
+
+    // 设置上下文
+    ctx.set('country', request.cf?.country || '')
+    ctx.set('continent', request.cf?.continent || '')
+
+    const aiSvc = this.aigcService
+    const { readable, writable } = new TransformStream()
+
+    ctx.execution.waitUntil(aiSvc.chatRawContent(ctx, req.title, req.raw_content, req.messages, writable, req.quote || []))
 
     return new Response(readable, {
       headers: { 'Content-Type': 'text/event-stream; charset=utf-8', ...corsHeader }

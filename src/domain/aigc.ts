@@ -10,7 +10,7 @@ import {
   generateRelatedTagPrompt
 } from '../const/prompt'
 import { ContextManager } from '../utils/context'
-import { ChatCompletionMessageToolCall, ChatCompletionMessageParam, ChatCompletionContentPart } from 'openai/resources/chat/completions'
+import { ChatCompletionMessageToolCall, ChatCompletionMessageParam, ChatCompletionContentPart, ChatCompletionTool } from 'openai/resources/chat/completions'
 import { GoogleSearch } from '../infra/external/searchGoogle'
 import { ContentParser } from '../utils/parser'
 import { systemTag } from '../const/systemTag'
@@ -97,44 +97,16 @@ export class AigcService {
     await this.writeChunk([{ role, name, content }], status, finishReason)
   }
 
-  /** GPT 4o 生成问题 */
+  /** GPT 4o 生成书签问题 */
   private async chatToolGenerateQuestion(ctx: ContextManager, bmId: number) {
     const bookmark = await this.bookmarkRepo.getBookmarkById(bmId)
     if (!bookmark) return this.writeChunk([{ role: 'assistant', content: 'Bookmark not found' }])
 
-    const messages: ChatCompletionMessageParam[] = [
-      { role: 'system', content: generateQuestionPrompt },
-      { role: 'user', content: bookmark.title }
-    ]
-
-    let buffer: string = ''
-    const callback = async (chunk: string | MultiLangError) => {
-      if (chunk instanceof MultiLangError) return this.writeChunk([{ role: 'assistant', content: chunk.message }])
-
-      if (chunk.endsWith('\n') && buffer.length > 0) {
-        buffer = buffer.concat(chunk)
-        await this.writeProgress('tool', 'generateQuestion', JSON.stringify([buffer]), toolStatus.SUCCESSFULLY)
-        buffer = ''
-        return
-      }
-      if (chunk.startsWith('-') || buffer.length > 0) {
-        buffer = buffer.concat(chunk)
-      }
-    }
-
-    // 给前端一个提示
-    await this.writeProgress('tool', 'generateQuestion', undefined, toolStatus.PROCESSING)
-
-    // 调用GPT-4o生成问题
-    await this.aigc().universal(ctx, messages, callback)
-
-    // 如果buffer还有内容，则直接输出
-    if (buffer) await this.writeProgress('tool', 'generateQuestion', JSON.stringify([buffer]), toolStatus.SUCCESSFULLY)
-
-    await this.writeDone()
+    const title = bookmark.title
+    return await this.chatToolGenerateRawContentQuestion(ctx, title)
   }
 
-  /** GPT 4o 解答问题 */
+  /** GPT 4o 解答书签问题 */
   private async chatToolGenerateAnswer(ctx: ContextManager, bmId: number, question: string) {
     const bookmark = await this.bookmarkRepo.getBookmarkById(bmId)
     if (bookmark instanceof MultiLangError || !bookmark || !bookmark.content_key) return await this.writeChunk([{ role: 'assistant', content: 'Bookmark not found' }])
@@ -142,15 +114,9 @@ export class AigcService {
     const obj = await this.bucket().R2Bucket.get(bookmark.content_md_key)
     if (!obj) return await this.writeChunk([{ role: 'assistant', content: 'Bookmark content not found' }])
 
-    const messages: ChatCompletionMessageParam[] = [
-      { role: 'system', content: generateAnswerPrompt },
-      { role: 'user', content: generateUserAnserPrompt.replace('{article}', await obj.text()).replace('{questions}', question) }
-    ]
+    const rawContent = await obj.text()
 
-    return await this.aigc().universal(ctx, messages, async (chunk: string | MultiLangError) => {
-      if (chunk instanceof MultiLangError) return this.writeChunk([{ role: 'assistant', content: chunk.message }])
-      await this.writeChunk([{ role: 'assistant', content: chunk }])
-    })
+    return await this.chatToolGenerateRawContentAnswer(ctx, rawContent, question)
   }
 
   /** GPT 4o 浏览器工具 */
@@ -221,8 +187,186 @@ export class AigcService {
 
     // 去掉最后一条消息
     messages.pop()
-    const article = await obj.text()
-    const systemMessage = userChatBookmarkSystemPrompt.replace('{article}', article)
+    const rawContent = await obj.text()
+
+    return await this.chatRawContentText(ctx, content, rawContent, messages, quote)
+  }
+
+  async generateTags(ctx: ContextManager, env: Env, bmTitle: string, bmContent: string) {
+    let buffer = ''
+    let isErr = false
+
+    const messages: ChatCompletionMessageParam[] = [
+      { role: 'system', content: generateRelatedTagPrompt },
+      { role: 'user', content: `title: ${bmTitle}\n content: ${bmContent.slice(0, 200)}` }
+    ]
+
+    await this.aigc().universal(ctx, messages, async (chunk: string | MultiLangError) => {
+      if (chunk instanceof MultiLangError || isErr) {
+        isErr = true
+      } else buffer += chunk
+    })
+
+    const tags = buffer
+      .split('\n')
+      .filter(t => systemTag.has(t))
+      .filter(tag => tag.length >= 1)
+
+    console.log(`generate tags: ${tags}`)
+    return tags
+  }
+
+  async chatBookmark(ctx: ContextManager, bmId: number, messages: ChatCompletionMessageParam[], writer: WritableStream<Uint8Array>, quote: completionQuote[]) {
+    this.wr = writer.getWriter()
+    const latestMessageIdx = messages.length - 1
+    if (messages.length < 1 || bmId < 1) return this.wr.write(this.ted.encode('Invalid request\n'))
+
+    // 只处理最后一条信息
+    const latestMessage = messages[latestMessageIdx]
+    const content = typeof latestMessage.content === 'string' ? latestMessage.content : ''
+
+    try {
+      // chat or tool call
+      if (!this.isToolCallMessage(latestMessage)) return await this.chatBookmarkText(ctx, content, messages, bmId, quote)
+
+      // tool call chat
+      switch (latestMessage.tool_calls[0].function.name) {
+        case 'generateQuestion':
+          return await this.chatToolGenerateQuestion(ctx, bmId)
+        case 'replyAnswer':
+          return await this.chatToolGenerateAnswer(ctx, bmId, content)
+        default:
+          return this.wr.write(this.ted.encode('Invalid request\n'))
+      }
+    } catch (err) {
+      console.error(err)
+      this.writeChunk([{ role: 'assistant', content: 'Failed to generate question, please try again later.\n' }])
+    } finally {
+      this.wr.close()
+    }
+  }
+
+  async chatRawContent(
+    ctx: ContextManager,
+    title: string,
+    rawContent: string,
+    messages: ChatCompletionMessageParam[],
+    writer: WritableStream<Uint8Array>,
+    quote: completionQuote[]
+  ) {
+    this.wr = writer.getWriter()
+    const latestMessageIdx = messages.length - 1
+    if (messages.length < 1) return this.wr.write(this.ted.encode('Invalid request\n'))
+
+    // 只处理最后一条信息
+    const latestMessage = messages[latestMessageIdx]
+    const content = typeof latestMessage.content === 'string' ? latestMessage.content : ''
+
+    try {
+      // chat or tool call
+      if (!this.isToolCallMessage(latestMessage)) return await this.chatRawContentText(ctx, rawContent, content, messages, quote)
+
+      // tool call chat
+      switch (latestMessage.tool_calls[0].function.name) {
+        case 'generateQuestion':
+          return await this.chatToolGenerateRawContentQuestion(ctx, title)
+        case 'replyAnswer':
+          return await this.chatToolGenerateRawContentAnswer(ctx, content, rawContent)
+        default:
+          return this.wr.write(this.ted.encode('Invalid request\n'))
+      }
+    } catch (err) {
+      console.error(err)
+      this.writeChunk([{ role: 'assistant', content: 'Failed to generate question, please try again later.\n' }])
+    } finally {
+      this.wr.close()
+    }
+  }
+
+  async summaryBookmark(ctx: ContextManager, bmId: number, forceSummary: boolean, writer: WritableStream<Uint8Array>) {
+    let provider
+    this.wr = writer.getWriter()
+    const userId = ctx.getUserId()
+    const lang = ctx.getlang()
+
+    try {
+      const callback = async (chunk: string | MultiLangError) => {
+        if (chunk instanceof MultiLangError) return this.wr.write(this.ted.encode(chunk.message))
+        await this.wr.write(this.ted.encode(chunk))
+      }
+
+      const bookmark = await this.bookmarkRepo.getBookmarkById(bmId)
+      if (!bookmark || bookmark instanceof MultiLangError || !bookmark.content_md_key) {
+        console.log('bookmark not found')
+        return callback(BookmarkNotFoundError())
+      }
+
+      const summary = await this.bookmarkRepo.getUserBookmarkSummary(bmId, ctx.getUserId(), lang)
+      if (summary && !forceSummary) {
+        return callback(summary.content)
+      }
+
+      if (forceSummary && summary?.updated_at) {
+        return callback(SummaryUpdateReachLimitError())
+      }
+
+      const bmObject = await this.bucket().R2Bucket.get(bookmark.content_md_key)
+      if (!bmObject) {
+        console.log('bookmark content not found')
+        return callback(BookmarkNotFoundError())
+      }
+
+      const content = await bmObject.text()
+      const prompt = systemPrompt(lang)
+      const messages: ChatCompletionMessageParam[] = [
+        { role: 'system', content: prompt },
+        { role: 'user', content }
+      ]
+      provider = await this.aigc().universal(ctx, messages, callback)
+    } catch (error) {
+      console.error(error)
+      this.wr.write(this.ted.encode(error instanceof MultiLangError ? error.message : 'Failed to get summary, please try again later.\n'))
+    } finally {
+      this.wr.close()
+      if (!!this.chunks && !!provider) {
+        await this.saveSummaryChunks(bmId, userId, lang, provider.provider, provider.model)
+      }
+    }
+  }
+
+  async summaryRawContent(ctx: ContextManager, rawContent: string, writer: WritableStream<Uint8Array>) {
+    this.wr = writer.getWriter()
+    const lang = ctx.getlang()
+
+    try {
+      const callback = async (chunk: string | MultiLangError) => {
+        if (chunk instanceof MultiLangError) return this.wr.write(this.ted.encode(chunk.message))
+        await this.wr.write(this.ted.encode(chunk))
+      }
+
+      const prompt = systemPrompt(lang)
+      const messages: ChatCompletionMessageParam[] = [
+        { role: 'system', content: prompt },
+        { role: 'user', content: rawContent }
+      ]
+
+      return await this.aigc().universal(ctx, messages, callback)
+    } catch (error) {
+      console.error(error)
+      this.wr.write(this.ted.encode(error instanceof MultiLangError ? error.message : 'Failed to get summary, please try again later.\n'))
+    } finally {
+      this.wr.close()
+    }
+  }
+
+  /** 基于文章内容回答问题 */
+  private async chatRawContentText(ctx: ContextManager, rawContent: string, content: string, messages: ChatCompletionMessageParam[], quote: completionQuote[]) {
+    if (!rawContent) return this.writeChunk([{ role: 'assistant', content: 'No Content' }])
+
+    // 去掉最后一条消息
+    messages.pop()
+    const raw = rawContent
+    const systemMessage = userChatBookmarkSystemPrompt.replace('{raw}', raw)
     const userMessage = { type: 'text', text: getUserChatBookmarkUserPrompt().replace('{content}', content) } as ChatCompletionContentPart
     const quoteMessage = quote.map(item => {
       return item.type === 'text' ? { type: 'text', text: item.content } : { type: 'image_url', image_url: { url: item.content } }
@@ -303,108 +447,54 @@ export class AigcService {
     await this.writeDone()
   }
 
-  async generateTags(ctx: ContextManager, env: Env, bmTitle: string, bmContent: string) {
-    let buffer = ''
-    let isErr = false
+  /** GPT 4o 生成问题 */
+  private async chatToolGenerateRawContentQuestion(ctx: ContextManager, title: string) {
+    if (!title) return this.writeChunk([{ role: 'assistant', content: 'No raw content' }])
 
     const messages: ChatCompletionMessageParam[] = [
-      { role: 'system', content: generateRelatedTagPrompt },
-      { role: 'user', content: `title: ${bmTitle}\n content: ${bmContent.slice(0, 200)}` }
+      { role: 'system', content: generateQuestionPrompt },
+      { role: 'user', content: title }
     ]
 
-    await this.aigc().universal(ctx, messages, async (chunk: string | MultiLangError) => {
-      if (chunk instanceof MultiLangError || isErr) {
-        isErr = true
-      } else buffer += chunk
+    let buffer: string = ''
+    const callback = async (chunk: string | MultiLangError) => {
+      if (chunk instanceof MultiLangError) return this.writeChunk([{ role: 'assistant', content: chunk.message }])
+
+      if (chunk.endsWith('\n') && buffer.length > 0) {
+        buffer = buffer.concat(chunk)
+        await this.writeProgress('tool', 'generateQuestion', JSON.stringify([buffer]), toolStatus.SUCCESSFULLY)
+        buffer = ''
+        return
+      }
+      if (chunk.startsWith('-') || buffer.length > 0) {
+        buffer = buffer.concat(chunk)
+      }
+    }
+
+    // 给前端一个提示
+    await this.writeProgress('tool', 'generateQuestion', undefined, toolStatus.PROCESSING)
+
+    // 调用GPT-4o生成问题
+    await this.aigc().universal(ctx, messages, callback)
+
+    // 如果buffer还有内容，则直接输出
+    if (buffer) await this.writeProgress('tool', 'generateQuestion', JSON.stringify([buffer]), toolStatus.SUCCESSFULLY)
+
+    await this.writeDone()
+  }
+
+  /** GPT 4o 解答问题 */
+  private async chatToolGenerateRawContentAnswer(ctx: ContextManager, rawContent: string, question: string) {
+    if (!rawContent) return await this.writeChunk([{ role: 'assistant', content: 'No raw content' }])
+
+    const messages: ChatCompletionMessageParam[] = [
+      { role: 'system', content: generateAnswerPrompt },
+      { role: 'user', content: generateUserAnserPrompt.replace('{raw}', rawContent).replace('{questions}', question) }
+    ]
+
+    return await this.aigc().universal(ctx, messages, async (chunk: string | MultiLangError) => {
+      if (chunk instanceof MultiLangError) return this.writeChunk([{ role: 'assistant', content: chunk.message }])
+      await this.writeChunk([{ role: 'assistant', content: chunk }])
     })
-
-    const tags = buffer
-      .split('\n')
-      .filter(t => systemTag.has(t))
-      .filter(tag => tag.length >= 1)
-
-    console.log(`generate tags: ${tags}`)
-    return tags
-  }
-
-  async chatBookmark(ctx: ContextManager, bmId: number, messages: ChatCompletionMessageParam[], writer: WritableStream<Uint8Array>, quote: completionQuote[]) {
-    this.wr = writer.getWriter()
-    const latestMessageIdx = messages.length - 1
-    if (messages.length < 1 || bmId < 1) return this.wr.write(this.ted.encode('Invalid request\n'))
-
-    // 只处理最后一条信息
-    const latestMessage = messages[latestMessageIdx]
-    const content = typeof latestMessage.content === 'string' ? latestMessage.content : ''
-
-    try {
-      // chat or tool call
-      if (!this.isToolCallMessage(latestMessage)) return await this.chatBookmarkText(ctx, content, messages, bmId, quote)
-
-      // tool call chat
-      switch (latestMessage.tool_calls[0].function.name) {
-        case 'generateQuestion':
-          return await this.chatToolGenerateQuestion(ctx, bmId)
-        case 'replyAnswer':
-          return await this.chatToolGenerateAnswer(ctx, bmId, content)
-        default:
-          return this.wr.write(this.ted.encode('Invalid request\n'))
-      }
-    } catch (err) {
-      console.error(err)
-      this.writeChunk([{ role: 'assistant', content: 'Failed to generate question, please try again later.\n' }])
-    } finally {
-      this.wr.close()
-    }
-  }
-
-  async summaryBookmark(ctx: ContextManager, bmId: number, forceSummary: boolean, writer: WritableStream<Uint8Array>) {
-    let provider
-    this.wr = writer.getWriter()
-    const userId = ctx.getUserId()
-    const lang = ctx.getlang()
-
-    try {
-      const callback = async (chunk: string | MultiLangError) => {
-        if (chunk instanceof MultiLangError) return this.wr.write(this.ted.encode(chunk.message))
-        await this.wr.write(this.ted.encode(chunk))
-      }
-
-      const bookmark = await this.bookmarkRepo.getBookmarkById(bmId)
-      if (!bookmark || bookmark instanceof MultiLangError || !bookmark.content_md_key) {
-        console.log('bookmark not found')
-        return callback(BookmarkNotFoundError())
-      }
-
-      const summary = await this.bookmarkRepo.getUserBookmarkSummary(bmId, ctx.getUserId(), lang)
-      if (summary && !forceSummary) {
-        return callback(summary.content)
-      }
-
-      if (forceSummary && summary?.updated_at) {
-        return callback(SummaryUpdateReachLimitError())
-      }
-
-      const bmObject = await this.bucket().R2Bucket.get(bookmark.content_md_key)
-      if (!bmObject) {
-        console.log('bookmark content not found')
-        return callback(BookmarkNotFoundError())
-      }
-
-      const content = await bmObject.text()
-      const prompt = systemPrompt(lang)
-      const messages: ChatCompletionMessageParam[] = [
-        { role: 'system', content: prompt },
-        { role: 'user', content }
-      ]
-      provider = await this.aigc().universal(ctx, messages, callback)
-    } catch (error) {
-      console.error(error)
-      this.wr.write(this.ted.encode(error instanceof MultiLangError ? error.message : 'Failed to get summary, please try again later.\n'))
-    } finally {
-      this.wr.close()
-      if (!!this.chunks && !!provider) {
-        await this.saveSummaryChunks(bmId, userId, lang, provider.provider, provider.model)
-      }
-    }
   }
 }
