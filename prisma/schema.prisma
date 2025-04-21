@@ -294,3 +294,15 @@ model slax_user_notice_device {
 
   @@index([user_id, type])
 }
+
+// 负责记录用户缓存收藏的记录
+model slax_user_bookmark_change {
+  id          Int      @id @default(autoincrement())
+  user_id     Int      @default(0)
+  target_url  String   @default("")
+  bookmark_id Int      @default(0)
+  action      String   @default("")
+  created_at  DateTime @default(now())
+
+  @@index([user_id, created_at])
+}
