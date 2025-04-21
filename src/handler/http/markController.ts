@@ -26,7 +26,8 @@ export class MarkController {
     if (!req || !req.source || (!req.bm_id && !req.share_code && !req.collection_code && !req.cb_id)) {
       return Failed(ErrorParam())
     }
-    if (req.type && req.type !== markType.LINE && req.type !== markType.COMMENT && req.type !== markType.REPLY) {
+
+    if (req.type && [markType.LINE, markType.COMMENT, markType.REPLY, markType.EXTENSIONS_LINE, markType.EXTENSIONS_COMMENT].indexOf(req.type) === -1) {
       return Failed(ErrorMarkTypeError())
     }
 
