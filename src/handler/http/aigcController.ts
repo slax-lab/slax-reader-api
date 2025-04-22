@@ -2,26 +2,35 @@ import { ContextManager } from '../../utils/context'
 import { corsHeader } from '../../middleware/cors'
 import { ChatCompletionMessageParam } from 'openai/resources/index.mjs'
 import { AigcService, completionQuote } from '../../domain/aigc'
-import { ErrorParam } from '../../const/err'
+import { BookmarkContentNotFoundError, BookmarkNotFoundError, ErrorParam } from '../../const/err'
 import { inject } from '../../decorators/di'
 import { Controller } from '../../decorators/controller'
 import { Post } from '../../decorators/route'
 import { UserService } from '../../domain/user'
 import { BookmarkService } from '../../domain/bookmark'
+import { MultiLangError } from '../../utils/multiLangError'
 
-interface SummaryRequest {
-  bmId?: number
-  shareCode?: string
-  cbId?: number
-  collectionCode: string
-  force: boolean
-}
+type SummaryRequest =
+  | {
+      bmId?: number
+      shareCode?: string
+      cbId?: number
+      collectionCode: string
+      force: boolean
+    }
+  | {
+      raw_content: string
+    }
 
-interface CompletionsRequest {
-  bmId?: number
-  shareCode?: string
-  cbId?: number
-  collectionCode: string
+type CompletionsRequest = (
+  | {
+      bmId?: number
+      shareCode?: string
+      cbId?: number
+      collectionCode?: string
+    }
+  | { title: string; raw_content: string }
+) & {
   messages: ChatCompletionMessageParam[]
   quote?: completionQuote[]
 }
@@ -29,14 +38,6 @@ interface CompletionsRequest {
 interface RawContentSummaryRequest {
   raw_content: string
   collectionCode: string
-  force: boolean
-}
-
-interface RawContentCompletionsRequest {
-  title: string
-  raw_content: string
-  messages: ChatCompletionMessageParam[]
-  quote?: completionQuote[]
 }
 
 @Controller('/v1/aigc')
@@ -57,23 +58,65 @@ export class AigcController {
       throw ErrorParam()
     }
 
-    // 校验权限
-    if (!req.bmId && !req.shareCode) throw ErrorParam()
-
-    // 设置上下文
-    ctx.set('country', request.cf?.country || '')
-    ctx.set('continent', request.cf?.continent || '')
+    let rawContent = ''
 
     const aiSvc = this.aigcService
     const { readable, writable } = new TransformStream({
       transform: (chunk, controller) => aiSvc.recordChunks(chunk, controller)
     })
 
-    // 拿到bookmark_id
-    const bmId = await this.bookmarkService.getBookmarkId(ctx, req.bmId, req.shareCode, req.cbId)
-    if (!bmId || bmId < 1) throw ErrorParam()
+    let tasks: Promise<unknown>[] = []
 
-    ctx.execution.waitUntil(aiSvc.summaryBookmark(ctx, bmId, req.force, writable))
+    // 校验权限
+    if ('raw_content' in req) {
+      if (!req.raw_content) throw ErrorParam()
+
+      rawContent = req.raw_content
+
+      tasks.push(aiSvc.summaryRawContent(ctx, rawContent, writable))
+    } else {
+      if (!req.bmId && !req.shareCode && !req.cbId) throw ErrorParam()
+
+      const bmId = await this.bookmarkService.getBookmarkId(ctx, req.bmId, req.shareCode, req.cbId)
+      if (!bmId || bmId < 1) throw ErrorParam()
+
+      const bookmark = await this.bookmarkService.getBookmarkById(bmId)
+      if (!bookmark || bookmark instanceof MultiLangError || !bookmark.content_md_key) {
+        throw BookmarkNotFoundError()
+      }
+
+      const content = await this.bookmarkService.getBookmarkContent(bookmark.content_md_key)
+      if (!content) throw BookmarkContentNotFoundError()
+
+      rawContent = content || ''
+
+      if (!req.force) {
+        const summary = await this.bookmarkService.getUserBookmarkSummary(bmId, ctx.getUserId(), ctx.getlang())
+        if (summary && !(summary instanceof MultiLangError)) {
+          tasks.push(writable.getWriter().write(summary))
+        } else {
+          tasks.push(
+            aiSvc.summaryRawContent(ctx, rawContent, writable, async result => {
+              await this.bookmarkService.saveSummary(bmId, ctx.getUserId(), ctx.getlang(), result.provider, result.response, result.model)
+            })
+          )
+        }
+      } else {
+        tasks.push(
+          aiSvc.summaryRawContent(ctx, rawContent, writable, async result => {
+            await this.bookmarkService.saveSummary(bmId, ctx.getUserId(), ctx.getlang(), result.provider, result.response, result.model)
+          })
+        )
+      }
+    }
+
+    // 设置上下文
+    ctx.set('country', request.cf?.country || '')
+    ctx.set('continent', request.cf?.continent || '')
+
+    if (tasks.length > 0) {
+      ctx.execution.waitUntil(Promise.all(tasks))
+    }
 
     return new Response(readable, {
       headers: { 'Content-Type': 'text/event-stream; charset=utf-8', ...corsHeader }
@@ -91,8 +134,32 @@ export class AigcController {
       throw ErrorParam()
     }
 
+    let title = ''
+    let rawContent = ''
+
     // 校验权限
-    if (!req.bmId && !req.shareCode) throw ErrorParam()
+    if ('title' in req) {
+      if (!req.title || !req.raw_content) throw ErrorParam()
+
+      title = req.title
+      rawContent = req.raw_content
+    } else {
+      if (!req.bmId && !req.shareCode && !req.cbId) throw ErrorParam()
+
+      const bmId = await this.bookmarkService.getBookmarkId(ctx, req.bmId, req.shareCode, req.cbId)
+      if (!bmId || bmId < 1) throw ErrorParam()
+
+      const bookmark = await this.bookmarkService.getBookmarkById(bmId)
+      if (!bookmark || bookmark instanceof MultiLangError || !bookmark.content_md_key) {
+        throw BookmarkNotFoundError()
+      }
+
+      const content = await this.bookmarkService.getBookmarkContent(bookmark.content_md_key)
+      if (!content) throw BookmarkContentNotFoundError()
+
+      title = bookmark.title
+      rawContent = content
+    }
 
     // 设置上下文
     ctx.set('country', request.cf?.country || '')
@@ -100,66 +167,7 @@ export class AigcController {
 
     const aiSvc = this.aigcService
     const { readable, writable } = new TransformStream()
-    const bmId = await this.bookmarkService.getBookmarkId(ctx, req.bmId, req.shareCode, req.cbId)
-    if (!bmId || bmId < 1) throw ErrorParam()
-
-    ctx.execution.waitUntil(aiSvc.chatBookmark(ctx, bmId, req.messages, writable, req.quote || []))
-
-    return new Response(readable, {
-      headers: { 'Content-Type': 'text/event-stream; charset=utf-8', ...corsHeader }
-    })
-  }
-
-  @Post('/raw_content_summaries')
-  public async handleRawContentSummariesRequest(ctx: ContextManager, request: Request): Promise<Response> {
-    let req: RawContentSummaryRequest
-    try {
-      req = await request.json<RawContentSummaryRequest>()
-    } catch (err) {
-      console.error(`Get raw content summaries failed: ${err}`)
-      throw ErrorParam()
-    }
-
-    // 校验权限
-    if (!req.raw_content) throw ErrorParam()
-
-    // 设置上下文
-    ctx.set('country', request.cf?.country || '')
-    ctx.set('continent', request.cf?.continent || '')
-
-    const aiSvc = this.aigcService
-    const { readable, writable } = new TransformStream({
-      transform: (chunk, controller) => aiSvc.recordChunks(chunk, controller)
-    })
-
-    ctx.execution.waitUntil(aiSvc.summaryRawContent(ctx, req.raw_content, writable))
-
-    return new Response(readable, {
-      headers: { 'Content-Type': 'text/event-stream; charset=utf-8', ...corsHeader }
-    })
-  }
-
-  @Post('/raw_content_chat')
-  public async handleRawContentCompletionsRequest(ctx: ContextManager, request: Request): Promise<Response> {
-    // TODO 拿到CTX中的user_id进行速率限制
-    let req: RawContentCompletionsRequest
-    try {
-      req = await request.json<RawContentCompletionsRequest>()
-    } catch (err) {
-      console.error(`Generate question failed: ${err}`)
-      throw ErrorParam()
-    }
-
-    if (!req.title || !req.raw_content) throw ErrorParam()
-
-    // 设置上下文
-    ctx.set('country', request.cf?.country || '')
-    ctx.set('continent', request.cf?.continent || '')
-
-    const aiSvc = this.aigcService
-    const { readable, writable } = new TransformStream()
-
-    ctx.execution.waitUntil(aiSvc.chatRawContent(ctx, req.title, req.raw_content, req.messages, writable, req.quote || []))
+    ctx.execution.waitUntil(aiSvc.chatRawContent(ctx, title, rawContent, req.messages, writable, req.quote || []))
 
     return new Response(readable, {
       headers: { 'Content-Type': 'text/event-stream; charset=utf-8', ...corsHeader }

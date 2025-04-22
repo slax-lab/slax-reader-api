@@ -27,15 +27,6 @@ router.post('/v1/aigc/chat', async (req: Request, ctx: ContextManager) => {
   return await controller.handleCompletionsRequest(ctx, req)
 })
 
-router.post('/v1/aigc/raw_content_summaries', async (req: Request, ctx: ContextManager) => {
-  const controller = container.resolve(AigcController)
-  return await controller.handleRawContentSummariesRequest(ctx, req)
-})
-router.post('/v1/aigc/raw_content_chat', async (req: Request, ctx: ContextManager) => {
-  const controller = container.resolve(AigcController)
-  return await controller.handleRawContentCompletionsRequest(ctx, req)
-})
-
 router.post('/v1/bookmark/add', async (req: Request, ctx: ContextManager) => {
   const controller = container.resolve(BookmarkController)
   return await controller.handleUserAddBookmarkRequest(ctx, req)

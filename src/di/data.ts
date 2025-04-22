@@ -2,7 +2,6 @@ import { PrismaClient } from '@prisma/client'
 import { PRISIMA_CLIENT, PRISIMA_FULLTEXT_CLIENT, VECTORIZE_CLIENTS } from '../const/symbol'
 import { container, singleton } from '../decorators/di'
 import { PrismaD1 } from '@prisma/adapter-d1'
-import { RedisClient } from '../infra/repository/redisClient'
 import { ChatCompletion } from '../infra/external/chatCompletion'
 import { BucketClient } from '../infra/repository/bucketClient'
 import { KVClient } from '../infra/repository/KVClient'
@@ -25,7 +24,6 @@ export class DatabaseRegistry {
       uncached: true
     })
     container.register(StripeClient, { useFactory: () => new StripeClient(env), uncached: true })
-    container.register(RedisClient, { useFactory: () => new RedisClient(env), uncached: true })
     container.register(ChatCompletion, { useFactory: () => new ChatCompletion(env), uncached: true })
     container.register(BucketClient, { useFactory: () => new BucketClient(env), uncached: true })
     container.register(KVClient, { useFactory: () => new KVClient(env), uncached: true })

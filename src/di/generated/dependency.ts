@@ -41,7 +41,6 @@ import { StripeClient } from '../../infra/external/stripe'
 import { QueueClient } from '../../infra/queue/queueClient'
 import { BucketClient } from '../../infra/repository/bucketClient'
 import { KVClient } from '../../infra/repository/KVClient'
-import { RedisClient } from '../../infra/repository/redisClient'
 import { AigcController } from '../../handler/http/aigcController'
 import { BookmarkController } from '../../handler/http/bookmarkController'
 import { CallbackController } from '../../handler/http/callbackController'
@@ -55,7 +54,6 @@ import { DatabaseRegistry } from '../data'
 container.register(AigcService, {
   useFactory: container =>
     new AigcService(
-      container.resolve(BookmarkRepo),
       lazy(() => container.resolve(ChatCompletion)),
       lazy(() => container.resolve(BucketClient))
     )
@@ -122,8 +120,7 @@ container.register(UserService, {
 })
 
 container.register(BookmarkOrchestrator, {
-  useFactory: container =>
-    new BookmarkOrchestrator(container.resolve(BookmarkService), container.resolve(TagService), container.resolve(MarkService), container.resolve(NotificationService))
+  useFactory: container => new BookmarkOrchestrator(container.resolve(BookmarkService), container.resolve(TagService), container.resolve(MarkService))
 })
 
 container.register(ImportOrchestrator, {
@@ -217,10 +214,6 @@ container.register(VectorizeRepo, {
 
 container.register(KVClient, {
   useClass: KVClient
-})
-
-container.register(RedisClient, {
-  useClass: RedisClient
 })
 
 container.register(AigcController, {
