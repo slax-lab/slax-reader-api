@@ -27,7 +27,7 @@ export class MarkController {
       return Failed(ErrorParam())
     }
 
-    if (req.type && [markType.LINE, markType.COMMENT, markType.REPLY, markType.EXTENSIONS_LINE, markType.EXTENSIONS_COMMENT].indexOf(req.type) === -1) {
+    if (req.type && [markType.LINE, markType.COMMENT, markType.REPLY, markType.RAW_WEB_LINE, markType.RAW_WEB_COMMENT].indexOf(req.type) === -1) {
       return Failed(ErrorMarkTypeError())
     }
 
