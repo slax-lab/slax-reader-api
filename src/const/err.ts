@@ -14,6 +14,7 @@ export enum ErrorName {
   TRASH_BOOKMARK_FAIL = 'TRASH_BOOKMARK_FAIL',
   TRASH_REVERT_BOOKMARK_FAIL = 'TRASH_REVERT_BOOKMARK_FAIL',
   BOOKMARK_NOT_FOUND = 'BOOKMARK_NOT_FOUND',
+  BOOKMARK_CONTENT_NOT_FOUND = 'BOOKMARK_CONTENT_NOT_FOUND',
   BLOCK_TARGET_URL = 'BLOCK_TARGET_URL',
   CREATE_BOOKMARK_FAIL = 'CREATE_BOOKMARK_FAIL',
   USER_ID_WRONG = 'USER_ID_WRONG',
@@ -207,6 +208,7 @@ export const DeleteBookmarkFailError = (): MultiLangError => NewError(ErrorName.
 export const TrashBookmarkFailError = (): MultiLangError => NewError(ErrorName.TRASH_BOOKMARK_FAIL, 400)
 export const TrashRevertBookmarkFailError = (): MultiLangError => NewError(ErrorName.TRASH_REVERT_BOOKMARK_FAIL, 400)
 export const BookmarkNotFoundError = (): MultiLangError => NewError(ErrorName.BOOKMARK_NOT_FOUND, 404)
+export const BookmarkContentNotFoundError = (): MultiLangError => NewError(ErrorName.BOOKMARK_CONTENT_NOT_FOUND, 404)
 export const BlockTargetUrlError = (): MultiLangError => NewError(ErrorName.BLOCK_TARGET_URL, 400)
 export const CreateBookmarkFailError = (): MultiLangError => NewError(ErrorName.CREATE_BOOKMARK_FAIL, 500)
 export const UserIdWrongError = (): MultiLangError => NewError(ErrorName.USER_ID_WRONG, 500)
