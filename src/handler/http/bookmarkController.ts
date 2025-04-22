@@ -1,6 +1,6 @@
 import { Failed, Successed } from '../../utils/responseUtils'
 import { ContextManager } from '../../utils/context'
-import { ErrorConnectionParam, ErrorParam } from '../../const/err'
+import { BookmarkChangesSyncTooOldError, ErrorConnectionParam, ErrorParam } from '../../const/err'
 import { RequestUtils } from '../../utils/requestUtils'
 import { callbackType } from '../../infra/queue/queueClient'
 import { bookmarkPO } from '../../infra/repository/dbBookmark'
@@ -311,6 +311,11 @@ export class BookmarkController {
       return Failed(ErrorParam())
     }
 
+    // 判断时间是否比现在晚15天
+    if (req.end_time < Date.now() - 15 * 24 * 60 * 60 * 1000) {
+      return Failed(BookmarkChangesSyncTooOldError())
+    }
+
     const res = await this.bookmarkService.getPartialBookmarkChangesLog(ctx, ctx.getUserId(), Number(req.end_time))
     return Successed(res)
   }
@@ -325,6 +330,6 @@ export class BookmarkController {
     const query = await RequestUtils.query<{ token: string }>(request)
     if (!query.token) return Failed(ErrorConnectionParam())
 
-    return await this.bookmarkService.connectNotification(ctx, request, query.token)
+    return await this.bookmarkService.connectBookmarkChanges(ctx, request, query.token)
   }
 }
