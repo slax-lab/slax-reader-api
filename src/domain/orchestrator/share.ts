@@ -8,6 +8,24 @@ import { TagService } from '../tag'
 import { BookmarkNotFoundError } from '../../const/err'
 import { MarkService } from '../mark'
 import { markDetail } from '../bookmark'
+import { markType } from '../../infra/repository/dbMark'
+
+export interface getInlineShareDetailResp {
+  title: string
+  target_url: string
+  share_info: {
+    need_login: boolean
+    created_at: string
+    allow_action: boolean
+    share_code: string
+  }
+  user_info: {
+    nick_name: string
+    avatar: string
+    show_userinfo: boolean
+  }
+  marks: markDetail
+}
 
 @injectable()
 export class ShareOrchestrator {
@@ -18,6 +36,34 @@ export class ShareOrchestrator {
     @inject(MarkService) private markService: MarkService,
     @inject(BookmarkService) private bookmarkService: BookmarkService
   ) {}
+
+  public async getInlineShareDetail(ctx: ContextManager, shareCode: string): Promise<getInlineShareDetailResp> {
+    const share = await this.shareService.getBookmarkShareByShareCode(shareCode)
+    if (!share) throw BookmarkNotFoundError()
+
+    const [userInfo, bookmark, marks] = await Promise.all([
+      this.userService.getUserBriefInfo(share.show_userinfo, share.user_id),
+      this.bookmarkService.getBookmarkById(share.bookmark_id),
+      this.markService.getBookmarkMarkList(ctx, share.bookmark_id, share.show_comment && share.show_line, [markType.RAW_WEB_COMMENT, markType.RAW_WEB_LINE])
+    ])
+    if (!bookmark) throw BookmarkNotFoundError()
+
+    return {
+      title: bookmark.title,
+      target_url: bookmark.target_url,
+      share_info: {
+        need_login: ctx.getUserId() < 1,
+        created_at: share.created_at.toISOString(),
+        allow_action: share.allow_comment,
+        share_code: share.share_code
+      },
+      user_info: {
+        ...userInfo,
+        show_userinfo: share.show_userinfo
+      },
+      marks
+    }
+  }
 
   public async getBookmarkByShareCode(ctx: ContextManager, shareCode: string): Promise<getBookmarkByShareResp> {
     const share = await this.shareService.getBookmarkShareByShareCode(shareCode)

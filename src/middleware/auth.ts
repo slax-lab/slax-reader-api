@@ -15,7 +15,8 @@ const whiteList = [
   '/v1/bookmark/connect_changes',
   '/ping',
   '/static/image',
-  '/callback/telegram'
+  '/callback/telegram',
+  '/v1/share/inline_detail'
 ]
 
 export const auth = async (request: Request, ctx: ContextManager) => {
