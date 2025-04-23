@@ -87,6 +87,20 @@ export interface bookmarkShardPO {
   created_at: Date
 }
 
+export interface bookmarkChangePO {
+  target_url: string
+  bookmark_id: number
+  created_at: Date
+}
+
+export interface bookmarkActionChangePO {
+  user_id: number
+  bookmark_id: number
+  created_at: Date
+  target_url: string
+  action: 'add' | 'delete' | 'update'
+}
+
 @injectable()
 export class BookmarkRepo {
   constructor(@inject(PRISIMA_CLIENT) private prisma: LazyInstance<PrismaClient>) {}
@@ -606,5 +620,51 @@ export class BookmarkRepo {
 
   public async getUserBookmarkIds(userId: number) {
     return await this.prisma().slax_user_bookmark.findMany({ where: { user_id: userId }, select: { bookmark_id: true } })
+  }
+
+  public async getAllBookmarkChanges(userId: number) {
+    try {
+      const res = await this.prisma().$queryRaw<
+        bookmarkChangePO[]
+      >`select sb.target_url, ub.id as bookmark_id, ub.created_at from slax_bookmark sb INNER JOIN (select id, bookmark_id, user_id, created_at from slax_user_bookmark where user_id = ${userId}) ub on sb.id = ub.bookmark_id order by ub.created_at desc`
+
+      return res
+    } catch (e) {
+      console.log(e, 'getAllBookmarkChanges error')
+      return []
+    }
+  }
+
+  public async createBookmarkChangeLog(userId: number, url: string, bookmarkId: number, action: 'add' | 'delete' | 'update', time: Date) {
+    try {
+      return await this.prisma().slax_user_bookmark_change.create({
+        data: {
+          user_id: userId,
+          target_url: url,
+          bookmark_id: bookmarkId,
+          action,
+          created_at: time
+        }
+      })
+    } catch (e) {
+      console.log(e, 'createBookmarkChangeLog error')
+      return
+    }
+  }
+
+  public async getPartialBookmarkChanges(userId: number, time: number) {
+    const res = await this.prisma().slax_user_bookmark_change.findMany({
+      where: {
+        user_id: userId,
+        created_at: {
+          gt: new Date(time)
+        }
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    })
+
+    return res as bookmarkActionChangePO[]
   }
 }

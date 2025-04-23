@@ -1,6 +1,6 @@
 import { Failed, Successed } from '../../utils/responseUtils'
 import { ContextManager } from '../../utils/context'
-import { ErrorParam } from '../../const/err'
+import { BookmarkChangesSyncTooOldError, ErrorConnectionParam, ErrorParam } from '../../const/err'
 import { RequestUtils } from '../../utils/requestUtils'
 import { callbackType } from '../../infra/queue/queueClient'
 import { bookmarkPO } from '../../infra/repository/dbBookmark'
@@ -288,5 +288,48 @@ export class BookmarkController {
 
     await this.tagService.deleteBookmarkTag(ctx, req.bookmark_id, req.tag_id)
     return Successed(null)
+  }
+
+  /**
+   * 获取全量书签记录
+   */
+  @Get('/all_changes')
+  public async handleUserGetAllBookmarkChangesRequest(ctx: ContextManager, request: Request) {
+    const res = await this.bookmarkService.getAllBookmarkChangesLog(ctx, ctx.getUserId())
+    return Successed(res)
+  }
+
+  /**
+   * 获取增量书签记录
+   */
+  @Get('/partial_changes')
+  public async handleUserGetPartialBookmarkChangesRequest(ctx: ContextManager, request: Request) {
+    const req = await RequestUtils.query<{ previous_sync: number }>(request)
+
+    // 校验 previous_sync 的时间戳合法性
+    if (!req.previous_sync || isNaN(req.previous_sync) || req.previous_sync < 0 || `${req.previous_sync}`.length !== 13) {
+      return Failed(ErrorParam())
+    }
+
+    // 判断时间是否比现在晚15天
+    if (req.previous_sync < Date.now() - 15 * 24 * 60 * 60 * 1000) {
+      return Failed(BookmarkChangesSyncTooOldError())
+    }
+
+    const res = await this.bookmarkService.getPartialBookmarkChangesLog(ctx, ctx.getUserId(), Number(req.previous_sync))
+    return Successed(res)
+  }
+
+  /**
+   * 获取连接实时增量书签记录 socket
+   */
+  @Get('/connect_changes')
+  public async handleUserGetConnectBookmarkChangesRequest(ctx: ContextManager, request: Request) {
+    const upgradeHeader = request.headers.get('Upgrade')
+    if (!upgradeHeader || upgradeHeader !== 'websocket') return Failed(ErrorConnectionParam())
+    const query = await RequestUtils.query<{ token: string }>(request)
+    if (!query.token) return Failed(ErrorConnectionParam())
+
+    return await this.bookmarkService.connectBookmarkChanges(ctx, request, query.token)
   }
 }

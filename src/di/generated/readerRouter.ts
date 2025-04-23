@@ -95,6 +95,18 @@ router.post('/v1/bookmark/del_tag', async (req: Request, ctx: ContextManager) =>
   const controller = container.resolve(BookmarkController)
   return await controller.handleUserBookmarkDelTagRequest(ctx, req)
 })
+router.get('/v1/bookmark/all_changes', async (req: Request, ctx: ContextManager) => {
+  const controller = container.resolve(BookmarkController)
+  return await controller.handleUserGetAllBookmarkChangesRequest(ctx, req)
+})
+router.get('/v1/bookmark/partial_changes', async (req: Request, ctx: ContextManager) => {
+  const controller = container.resolve(BookmarkController)
+  return await controller.handleUserGetPartialBookmarkChangesRequest(ctx, req)
+})
+router.get('/v1/bookmark/connect_changes', async (req: Request, ctx: ContextManager) => {
+  const controller = container.resolve(BookmarkController)
+  return await controller.handleUserGetConnectBookmarkChangesRequest(ctx, req)
+})
 router.all('/callback/telegram', async (req: Request, ctx: ContextManager) => {
   const controller = container.resolve(CallbackController)
   return await controller.handlerTelegramCallback(ctx, req)

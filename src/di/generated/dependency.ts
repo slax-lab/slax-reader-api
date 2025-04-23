@@ -21,9 +21,9 @@ import { ReportRepo } from '../../infra/repository/dbReport'
 import { BookmarkService } from '../../domain/bookmark'
 import { TagService } from '../../domain/tag'
 import { MarkService } from '../../domain/mark'
-import { NotificationService } from '../../domain/notification'
 import { ImportService } from '../../domain/import'
 import { UrlParserHandler } from '../../domain/orchestrator/urlParser'
+import { NotificationService } from '../../domain/notification'
 import { ShareService } from '../../domain/share'
 import { UserService } from '../../domain/user'
 import { AigcService } from '../../domain/aigc'
@@ -68,7 +68,8 @@ container.register(BookmarkService, {
       container.resolve(VectorizeRepo),
       container.resolve(MarkRepo),
       container.resolve(UserRepo),
-      lazy(() => container.resolve(QueueClient))
+      lazy(() => container.resolve(QueueClient)),
+      container.resolve(NotificationMessage)
     )
 })
 
