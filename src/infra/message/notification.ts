@@ -126,11 +126,6 @@ export class NotificationMessage {
   public async sendBookmarkChange(env: Env, payload: bookmarkActionChangePO) {
     const doId = env.WEBSOCKET_SERVER.idFromName('global')
     const dObj = env.WEBSOCKET_SERVER.get(doId)
-    await dObj.sendBookmarkChange(payload.user_id, {
-      bookmark_id: payload.bookmark_id,
-      target_url: payload.target_url,
-      action: payload.action,
-      created_at: payload.created_at
-    })
+    await dObj.sendBookmarkChange(payload)
   }
 }

@@ -159,8 +159,8 @@ export class BookmarkService {
     if (relation) {
       // 在数据库中增加收藏添加记录
       try {
-        await Promise.all([
-          this.bookmarkRepo.createBookmarkChangeLog(options.ctx.getUserId(), options.targetUrl, relation.id, 'add', relation.created_at),
+        await this.bookmarkRepo.createBookmarkChangeLog(options.ctx.getUserId(), options.targetUrl, relation.id, 'add', relation.created_at)
+        options.ctx.execution.waitUntil(
           this.notifyMessage.sendBookmarkChange(options.ctx.env, {
             user_id: options.ctx.getUserId(),
             bookmark_id: relation.id,
@@ -168,7 +168,7 @@ export class BookmarkService {
             target_url: options.targetUrl,
             action: 'add'
           })
-        ])
+        )
       } catch (e) {
         console.error('create bookmark change log error:', e)
       }
@@ -375,7 +375,10 @@ export class BookmarkService {
         bmRepo.deleteUserBookmark(bmId, userId),
         searchRepo.deleteUserBookmark(userId, bmId),
         this.markRepo.deleteByBookmarkId(bmInfo.id),
-        bmRepo.createBookmarkChangeLog(userId, bmInfo.bookmark?.target_url, bmInfo.id, 'delete', new Date()),
+        bmRepo.createBookmarkChangeLog(userId, bmInfo.bookmark?.target_url, bmInfo.id, 'delete', new Date())
+      ])
+
+      ctx.execution.waitUntil(
         this.notifyMessage.sendBookmarkChange(ctx.env, {
           user_id: userId,
           bookmark_id: bmInfo.id,
@@ -383,7 +386,7 @@ export class BookmarkService {
           target_url: bmInfo.bookmark?.target_url,
           action: 'delete'
         })
-      ])
+      )
 
       if (resErr instanceof MultiLangError) {
         console.error('delete user bookmark error:', resErr)
@@ -765,43 +768,37 @@ export class BookmarkService {
   public async getAllBookmarkChangesLog(ctx: ContextManager, userId: number) {
     const res = (await this.bookmarkRepo.getAllBookmarkChanges(userId)) || []
 
-    const logs = []
-    for (const item of res) {
-      logs.push({
-        target_url: item.target_url,
-        bookmark_id: ctx.hashIds.encodeId(item.bookmark_id)
-      })
-    }
+    const logs = res.map(item => ({
+      target_url: item.target_url,
+      bookmark_id: ctx.hashIds.encodeId(item.bookmark_id)
+    }))
 
-    const end_time = res.length > 0 ? res[0].created_at.getTime() : null
+    const previous_sync = res.length > 0 ? res[0].created_at.getTime() : null
 
     return {
       logs,
-      ...(end_time ? { end_time } : {})
+      ...(previous_sync ? { previous_sync } : {})
     }
   }
 
   public async getPartialBookmarkChangesLog(ctx: ContextManager, userId: number, time: number) {
     const res = (await this.bookmarkRepo.getPartialBookmarkChanges(userId, time)) || []
 
-    const logs = []
-    for (const item of res) {
-      logs.push({
-        target_url: item.target_url,
-        bookmark_id: ctx.hashIds.encodeId(item.bookmark_id),
-        log_action: item.action
-      })
-    }
+    const logs = res.map(item => ({
+      target_url: item.target_url,
+      bookmark_id: ctx.hashIds.encodeId(item.bookmark_id),
+      log_action: item.action
+    }))
 
-    const end_time = res.length > 0 ? res[0].created_at.getTime() : null
+    const previous_sync = res.length > 0 ? res[0].created_at.getTime() : null
 
     return {
       logs,
-      ...(end_time ? { end_time } : {})
+      ...(previous_sync ? { previous_sync } : {})
     }
   }
 
-  public async connectNotification(ctx: ContextManager, request: Request, token: string) {
+  public async connectBookmarkChanges(ctx: ContextManager, request: Request, token: string) {
     await authToken(ctx, token)
 
     let pushToken = String(randomUUID())

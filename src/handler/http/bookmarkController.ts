@@ -304,19 +304,19 @@ export class BookmarkController {
    */
   @Get('/partial_changes')
   public async handleUserGetPartialBookmarkChangesRequest(ctx: ContextManager, request: Request) {
-    const req = await RequestUtils.query<{ end_time: number }>(request)
+    const req = await RequestUtils.query<{ previous_sync: number }>(request)
 
-    // 校验end_time的时间戳合法性
-    if (!req.end_time || isNaN(req.end_time) || req.end_time < 0) {
+    // 校验 previous_sync 的时间戳合法性
+    if (!req.previous_sync || isNaN(req.previous_sync) || req.previous_sync < 0) {
       return Failed(ErrorParam())
     }
 
     // 判断时间是否比现在晚15天
-    if (req.end_time < Date.now() - 15 * 24 * 60 * 60 * 1000) {
+    if (req.previous_sync < Date.now() - 15 * 24 * 60 * 60 * 1000) {
       return Failed(BookmarkChangesSyncTooOldError())
     }
 
-    const res = await this.bookmarkService.getPartialBookmarkChangesLog(ctx, ctx.getUserId(), Number(req.end_time))
+    const res = await this.bookmarkService.getPartialBookmarkChangesLog(ctx, ctx.getUserId(), Number(req.previous_sync))
     return Successed(res)
   }
 
