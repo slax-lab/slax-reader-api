@@ -179,3 +179,4 @@ prod.toml
 dev.toml
 
 .DS_Store
+worker-configuration.d.ts

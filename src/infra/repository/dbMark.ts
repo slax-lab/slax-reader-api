@@ -91,13 +91,13 @@ export class MarkRepo {
     })
   }
 
-  async list(userBmId: number) {
+  async list(userBmId: number, types: markType[]) {
     return (
       await this.prisma().slax_mark_comment.findMany({
         where: {
-          // type: {
-          //   in: whereType
-          // },
+          type: {
+            in: types
+          },
           bookmark_id: userBmId
         }
       })

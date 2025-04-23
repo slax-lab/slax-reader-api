@@ -270,13 +270,13 @@ export class MarkService {
     return 'ok'
   }
 
-  public async getBookmarkMarkList(ctx: ContextManager, userBmId: number, isShowMarks: boolean) {
+  public async getBookmarkMarkList(ctx: ContextManager, userBmId: number, isShowMarks: boolean, types = [markType.COMMENT, markType.REPLY]) {
     const defaultResult = { mark_list: [], user_list: [] }
     if (!isShowMarks) return defaultResult
     const markRepo = this.markRepo
     const userRepo = this.userRepo
 
-    const marks = await markRepo.list(userBmId)
+    const marks = await markRepo.list(userBmId, types)
     if (marks.length === 0) return defaultResult
 
     const users = await userRepo.getUserInfoList(marks.map(m => m.user_id))
@@ -316,10 +316,12 @@ export class MarkService {
 
   public async getMarkList(ctx: ContextManager, page: number, size: number): Promise<markCommentItem[]> {
     const markRepo = this.markRepo
-    const markTypeMap = {
+    const markTypeMap: Record<markType, string> = {
       [markType.COMMENT]: 'comment',
       [markType.LINE]: 'mark',
-      [markType.REPLY]: 'reply'
+      [markType.REPLY]: 'reply',
+      [markType.RAW_WEB_LINE]: 'mark',
+      [markType.RAW_WEB_COMMENT]: 'comment'
     }
     const marks = await markRepo.listUserMark(ctx.getUserId(), page, size)
     if (marks.length === 0) return []

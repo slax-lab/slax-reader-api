@@ -3,7 +3,6 @@ import { RequestUtils } from '../../utils/requestUtils'
 import { Failed, Successed } from '../../utils/responseUtils'
 import { inject } from '../../decorators/di'
 import { ShareService } from '../../domain/share'
-import type { LazyInstance } from '../../decorators/lazy'
 import { Controller } from '../../decorators/controller'
 import { Get, Post } from '../../decorators/route'
 import { ContextManager } from '../../utils/context'
@@ -26,6 +25,15 @@ export class ShareController {
     if (!req || !req.share_code || req.share_code.length < 1) return Failed(ErrorParam())
 
     const shareDetail = await this.shareOrchestrator.getBookmarkByShareCode(ctx, req.share_code)
+    return Successed(shareDetail)
+  }
+
+  @Get('/inline_detail')
+  public async getInlineShare(ctx: ContextManager, request: Request) {
+    const req = await RequestUtils.query<{ share_code: string }>(request)
+    if (!req || !req.share_code || req.share_code.length < 1) return Failed(ErrorParam())
+
+    const shareDetail = await this.shareOrchestrator.getInlineShareDetail(ctx, req.share_code)
     return Successed(shareDetail)
   }
 

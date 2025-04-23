@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy --minify -c ./config/config.toml",
-    "dev": "wrangler dev --env dev --ip 0.0.0.0 -c ./config/config.toml --experimental-vectorize-bind-to-prod --test-scheduled",
+    "dev": "wrangler dev --env dev --ip 0.0.0.0 -c ./config/dev.toml --experimental-vectorize-bind-to-prod --test-scheduled",
     "preview": "wrangler dev --env preview --remote -c ./config/config.toml",
     "test": "vitest",
-    "types": "wrangler types -c ./config/config.toml",
+    "types": "wrangler types -c ./config/dev.toml",
     "lint": "eslint . --ext .mjs,.js,.vue,.ts",
     "lint:fix": "eslint . --ext .mjs,.js,.ts --fix",
     "lint:fix:gen": "eslint ./src/di/generated --ext .ts --fix",
@@ -19,7 +19,7 @@
     "gen:consumer": "tsx ./script/gen-consumer.ts",
     "gen:router": "tsx ./script/gen-routers.ts",
     "gen:all": "pnpm gen:model && pnpm types && pnpm gen:cron && pnpm gen:consumer && pnpm gen:router && pnpm gen:di && pnpm prettier --write ./src/di/generated && pnpm prettier --write ./worker-configuration.d.ts",
-    "migration:local": "wrangler d1 migrations apply slax-reader-backend --local -c ./config/config.toml",
+    "migration:local": "wrangler d1 migrations apply slax-reader-backend --local -c ./config/dev.toml",
     "migration:local:fulltext": "wrangler d1 migrations apply slax-reader-backend-fulltext --local -c ./config/config.toml"
   },
   "dependencies": {
