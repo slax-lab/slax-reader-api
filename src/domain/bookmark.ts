@@ -826,6 +826,15 @@ export class BookmarkService {
       })
   }
 
+  public async getUserBookmarkSummary(bookmarkId: number, userId: number, lang: string) {
+    return await this.bookmarkRepo.getUserBookmarkSummary(bookmarkId, userId, lang)
+  }
+
+  async saveSummary(bmId: number, userId: number, lang: string, provider: string, content: string, model: string) {
+    const info = { content: content, ai_name: provider || '', ai_model: model || '', bookmark_id: bmId, user_id: userId, lang }
+    await this.bookmarkRepo.upsertBookmarkSummary(info)
+  }
+
   public getQueue(): LazyInstance<QueueClient> {
     return this.queue
   }

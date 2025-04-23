@@ -54,7 +54,6 @@ import { DatabaseRegistry } from '../data'
 container.register(AigcService, {
   useFactory: container =>
     new AigcService(
-      container.resolve(BookmarkRepo),
       lazy(() => container.resolve(ChatCompletion)),
       lazy(() => container.resolve(BucketClient))
     )
