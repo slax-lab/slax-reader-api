@@ -307,7 +307,7 @@ export class BookmarkController {
     const req = await RequestUtils.query<{ previous_sync: number }>(request)
 
     // 校验 previous_sync 的时间戳合法性
-    if (!req.previous_sync || isNaN(req.previous_sync) || req.previous_sync < 0) {
+    if (!req.previous_sync || isNaN(req.previous_sync) || req.previous_sync < 0 || `${req.previous_sync}`.length !== 13) {
       return Failed(ErrorParam())
     }
 
