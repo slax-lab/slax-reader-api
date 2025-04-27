@@ -37,7 +37,6 @@ import { ImportOrchestrator } from '../../domain/orchestrator/import'
 import { BookmarkJob } from '../../handler/cron/bookmarkJob'
 import { BookmarkConsumer } from '../../handler/queue/bookmarkConsumer'
 import { ChatCompletion } from '../../infra/external/chatCompletion'
-import { StripeClient } from '../../infra/external/stripe'
 import { QueueClient } from '../../infra/queue/queueClient'
 import { BucketClient } from '../../infra/repository/bucketClient'
 import { KVClient } from '../../infra/repository/KVClient'
@@ -173,10 +172,6 @@ container.register(ChatCompletion, {
   useClass: ChatCompletion
 })
 
-container.register(StripeClient, {
-  useClass: StripeClient
-})
-
 container.register(NotificationMessage, {
   useFactory: container => new NotificationMessage(container.resolve(UserRepo))
 })
@@ -229,7 +224,8 @@ container.register(BookmarkController, {
       container.resolve(ImportService),
       container.resolve(SearchService),
       container.resolve(TagService),
-      container.resolve(UrlParserHandler)
+      container.resolve(UrlParserHandler),
+      container.resolve(MarkService)
     )
 })
 

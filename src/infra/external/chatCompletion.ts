@@ -4,7 +4,6 @@ import { MultiLangError } from '../../utils/multiLangError'
 import { AIContentHarmful, AIError, AIRateLimitError } from '../../const/err'
 import { getBestAzureInstance } from '../../utils/azureOpenAI'
 import { ContextManager } from '../../utils/context'
-import { AiTextGenerationToolInputWithFunction, runWithTools } from '@cloudflare/ai-utils'
 import { injectable } from '../../decorators/di'
 
 export type callbackHandle = (chunk: string | MultiLangError) => Promise<void>
@@ -123,52 +122,6 @@ export class ChatCompletion {
       if (!chunk.choices || !chunk.choices[0] || !chunk.choices[0].delta || !chunk.choices[0].delta.content) continue
       await callback(chunk.choices[0].delta.content)
     }
-  }
-
-  private async runToolCfAi(
-    chat: OpenAI.Beta.Chat.Completions,
-    messages: ChatCompletionMessageParam[],
-    callback: callbackHandle,
-    tools: Parameters<typeof chat.runTools>[0]['tools']
-  ) {
-    const msg: RoleScopedChatInput[] = messages
-      .filter(item => typeof item.content === 'string')
-      .map(item => {
-        return {
-          role: item.role as any,
-          content: item.content as string
-        }
-      })
-    const toolList: AiTextGenerationToolInputWithFunction[] = tools.map(tool => {
-      if (!tool.function.name) {
-        throw new Error('Tool function name is required')
-      }
-      return {
-        name: tool.function.name,
-        description: `执行${tool.function.name}操作`,
-        parameters: {
-          type: 'object',
-          properties:
-            tool.function.parameters && 'properties' in tool.function.parameters
-              ? Object.fromEntries(
-                  Object.entries(tool.function.parameters.properties as Record<string, unknown>).map(([key, value]) => [key, { type: 'string', description: String(value) }])
-                )
-              : {},
-          required: tool.function.parameters && 'properties' in tool.function.parameters ? Object.keys(tool.function.parameters.properties as Record<string, unknown>) : []
-        }
-      }
-    })
-    const rdStream = await runWithTools(
-      this.env.AI,
-      '@hf/nousresearch/hermes-2-pro-mistral-7b',
-      {
-        messages: msg,
-        tools: toolList
-      },
-      {
-        streamFinalResponse: true
-      }
-    )
   }
 
   private getCompletionsList<T extends boolean>(ctx: ContextManager, isBeta: T): T extends true ? OpenAI.Beta.Chat.Completions[] : OpenAI.Chat.Completions[] {

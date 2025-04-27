@@ -140,6 +140,9 @@ model slax_mark_comment {
   root_id   Int @default(0)
   parent_id Int @default(0)
 
+  // 模糊匹配来源
+  approx_source String @default("")
+
   // 划线/评论的内容
   content String @default("")
 

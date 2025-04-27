@@ -23,13 +23,13 @@
     "migration:local:fulltext": "wrangler d1 migrations apply slax-reader-backend-fulltext --local -c ./config/config.toml"
   },
   "dependencies": {
-    "@cloudflare/ai-utils": "^1.0.1",
     "@prisma/adapter-d1": "^5.22.0",
     "@prisma/client": "^5.22.0",
     "@slax-lab/readability": "0.6.2",
     "@types/node": "^20.16.5",
     "@types/web": "^0.0.151",
     "@upstash/redis": "^1.34.3",
+    "approx-string-match": "^2.0.0",
     "aws4fetch": "^1.0.20",
     "date-fns": "^3.6.0",
     "grammy": "^1.30.0",

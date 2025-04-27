@@ -39,6 +39,15 @@ export interface markRequest {
   collection_code?: string
   cb_id?: number
   type: markType
+  approx_source?: markApproxSource
+}
+
+export interface markApproxSource {
+  exact: string
+  prefix: string
+  suffix: string
+  position_start: number
+  position_end: number
 }
 
 export interface markSelectContent {
@@ -76,6 +85,7 @@ export interface markCommentItem {
   comment: string
   source_type: 'share' | 'bookmark'
   source_id: string
+  approx_source?: markApproxSource
 }
 
 @injectable()
@@ -213,7 +223,8 @@ export class MarkService {
       comment: data.comment || '',
       created_at: new Date(),
       parent_id: parentId,
-      root_id: rootId
+      root_id: rootId,
+      approx_source: data.approx_source
     })
     if (!res) throw ServerError()
 
@@ -270,13 +281,13 @@ export class MarkService {
     return 'ok'
   }
 
-  public async getBookmarkMarkList(ctx: ContextManager, userBmId: number, isShowMarks: boolean, types = [markType.COMMENT, markType.REPLY]) {
+  public async getBookmarkMarkList(ctx: ContextManager, userBmId: number, isShowMarks: boolean) {
     const defaultResult = { mark_list: [], user_list: [] }
     if (!isShowMarks) return defaultResult
     const markRepo = this.markRepo
     const userRepo = this.userRepo
 
-    const marks = await markRepo.list(userBmId, types)
+    const marks = await markRepo.list(userBmId)
     if (marks.length === 0) return defaultResult
 
     const users = await userRepo.getUserInfoList(marks.map(m => m.user_id))
@@ -290,7 +301,8 @@ export class MarkService {
         parent_id: ctx.hashIds.encodeId(m.parent_id),
         root_id: ctx.hashIds.encodeId(m.root_id),
         created_at: m.created_at,
-        is_deleted: m.is_deleted
+        is_deleted: m.is_deleted,
+        approx_source: m.approx_source
       }
     })
     const userMap: Record<number, markUserInfo> = {
@@ -379,7 +391,8 @@ export class MarkService {
           parent_comment_deleted: mark.type === markType.REPLY ? deletedParentCommmentIdList.has(mark.parent_id) : undefined,
           comment: mark.comment,
           source_type: mark.source_type as 'share' | 'bookmark',
-          source_id: sourceId
+          source_id: sourceId,
+          approx_source: JSON.parse(mark.approx_source)
         })
       } catch (e) {
         console.log(`get mark list failed: ${e}, content: ${mark.content}`)

@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@cloudflare/ai-utils':
-        specifier: ^1.0.1
-        version: 1.0.1
       '@prisma/adapter-d1':
         specifier: ^5.22.0
         version: 5.22.0
@@ -29,6 +26,9 @@ importers:
       '@upstash/redis':
         specifier: ^1.34.3
         version: 1.34.3
+      approx-string-match:
+        specifier: ^2.0.0
+        version: 2.0.0
       aws4fetch:
         specifier: ^1.0.20
         version: 1.0.20
@@ -122,9 +122,6 @@ importers:
         version: 3.112.0(@cloudflare/workers-types@4.20241112.0)
 
 packages:
-
-  '@cloudflare/ai-utils@1.0.1':
-    resolution: {integrity: sha512-gmn16AvVqtMLcaBYvPkwEWui39E4hlcFPqXuVamKbGleIDO6hVpvAy3KCvbnoPVT7KqRcfdLLpHRIBQDwI9tWQ==}
 
   '@cloudflare/kv-asset-handler@0.3.4':
     resolution: {integrity: sha512-YLPHc8yASwjNkmcDMQMY35yiWjoKAKnhUbPRszBRS0YgH+IXtsMp61j+yTcnCE3oO2DgP0U3iejLC8FTtKDC8Q==}
@@ -1028,6 +1025,9 @@ packages:
   ansi-styles@4.3.0:
     resolution: {integrity: sha512-zbB9rCJAT1rbjiVDb2hqKFHNYLxgtk8NURxZ3IZwD3F6NtxbXZQCnnSi1Lkx+IDohdPlFp222wVALIheZJQSEg==}
     engines: {node: '>=8'}
+
+  approx-string-match@2.0.0:
+    resolution: {integrity: sha512-03v8MsWnZYV4Svv82EYWoVw1RIKAJ/zubmhG1FYvhJwOsBnLPxx6CPHF2dXN/yW8uwHK+653j52IwiNluJR97w==}
 
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
@@ -2338,11 +2338,6 @@ packages:
 
 snapshots:
 
-  '@cloudflare/ai-utils@1.0.1':
-    dependencies:
-      yaml: 2.6.1
-      zod: 3.23.8
-
   '@cloudflare/kv-asset-handler@0.3.4':
     dependencies:
       mime: 3.0.0
@@ -3097,6 +3092,8 @@ snapshots:
   ansi-styles@4.3.0:
     dependencies:
       color-convert: 2.0.1
+
+  approx-string-match@2.0.0: {}
 
   argparse@2.0.1: {}
 
@@ -4481,7 +4478,8 @@ snapshots:
 
   y18n@5.0.8: {}
 
-  yaml@2.6.1: {}
+  yaml@2.6.1:
+    optional: true
 
   yargs-parser@21.1.1: {}
 

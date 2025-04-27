@@ -35,6 +35,7 @@ export class MarkController {
     if (req.type === markType.LINE && (req.comment || sourceType !== 'object')) return Failed(ErrorMarkTypeError())
     if (req.type === markType.COMMENT && (!req.comment || req.comment.length < 1 || sourceType !== 'object')) return Failed(ErrorMarkTypeError())
     if (req.type === markType.REPLY && (!req.comment || req.comment.length < 1)) return Failed(ErrorMarkTypeError())
+    if ([markType.RAW_WEB_COMMENT, markType.RAW_WEB_LINE].includes(req.type) && !req.approx_source) return Failed(ErrorMarkTypeError())
 
     const createResult = await this.markOrchestrator.createMark(ctx, req)
 
