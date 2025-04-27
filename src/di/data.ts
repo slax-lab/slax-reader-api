@@ -6,7 +6,6 @@ import { ChatCompletion } from '../infra/external/chatCompletion'
 import { BucketClient } from '../infra/repository/bucketClient'
 import { KVClient } from '../infra/repository/KVClient'
 import { QueueClient } from '../infra/queue/queueClient'
-import { StripeClient } from '../infra/external/stripe'
 
 @singleton()
 export class DatabaseRegistry {
@@ -23,7 +22,6 @@ export class DatabaseRegistry {
       useFactory: () => [env.VECTORIZE1, env.VECTORIZE2, env.VECTORIZE3, env.VECTORIZE4, env.VECTORIZE5],
       uncached: true
     })
-    container.register(StripeClient, { useFactory: () => new StripeClient(env), uncached: true })
     container.register(ChatCompletion, { useFactory: () => new ChatCompletion(env), uncached: true })
     container.register(BucketClient, { useFactory: () => new BucketClient(env), uncached: true })
     container.register(KVClient, { useFactory: () => new KVClient(env), uncached: true })

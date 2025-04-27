@@ -34,6 +34,15 @@ export interface markPO {
   source_type: string
   source_id: string
   content: markSelectContent[]
+  approx_source?: markApproxSource
+}
+
+export interface markApproxSource {
+  exact: string
+  prefix: string
+  suffix: string
+  position_start: number
+  position_end: number
 }
 
 export interface markPOWithId {
@@ -42,6 +51,7 @@ export interface markPOWithId {
   bookmark_id: number
   type: number
   source: string
+  approx_source: string
   comment: string
   root_id: number
   parent_id: number
@@ -86,18 +96,16 @@ export class MarkRepo {
         root_id: data.root_id,
         source_type: data.source_type,
         source_id: data.source_id,
-        content: JSON.stringify(data.content)
+        content: JSON.stringify(data.content),
+        approx_source: JSON.stringify(data.approx_source)
       }
     })
   }
 
-  async list(userBmId: number, types: markType[]) {
+  async list(userBmId: number) {
     return (
       await this.prisma().slax_mark_comment.findMany({
         where: {
-          type: {
-            in: types
-          },
           bookmark_id: userBmId
         }
       })
@@ -113,7 +121,8 @@ export class MarkRepo {
         updated_at: item.updated_at,
         is_deleted: item.is_deleted,
         parent_id: item.parent_id,
-        root_id: item.root_id
+        root_id: item.root_id,
+        approx_source: JSON.parse(item.approx_source.length > 0 ? item.approx_source : '{}')
       }
     })
   }
