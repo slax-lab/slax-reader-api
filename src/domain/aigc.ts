@@ -210,10 +210,7 @@ export class AigcService {
     writer: WritableStream<Uint8Array>,
     callbackHandler?: (result: { provider: string; model: string; response: string }) => Promise<void>
   ) {
-    let providerInfo: {
-      provider: string
-      model: string
-    } | void | null = null
+    let providerInfo
     this.wr = writer.getWriter()
     const lang = ctx.getlang()
 
@@ -236,22 +233,14 @@ export class AigcService {
     } finally {
       this.wr.close()
 
-      if (!callbackHandler) {
-        return
-      }
+      if (!callbackHandler || !this.chunks || !providerInfo) return
 
-      let chunkResponse = ''
-      if (!!this.chunks && !!providerInfo) {
-        const blob = new Blob(this.chunks)
-        const text = await blob.text()
-
-        chunkResponse = text
-      }
+      const blob = new Blob(this.chunks)
 
       await callbackHandler({
         provider: providerInfo?.provider || '',
         model: providerInfo?.model || '',
-        response: chunkResponse
+        response: await blob.text()
       })
     }
   }
@@ -263,7 +252,7 @@ export class AigcService {
     // 去掉最后一条消息
     messages.pop()
     const raw = rawContent
-    const systemMessage = userChatBookmarkSystemPrompt.replace('{raw}', raw)
+    const systemMessage = userChatBookmarkSystemPrompt.replace('{article}', raw)
     const userMessage = { type: 'text', text: getUserChatBookmarkUserPrompt().replace('{content}', content) } as ChatCompletionContentPart
     const quoteMessage = quote.map(item => {
       return item.type === 'text' ? { type: 'text', text: item.content } : { type: 'image_url', image_url: { url: item.content } }

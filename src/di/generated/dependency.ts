@@ -224,8 +224,7 @@ container.register(BookmarkController, {
       container.resolve(ImportService),
       container.resolve(SearchService),
       container.resolve(TagService),
-      container.resolve(UrlParserHandler),
-      container.resolve(MarkService)
+      container.resolve(UrlParserHandler)
     )
 })
 
