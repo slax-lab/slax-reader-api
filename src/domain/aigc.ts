@@ -53,6 +53,7 @@ export class AigcService {
     @inject(BucketClient) private bucket: LazyInstance<BucketClient>
   ) {}
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async recordChunks(chunk: Uint8Array, controller: TransformStreamDefaultController<any>) {
     this.chunks.push(chunk)
     controller.enqueue(chunk)
@@ -143,7 +144,7 @@ export class AigcService {
     })
   }
 
-  async generateTags(ctx: ContextManager, env: Env, bmTitle: string, bmContent: string) {
+  async generateTags(ctx: ContextManager, bmTitle: string, bmContent: string) {
     let buffer = ''
     let isErr = false
 
@@ -261,6 +262,7 @@ export class AigcService {
     messages.push({ role: 'system', content: systemMessage })
     messages.push({ role: 'user', content: [...quoteMessage, userMessage] })
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tools: any[] = [
       {
         type: 'function',

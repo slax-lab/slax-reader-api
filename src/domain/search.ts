@@ -186,7 +186,7 @@ export class SearchService {
     return this.processHybridSearchList(hybridSearchMap)
   }
 
-  public async processHybridSearchRerank(env: Env, keyword: string, hybridSearchMap: Record<number, hybridSearchItem>) {
+  public async processHybridSearchRerank(ctx: ContextManager, keyword: string, hybridSearchMap: Record<number, hybridSearchItem>) {
     // 预处理搜索结果
     const processedItems = Object.values(hybridSearchMap).map(item => ({
       ...item,
@@ -199,7 +199,7 @@ export class SearchService {
     // 获取重排序分数
     const texts = processedItems.map(item => `${item.highlight_title}\n${item.highlight_content}`)
     const t1 = performance.now()
-    const rerankedScores = await rerank(env, keyword, texts).finally(() => {
+    const rerankedScores = await rerank(ctx.env, keyword, texts).finally(() => {
       console.log(`rerank time: ${performance.now() - t1} ms`)
     })
 
@@ -324,7 +324,6 @@ export class SearchService {
     if (vectorizeResult.length < 1 || userBookmarkItem.length < 1 || !vectorizeResult) return []
 
     const searchPromises: Promise<VectorizeMatches | []>[] = []
-    const dsRepo = this.bookmarkSearchRepo
     const shardBucket: shardBucket[] = Array.from({ length: 5 }, (_, idx) => ({ userBookmarkIds: [], shardIdx: idx }))
     // 分出每个桶的数据
     userBookmarkItem.forEach(item => {
@@ -363,13 +362,13 @@ export class SearchService {
     return result
   }
 
-  public async addSearchRecordByBmId(ctx: ContextManager, env: Env, bookmarkId: number) {
+  public async addSearchRecordByBmId(ctx: ContextManager, bookmarkId: number) {
     const bookmark = await this.bookmarkRepo.getBookmarkById(bookmarkId)
     if (!bookmark) throw BookmarkNotFoundError()
     if (!bookmark.content_md_key) throw BookmarkNotFoundError()
-    const content = await env.OSS.get(bookmark.content_md_key)
+    const content = await ctx.env.OSS.get(bookmark.content_md_key)
     if (!content) throw BookmarkNotFoundError()
-    const normalizer = new Normalizer(env)
+    const normalizer = new Normalizer(ctx.env)
 
     const body = await content.text()
     return await Promise.allSettled([
@@ -378,8 +377,8 @@ export class SearchService {
     ])
   }
 
-  public async addSearchRecord(ctx: ContextManager, env: Env, bookmarkId: number, title: string, content: string) {
-    const normalizer = new Normalizer(env)
+  public async addSearchRecord(ctx: ContextManager, bookmarkId: number, title: string, content: string) {
+    const normalizer = new Normalizer(ctx.env)
     return await Promise.allSettled([this.fulltextNormalize(ctx, normalizer, bookmarkId, title, content), this.semanticNormalize(ctx, normalizer, bookmarkId, title, content)])
   }
 
