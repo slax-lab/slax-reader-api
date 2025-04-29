@@ -44,7 +44,7 @@ export class ShareOrchestrator {
     const [userInfo, bookmark, marks] = await Promise.all([
       this.userService.getUserBriefInfo(share.show_userinfo, share.user_id),
       this.bookmarkService.getBookmarkById(share.bookmark_id),
-      this.markService.getBookmarkMarkList(ctx, share.bookmark_id, share.show_comment && share.show_line, [markType.RAW_WEB_COMMENT, markType.RAW_WEB_LINE])
+      this.markService.getBookmarkMarkList(ctx, share.bookmark_id, share.show_comment && share.show_line)
     ])
     if (!bookmark) throw BookmarkNotFoundError()
 
