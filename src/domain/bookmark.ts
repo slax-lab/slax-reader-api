@@ -1,4 +1,4 @@
-import { BookmarkNotFoundError, CreateBookmarkFailError, ErrorParam, UserNotFoundError } from '../const/err'
+import { BookmarkContentNotFoundError, BookmarkNotFoundError, CreateBookmarkFailError, ErrorParam, UserNotFoundError } from '../const/err'
 import { ContextManager } from '../utils/context'
 import { BlockTargetUrlError } from '../const/err'
 import { bookmarkFetchRetryStatus, bookmarkParseStatus, BookmarkRepo, queueStatus } from '../infra/repository/dbBookmark'
@@ -837,5 +837,34 @@ export class BookmarkService {
 
   public getQueue(): LazyInstance<QueueClient> {
     return this.queue
+  }
+
+  public async getBookmarkTitleContent(
+    ctx: ContextManager,
+    bmId?: number,
+    shareCode?: string,
+    cbId?: number,
+    title?: string,
+    content?: string
+  ): Promise<{ title: string; content: string; bmId: number }> {
+    if (!bmId && !shareCode && !cbId && !title && !content) throw ErrorParam()
+
+    if (!bmId && !shareCode && !cbId && title && content) {
+      return { title, content, bmId: 0 }
+    }
+
+    const bookmarkId = await this.getBookmarkId(ctx, bmId, shareCode, cbId)
+    if (!bookmarkId || bookmarkId < 1) throw ErrorParam()
+
+    const bookmark = await this.getBookmarkById(bookmarkId)
+    if (!bookmark || bookmark instanceof MultiLangError || !bookmark.content_md_key) {
+      throw BookmarkNotFoundError()
+    }
+
+    const body = await this.getBookmarkContent(bookmark.content_md_key)
+
+    if (!body) throw BookmarkContentNotFoundError()
+
+    return { title: bookmark.title, content: body, bmId: bookmarkId }
   }
 }
