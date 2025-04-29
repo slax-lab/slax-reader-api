@@ -323,7 +323,6 @@ export class AigcService {
       }
     }
 
-    console.log(JSON.stringify(messages))
     await this.aigc().runTools(ctx, messages, callback, tools)
 
     if (buffer && !outputDone) {
