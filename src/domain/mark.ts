@@ -230,7 +230,7 @@ export class MarkService {
 
     // 如果是父级评论，多update一次追加root_id，后续delete的时候不需要重新查询
     const callback = async () => {
-      if (data.type === markType.COMMENT) await this.markRepo.updateCommentRootId(res.id, res.id)
+      if ([markType.COMMENT, markType.ORIGIN_COMMENT].includes(data.type)) await this.markRepo.updateCommentRootId(res.id, res.id)
     }
     ctx.execution.waitUntil(callback())
 
@@ -258,7 +258,7 @@ export class MarkService {
     }
 
     // 如果root_id的评论底下有任意子评论，则软删除当前评论
-    if (mark.type === markType.COMMENT || mark.type === markType.REPLY) {
+    if ([markType.COMMENT, markType.ORIGIN_COMMENT, markType.REPLY].includes(mark.type)) {
       const res = await this.markRepo.existsCommentMarkChild(mark.user_bookmark_id, mark.root_id)
       // 如果有子评论，把评论标记为删除
       if (res && res > 1) {
@@ -268,9 +268,9 @@ export class MarkService {
     }
     // 硬删除评论
     try {
-      if (mark.type === markType.COMMENT || mark.type === markType.REPLY) {
+      if ([markType.COMMENT, markType.ORIGIN_COMMENT, markType.REPLY].includes(mark.type)) {
         await this.markRepo.deleteByRootId(mark.user_bookmark_id, mark.root_id)
-      } else if (mark.type === markType.LINE) {
+      } else if ([markType.LINE, markType.ORIGIN_LINE].includes(mark.type)) {
         await this.markRepo.del(markId)
       }
     } catch (e) {
@@ -332,8 +332,8 @@ export class MarkService {
       [markType.COMMENT]: 'comment',
       [markType.LINE]: 'mark',
       [markType.REPLY]: 'reply',
-      [markType.RAW_WEB_LINE]: 'mark',
-      [markType.RAW_WEB_COMMENT]: 'comment'
+      [markType.ORIGIN_LINE]: 'mark',
+      [markType.ORIGIN_COMMENT]: 'comment'
     }
     const marks = await markRepo.listUserMark(ctx.getUserId(), page, size)
     if (marks.length === 0) return []
