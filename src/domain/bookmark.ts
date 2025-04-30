@@ -784,6 +784,11 @@ export class BookmarkService {
   public async getPartialBookmarkChangesLog(ctx: ContextManager, userId: number, time: number) {
     const res = (await this.bookmarkRepo.getPartialBookmarkChanges(userId, time)) || []
 
+    console.log(res)
+    res.forEach(item => {
+      console.log('encode', item.bookmark_id, ctx.hashIds.encodeId(Number(item.bookmark_id)))
+    })
+
     const logs = res.map(item => ({
       target_url: item.target_url,
       bookmark_id: ctx.hashIds.encodeId(Number(item.bookmark_id)),
