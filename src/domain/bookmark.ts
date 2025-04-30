@@ -159,7 +159,7 @@ export class BookmarkService {
     if (relation) {
       // 在数据库中增加收藏添加记录
       try {
-        await this.bookmarkRepo.createBookmarkChangeLog(options.ctx.getUserId(), options.targetUrl, relation.id, 'add', relation.created_at)
+        await this.bookmarkRepo.createBookmarkChangeLog(options.ctx.getUserId(), options.targetUrl, relation.bookmark_id, 'add', relation.created_at)
         options.ctx.execution.waitUntil(
           this.notifyMessage.sendBookmarkChange(options.ctx.env, {
             user_id: options.ctx.getUserId(),
@@ -375,7 +375,7 @@ export class BookmarkService {
         bmRepo.deleteUserBookmark(bmId, userId),
         searchRepo.deleteUserBookmark(userId, bmId),
         this.markRepo.deleteByBookmarkId(bmInfo.id),
-        bmRepo.createBookmarkChangeLog(userId, bmInfo.bookmark?.target_url, bmInfo.id, 'delete', new Date())
+        bmRepo.createBookmarkChangeLog(userId, bmInfo.bookmark?.target_url, bmId, 'delete', new Date())
       ])
 
       ctx.execution.waitUntil(
