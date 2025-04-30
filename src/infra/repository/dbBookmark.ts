@@ -624,7 +624,7 @@ export class BookmarkRepo {
 
   public async getAllBookmarkChanges(userId: number) {
     try {
-      const res = await this.prisma().$queryRaw<bookmarkChangePO[]>`SELECT sb.target_url, ub.id as bookmark_id, ub.created_at 
+      const res = await this.prisma().$queryRaw<bookmarkChangePO[]>`SELECT sb.target_url, sb.id as bookmark_id, ub.created_at 
       FROM slax_bookmark sb 
       INNER JOIN 
       (SELECT id, bookmark_id, user_id, created_at FROM slax_user_bookmark WHERE user_id = ${userId}) ub 
