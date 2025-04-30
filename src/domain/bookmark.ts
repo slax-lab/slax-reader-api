@@ -770,7 +770,7 @@ export class BookmarkService {
 
     const logs = res.map(item => ({
       target_url: item.target_url,
-      bookmark_id: ctx.hashIds.encodeId(item.bookmark_id)
+      bookmark_id: ctx.hashIds.encodeId(Number(item.bookmark_id))
     }))
 
     const previous_sync = res.length > 0 ? res[0].created_at.getTime() : null
@@ -786,7 +786,7 @@ export class BookmarkService {
 
     const logs = res.map(item => ({
       target_url: item.target_url,
-      bookmark_id: ctx.hashIds.encodeId(item.bookmark_id),
+      bookmark_id: ctx.hashIds.encodeId(Number(item.bookmark_id)),
       log_action: item.action
     }))
 
