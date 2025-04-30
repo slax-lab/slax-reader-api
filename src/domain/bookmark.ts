@@ -484,6 +484,11 @@ export class BookmarkService {
     return (await this.bookmarkRepo.listUserBookmarks(ctx.getUserId(), (page - 1) * size, size, filter)).map(
       ({ bookmark, alias_title, archive_status, is_starred, deleted_at, type }) => {
         const { private_user, content_md_key, content_key, ...bookmarkWithout } = bookmark!
+
+        if (bookmark.id === 1001513) {
+          console.log('bookmark id: ', bookmark.id, 'encodeid:', ctx.hashIds.encodeId(bookmark.id), ' user: ', ctx.getUserId(), ' title:', bookmark.title)
+        }
+
         return {
           ...bookmarkWithout,
           alias_title,
