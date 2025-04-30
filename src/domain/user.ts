@@ -12,7 +12,6 @@ import type { LazyInstance } from '../decorators/lazy'
 import { UserRepo } from '../infra/repository/dbUser'
 import { BucketClient } from '../infra/repository/bucketClient'
 import { ReportRepo } from '../infra/repository/dbReport'
-import { i18n } from '../const/i18n'
 
 export interface userShareCollectInfo {
   show_name: string
@@ -125,7 +124,7 @@ export class UserService {
     }
 
     let userInfo = (!!findRes ? findRes : {}) as userInfoPO
-    const isFirstRegister = !findRes || !findRes.id
+    // const isFirstRegister = !findRes || !findRes.id
 
     userInfo = UserService.getUserReuqestInfo(request, userInfo)
 
@@ -231,15 +230,15 @@ export class UserService {
     const res = await this.reportRepo.saveReport(req)
     if (!res) throw SaveReportError()
 
-    const user = await this.userRepo.getInfoByUserId(req.user_id)
+    // const user = await this.userRepo.getInfoByUserId(req.user_id)
 
-    const content = i18n('zh').reportPushTemplate({
-      type: req.type === reportType.LIKE ? '👍🏻' : '👎🏻',
-      id: res.id,
-      name: user.name,
-      country: user.country,
-      content: req.content
-    })
+    // const content = i18n('zh').reportPushTemplate({
+    //   type: req.type === reportType.LIKE ? '👍🏻' : '👎🏻',
+    //   id: res.id,
+    //   name: user.name,
+    //   country: user.country,
+    //   content: req.content
+    // })
   }
 
   /**
@@ -296,7 +295,7 @@ export class UserService {
    * @returns
    */
   public async enableUserSetting(ctx: ContextManager, setting: string, enable: boolean): Promise<string | userShareCollectInfo> {
-    const user = await this.userRepo.getInfoByUserId(ctx.getUserId())
+    // const user = await this.userRepo.getInfoByUserId(ctx.getUserId())
 
     if (setting === 'mail_collect' && !enable) {
       await this.userRepo.unbindPlatform(ctx.getUserId(), platformBindType.EMAIL)

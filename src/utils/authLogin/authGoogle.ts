@@ -36,6 +36,7 @@ class GoogleAuth {
   constructor(env: Env, platform: string) {
     switch (platform) {
       case 'ios':
+        //@ts-ignore
         this.clientId = env.GOOGLE_IOS_CLIENT_ID_TEXT
         this.clientSecret = ''
         break

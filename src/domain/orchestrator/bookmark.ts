@@ -36,7 +36,7 @@ export class BookmarkOrchestrator {
       this.tagService.getBookmarkTags(ctx, userId, bmId)
     ])
 
-    // concat return data
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, content_key, content_md_key, private_user, ...bookmarkWithoutId } = res.bookmark
     return {
       ...bookmarkWithoutId,

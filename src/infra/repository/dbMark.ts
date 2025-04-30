@@ -8,8 +8,8 @@ export enum markType {
   LINE = 1,
   COMMENT = 2,
   REPLY = 3,
-  RAW_WEB_LINE = 4,
-  RAW_WEB_COMMENT = 5
+  ORIGIN_LINE = 4,
+  ORIGIN_COMMENT = 5
 }
 
 export interface markXPathItem {
