@@ -371,18 +371,19 @@ export class BookmarkService {
 
       console.log('delete user bookmark:', bmId, ' user:', userId, ' deleted_at: ', bmInfo.deleted_at, ' id: ', bmInfo.id)
 
+      const deleteDate = new Date()
       const [resErr, _] = await Promise.all([
         bmRepo.deleteUserBookmark(bmId, userId),
         searchRepo.deleteUserBookmark(userId, bmId),
         this.markRepo.deleteByBookmarkId(bmInfo.id),
-        bmRepo.createBookmarkChangeLog(userId, bmInfo.bookmark?.target_url, bmId, 'delete', new Date())
+        bmRepo.createBookmarkChangeLog(userId, bmInfo.bookmark?.target_url, bmId, 'delete', deleteDate)
       ])
 
       ctx.execution.waitUntil(
         this.notifyMessage.sendBookmarkChange(ctx.env, {
           user_id: userId,
           bookmark_id: ctx.hashIds.encodeId(bmInfo.id),
-          created_at: bmInfo.created_at,
+          created_at: deleteDate,
           target_url: bmInfo.bookmark?.target_url,
           action: 'delete'
         })
@@ -787,7 +788,7 @@ export class BookmarkService {
     const logs = res.map(item => ({
       target_url: item.target_url,
       bookmark_id: ctx.hashIds.encodeId(item.bookmark_id),
-      log_action: item.action
+      action: item.action
     }))
 
     const previous_sync = res.length > 0 ? res[0].created_at.getTime() : null
