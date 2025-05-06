@@ -39,6 +39,7 @@ export class TelegramBotService {
   }
 
   private async getBot(env: Env) {
+    //@ts-ignore
     const isProd = env.RUN_TYPE === 'prod'
     const client = isProd
       ? {

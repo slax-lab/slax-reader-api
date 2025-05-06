@@ -101,6 +101,7 @@ export class UrlParserHandler {
   }
 
   async parseUrl(ctx: ContextManager, messageId: string, message: parseMessage, postHandlers: PostHandler[]) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { resource, ...taskInfo } = message
     const bookmarkId = taskInfo.bookmarkId
 
@@ -162,34 +163,36 @@ export class UrlParserHandler {
     }
   }
 
-  async handleCallbackTask(ctx: ContextManager, env: Env, info: { callback?: callbackType; bookmarkId: number; callbackPayload: any }): Promise<PostHandler> {
+  async handleCallbackTask(ctx: ContextManager, info: { callback?: callbackType; bookmarkId: number; callbackPayload: any }): Promise<PostHandler> {
     return async () => {
       if (info.callback === callbackType.CALLBACK_TELEGRAM) {
-        await this.telegramBotService.initTelegramBot(env)
+        await this.telegramBotService.initTelegramBot(ctx.env)
         await this.telegramBotService.callback(ctx.hashIds.encodeId(info.bookmarkId), info.callbackPayload)
       }
     }
   }
 
-  async handleTagTask(ctx: ContextManager, env: Env, info: { bookmarkId: number; ignoreGenerateTag: boolean; userIds: number[] }): Promise<PostHandler> {
+  async handleTagTask(ctx: ContextManager, info: { bookmarkId: number; ignoreGenerateTag: boolean; userIds: number[] }): Promise<PostHandler> {
     return async meta => {
       if (info.ignoreGenerateTag || !info.userIds || info.userIds.length === 0) {
         return
       }
 
-      const tags = await this.aigcService.generateTags(ctx, env, meta.parseRes.title || '', meta.parseRes.textContent)
+      const tags = await this.aigcService.generateTags(ctx, meta.parseRes.title || '', meta.parseRes.textContent)
       await Promise.all(info.userIds.map(userId => this.bookmarkService.tagBookmark(ctx, userId, info.bookmarkId, tags)))
     }
   }
 
-  async handleSearchTask(ctx: ContextManager, env: Env, info: { bookmarkId: number }): Promise<PostHandler> {
+  async handleSearchTask(ctx: ContextManager, info: { bookmarkId: number }): Promise<PostHandler> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     return async ({ parseRes }) => {
-      await this.searchService.addSearchRecordByBmId(ctx, env, info.bookmarkId)
+      await this.searchService.addSearchRecordByBmId(ctx, info.bookmarkId)
     }
   }
 
   async processParseMessage(ctx: ContextManager, message: receiveQueueParseMessage) {
     const { id, info } = message
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { resource, ...logInfo } = info
     console.log(`processing message: ${id}, messageInfo: ${JSON.stringify(logInfo)}`)
 
@@ -220,13 +223,13 @@ export class UrlParserHandler {
 
     try {
       const callbacks: PostHandler[] = [
-        await this.handleCallbackTask(ctx, ctx.env, {
+        await this.handleCallbackTask(ctx, {
           callback: info.callback || callbackType.NOT_CALLBACK,
           bookmarkId: info.bookmarkId,
           callbackPayload: info.callbackPayload
         }),
-        await this.handleTagTask(ctx, ctx.env, { bookmarkId: info.bookmarkId, ignoreGenerateTag: info.ignoreGenerateTag, userIds: [info.userId] }),
-        await this.handleSearchTask(ctx, ctx.env, { bookmarkId: info.bookmarkId })
+        await this.handleTagTask(ctx, { bookmarkId: info.bookmarkId, ignoreGenerateTag: info.ignoreGenerateTag, userIds: [info.userId] }),
+        await this.handleSearchTask(ctx, { bookmarkId: info.bookmarkId })
       ]
 
       await this.parseUrl(ctx, id, info, callbacks)
@@ -255,12 +258,12 @@ export class UrlParserHandler {
       })
 
       const callbacks: PostHandler[] = [
-        await this.handleCallbackTask(ctx, ctx.env, {
+        await this.handleCallbackTask(ctx, {
           callback: info.callback || callbackType.NOT_CALLBACK,
           bookmarkId: info.bookmarkId,
           callbackPayload: info.callbackPayload
         }),
-        await this.handleTagTask(ctx, ctx.env, { bookmarkId: info.bookmarkId, ignoreGenerateTag: info.ignoreGenerateTag, userIds: info.retry.userIds || [] })
+        await this.handleTagTask(ctx, { bookmarkId: info.bookmarkId, ignoreGenerateTag: info.ignoreGenerateTag, userIds: info.retry.userIds || [] })
       ]
 
       await this.parseUrl(ctx, id, info, callbacks)

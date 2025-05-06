@@ -8,7 +8,6 @@ import { TagService } from '../tag'
 import { BookmarkNotFoundError } from '../../const/err'
 import { MarkService } from '../mark'
 import { markDetail } from '../bookmark'
-import { markType } from '../../infra/repository/dbMark'
 
 export interface getInlineShareDetailResp {
   title: string
@@ -80,6 +79,8 @@ export class ShareOrchestrator {
     if (!bookmark) throw BookmarkNotFoundError()
 
     const bmContent = await this.bookmarkService.getBookmarkContent(bookmark.content_key)
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, private_user, status, ...restProps } = bookmark
 
     return {
