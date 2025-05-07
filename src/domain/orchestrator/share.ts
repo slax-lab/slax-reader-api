@@ -24,6 +24,7 @@ export interface getInlineShareDetailResp {
     show_userinfo: boolean
   }
   marks: markDetail
+  owner_user_id: number
 }
 
 @injectable()
@@ -59,6 +60,7 @@ export class ShareOrchestrator {
         allow_action: share.allow_comment,
         share_code: share.share_code
       },
+      owner_user_id: ctx.hashIds.encodeId(share.user_id),
       user_info: {
         ...userInfo,
         show_userinfo: share.show_userinfo

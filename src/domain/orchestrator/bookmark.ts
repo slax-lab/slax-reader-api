@@ -22,6 +22,20 @@ export class BookmarkOrchestrator {
     return marksResult
   }
 
+  public async getBookmarkBriefInfo(ctx: ContextManager, bmId: number) {
+    const res = await this.bookmarkService.getUserBookmarkWithDetail(ctx.getUserId(), bmId)
+    if (!res) throw BookmarkNotFoundError()
+    if (res.bookmark.private_user > 0 && res.bookmark.private_user !== ctx.getUserId()) throw BookmarkNotFoundError()
+
+    const marksResult = await this.markService.getBookmarkMarkList(ctx, res.id, true)
+    const { id, content_key, content_md_key, private_user, ...bookmarkWithoutId } = res.bookmark
+
+    return {
+      ...bookmarkWithoutId,
+      marks: marksResult
+    }
+  }
+
   /** 获取收藏详情 */
   public async bookmarkDetail(ctx: ContextManager, bmId: number) {
     const userId = ctx.getUserId()

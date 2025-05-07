@@ -110,6 +110,10 @@ router.get('/v1/bookmark/mark_list', async (req: Request, ctx: ContextManager) =
   const controller = container.resolve(BookmarkController)
   return await controller.handleUserGetBookmarkMarkListRequest(ctx, req)
 })
+router.get('/v1/bookmark/brief', async (req: Request, ctx: ContextManager) => {
+  const controller = container.resolve(BookmarkController)
+  return await controller.handleUserGetBookmarkBriefRequest(ctx, req)
+})
 router.all('/callback/telegram', async (req: Request, ctx: ContextManager) => {
   const controller = container.resolve(CallbackController)
   return await controller.handlerTelegramCallback(ctx, req)
