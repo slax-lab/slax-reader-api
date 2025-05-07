@@ -213,7 +213,6 @@ export class AigcService {
   ) {
     let providerInfo
     this.wr = writer.getWriter()
-    const lang = ctx.getlang()
 
     try {
       const callback = async (chunk: string | MultiLangError) => {
@@ -221,7 +220,7 @@ export class AigcService {
         await this.wr.write(this.ted.encode(chunk))
       }
 
-      const prompt = systemPrompt(lang)
+      const prompt = systemPrompt.replace('{ai_lang}', ctx.get('ai_lang'))
       const messages: ChatCompletionMessageParam[] = [
         { role: 'system', content: prompt },
         { role: 'user', content: rawContent }
@@ -254,7 +253,7 @@ export class AigcService {
     messages.pop()
     const raw = rawContent
     const systemMessage = userChatBookmarkSystemPrompt.replace('{article}', raw)
-    const userMessage = { type: 'text', text: getUserChatBookmarkUserPrompt().replace('{content}', content) } as ChatCompletionContentPart
+    const userMessage = { type: 'text', text: getUserChatBookmarkUserPrompt().replace('{content}', content).replace('{ai_lang}', ctx.get('ai_lang')) } as ChatCompletionContentPart
     const quoteMessage = quote.map(item => {
       return item.type === 'text' ? { type: 'text', text: item.content } : { type: 'image_url', image_url: { url: item.content } }
     }) as Array<ChatCompletionContentPart>
@@ -340,7 +339,7 @@ export class AigcService {
     if (!title) return this.writeChunk([{ role: 'assistant', content: 'No raw content' }])
 
     const messages: ChatCompletionMessageParam[] = [
-      { role: 'system', content: generateQuestionPrompt },
+      { role: 'system', content: generateQuestionPrompt.replace('{ai_lang}', ctx.get('ai_lang')) },
       { role: 'user', content: title }
     ]
 
@@ -376,7 +375,7 @@ export class AigcService {
     if (!rawContent) return await this.writeChunk([{ role: 'assistant', content: 'No raw content' }])
 
     const messages: ChatCompletionMessageParam[] = [
-      { role: 'system', content: generateAnswerPrompt },
+      { role: 'system', content: generateAnswerPrompt.replace('{ai_lang}', ctx.get('ai_lang')) },
       { role: 'user', content: generateUserAnserPrompt.replace('{raw}', rawContent).replace('{questions}', question) }
     ]
 

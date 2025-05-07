@@ -47,15 +47,13 @@ export class AigcController {
       transform: (chunk, controller) => aiSvc.recordChunks(chunk, controller)
     })
 
-    // 设置上下文
+    const user = await this.userService.getUserInfo(ctx)
+    ctx.set('ai_lang', user.ai_lang)
     ctx.set('country', request.cf?.country || '')
     ctx.set('continent', request.cf?.continent || '')
 
     if (!req.force && req.bmId) {
-      const bmId = await this.bookmarkService.getBookmarkId(ctx, req.bmId, req.shareCode, req.cbId)
-      if (!bmId || bmId < 1) throw ErrorParam()
-
-      const summary = await this.bookmarkService.getUserBookmarkSummary(bmId, ctx.getUserId(), ctx.getlang())
+      const summary = await this.bookmarkService.getUserBookmarkSummary(ctx, req.bmId, req.shareCode, req.cbId)
       if (summary) {
         await writable.getWriter().write(summary)
         return new Response(readable, {
@@ -67,7 +65,7 @@ export class AigcController {
     const { title, content, bmId } = await this.bookmarkService.getBookmarkTitleContent(ctx, req.bmId, req.shareCode, req.cbId, 'no title', req.raw_content)
     ctx.execution.waitUntil(
       aiSvc.summaryRawContent(ctx, content, writable, async result => {
-        bmId > 0 && (await this.bookmarkService.saveSummary(bmId, ctx.getUserId(), ctx.getlang(), result.provider, result.response, result.model))
+        bmId > 0 && (await this.bookmarkService.saveSummary(ctx, bmId, result.provider, result.response, result.model))
       })
     )
 
@@ -81,11 +79,15 @@ export class AigcController {
     // TODO 拿到CTX中的user_id进行速率限制
     const req = await RequestUtils.json<CompletionsRequest>(request)
 
-    const { title, content } = await this.bookmarkService.getBookmarkTitleContent(ctx, req.bmId, req.shareCode, req.cbId, req.title, req.raw_content)
+    const [user, { title, content }] = await Promise.all([
+      this.userService.getUserInfo(ctx),
+      this.bookmarkService.getBookmarkTitleContent(ctx, req.bmId, req.shareCode, req.cbId, req.title, req.raw_content)
+    ])
 
     // 设置上下文
     ctx.set('country', request.cf?.country || '')
     ctx.set('continent', request.cf?.continent || '')
+    ctx.set('ai_lang', user.ai_lang)
 
     const aiSvc = this.aigcService
     const { readable, writable } = new TransformStream()
