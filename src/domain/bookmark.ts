@@ -827,12 +827,15 @@ export class BookmarkService {
       })
   }
 
-  public async getUserBookmarkSummary(bookmarkId: number, userId: number, lang: string) {
-    return await this.bookmarkRepo.getUserBookmarkSummary(bookmarkId, userId, lang)
+  public async getUserBookmarkSummary(ctx: ContextManager, bmId?: number, shareCode?: string, cbId?: number) {
+    const bookmarkId = await this.getBookmarkId(ctx, bmId, shareCode, cbId)
+    if (!bookmarkId || bookmarkId < 1) throw ErrorParam()
+
+    return await this.bookmarkRepo.getUserBookmarkSummary(bookmarkId, ctx.getUserId(), ctx.get('ai_lang'))
   }
 
-  async saveSummary(bmId: number, userId: number, lang: string, provider: string, content: string, model: string) {
-    const info = { content: content, ai_name: provider || '', ai_model: model || '', bookmark_id: bmId, user_id: userId, lang }
+  async saveSummary(ctx: ContextManager, bmId: number, provider: string, content: string, model: string) {
+    const info = { content: content, ai_name: provider || '', ai_model: model || '', bookmark_id: bmId, user_id: ctx.getUserId(), lang: ctx.get('ai_lang') }
     await this.bookmarkRepo.upsertBookmarkSummary(info)
   }
 

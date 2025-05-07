@@ -22,6 +22,7 @@ export interface userInfoPO {
   last_login_ip: string
   created_at: Date
   account: string
+  ai_lang: string
   invite_code?: string
 
   last_read_at?: Date
@@ -117,6 +118,16 @@ export class UserRepo {
     if (!userId || !lang) throw ErrorParam()
     const res = await this.prisma().slax_user.update({
       data: { lang },
+      where: { id: userId }
+    })
+    if (!res) throw UserNotFoundError()
+    return res as userInfoPO
+  }
+
+  public async updateUserAiLang(userId: number, lang: string): Promise<userInfoPO> {
+    if (!userId || !lang) throw ErrorParam()
+    const res = await this.prisma().slax_user.update({
+      data: { ai_lang: lang },
       where: { id: userId }
     })
     if (!res) throw UserNotFoundError()

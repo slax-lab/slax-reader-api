@@ -16,6 +16,7 @@ model slax_user {
   given_name    String    @default("")
   family_name   String    @default("")
   lang          String    @default("")
+  ai_lang       String    @default("")
   country       String    @default("")
   city          String    @default("")
   region        String    @default("")

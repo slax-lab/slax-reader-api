@@ -48,6 +48,7 @@ export interface userInfo {
   account: string
   email: string
   lang: string
+  ai_lang: string
   timezone: string
   avatar: string
   name: string
@@ -255,6 +256,7 @@ export class UserService {
       account: user.account,
       email: user.email,
       lang: user.lang,
+      ai_lang: !!user.ai_lang ? user.ai_lang : user.lang,
       timezone: user.timezone,
       avatar: user.picture,
       id: ctx.hashIds.encodeId(ctx.getUserId()),
@@ -282,6 +284,8 @@ export class UserService {
       await this.userRepo.updateUserName(ctx.getUserId(), data.value)
     } else if (data.key === 'lang') {
       await this.userRepo.updateUserLang(ctx.getUserId(), data.value)
+    } else if (data.key === 'ai_lang') {
+      await this.userRepo.updateUserAiLang(ctx.getUserId(), data.value)
     }
     return
   }
