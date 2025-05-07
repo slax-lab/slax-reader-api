@@ -344,4 +344,16 @@ export class BookmarkController {
     const res = await this.bookmarkOrchestrator.getBookmarkMarkList(ctx, ctx.getUserId(), bmId)
     return Successed(res)
   }
+
+  @Get('/brief')
+  public async handleUserGetBookmarkBriefRequest(ctx: ContextManager, request: Request) {
+    const req = await RequestUtils.query<{ bookmark_id: number }>(request)
+    if (!req || !req.bookmark_id) return Failed(ErrorParam())
+
+    const bmId = ctx.hashIds.decodeId(req.bookmark_id)
+    if (bmId < 1) return Failed(ErrorParam())
+
+    const res = await this.bookmarkOrchestrator.getBookmarkBriefInfo(ctx, bmId)
+    return Successed(res)
+  }
 }

@@ -24,6 +24,7 @@ export interface getInlineShareDetailResp {
     show_userinfo: boolean
   }
   marks: markDetail
+  owner_user_id: number
 }
 
 @injectable()
@@ -40,10 +41,13 @@ export class ShareOrchestrator {
     const share = await this.shareService.getBookmarkShareByShareCode(shareCode)
     if (!share) throw BookmarkNotFoundError()
 
+    const userBm = await this.bookmarkService.getUserBookmark(share.bookmark_id, share.user_id)
+    if (!userBm) throw BookmarkNotFoundError()
+
     const [userInfo, bookmark, marks] = await Promise.all([
       this.userService.getUserBriefInfo(share.show_userinfo, share.user_id),
       this.bookmarkService.getBookmarkById(share.bookmark_id),
-      this.markService.getBookmarkMarkList(ctx, share.bookmark_id, share.show_comment && share.show_line)
+      this.markService.getBookmarkMarkList(ctx, userBm.id, share.show_comment && share.show_line)
     ])
     if (!bookmark) throw BookmarkNotFoundError()
 
@@ -56,6 +60,7 @@ export class ShareOrchestrator {
         allow_action: share.allow_comment,
         share_code: share.share_code
       },
+      owner_user_id: ctx.hashIds.encodeId(share.user_id),
       user_info: {
         ...userInfo,
         show_userinfo: share.show_userinfo
