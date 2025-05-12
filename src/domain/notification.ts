@@ -142,7 +142,7 @@ export class NotificationService {
   // 创建评论、划线、回复通知
   public async createMarkNotification(env: Env, markInfo: markPOWithId, data: markRequest, userBookmark: any, replyToComment?: markDetailPO) {
     // 只有评论、回复生成通知，其他类型不生成通知
-    if (![markType.COMMENT, markType.REPLY].includes(data.type)) return
+    if (![markType.COMMENT, markType.REPLY, markType.ORIGIN_COMMENT].includes(data.type)) return
     // 评论分享
     // 查询被通知的用户以及创建通知的用户
     const noticeUserId = replyToComment?.user_id || userBookmark.user_id
@@ -166,7 +166,7 @@ export class NotificationService {
     let quoteContent = ''
     if (data.type === markType.REPLY) {
       quoteContent = replyToComment?.comment || ''
-    } else if (data.type === markType.COMMENT) {
+    } else if ([markType.COMMENT, markType.ORIGIN_COMMENT].includes(data.type)) {
       quoteContent = data.select_content.map(item => item.text).join('')
     }
 
@@ -268,7 +268,7 @@ export class NotificationService {
     try {
       // 评论的话，检查是否为自己评论自己的
       // 回复的话，检查是否为自己回复自己的
-      if (data.type === markType.COMMENT && userBookmark.user_id === markInfo.user_id) return
+      if ([markType.COMMENT, markType.ORIGIN_COMMENT].includes(data.type) && userBookmark.user_id === markInfo.user_id) return
       if (data.type === markType.REPLY && replyToComment?.user_id === markInfo.user_id) return
       await this.createMarkNotification(env, markInfo, data, userBookmark, replyToComment)
     } catch (e) {
