@@ -11,19 +11,19 @@ import { BookmarkService } from '../../domain/bookmark'
 import { RequestUtils } from '../../utils/requestUtils'
 
 type SummaryRequest = {
-  bmId?: number
-  shareCode?: string
-  cbId?: number
-  collectionCode: string
+  bm_id?: number
+  share_code?: string
+  cb_id?: number
+  collection_code: string
   force: boolean
   raw_content?: string
 }
 
 type CompletionsRequest = {
-  bmId?: number
-  shareCode?: string
-  cbId?: number
-  collectionCode?: string
+  bm_id?: number
+  share_code?: string
+  cb_id?: number
+  collection_code?: string
   title?: string
   raw_content?: string
   messages: ChatCompletionMessageParam[]
@@ -52,8 +52,8 @@ export class AigcController {
     ctx.set('country', request.cf?.country || '')
     ctx.set('continent', request.cf?.continent || '')
 
-    if (!req.force && req.bmId) {
-      const summary = await this.bookmarkService.getUserBookmarkSummary(ctx, req.bmId, req.shareCode, req.cbId)
+    if (!req.force && req.bm_id) {
+      const summary = await this.bookmarkService.getUserBookmarkSummary(ctx, req.bm_id, req.share_code, req.cb_id)
       if (summary) {
         await writable.getWriter().write(summary)
         return new Response(readable, {
@@ -62,7 +62,7 @@ export class AigcController {
       }
     }
 
-    const { title, content, bmId } = await this.bookmarkService.getBookmarkTitleContent(ctx, req.bmId, req.shareCode, req.cbId, 'no title', req.raw_content)
+    const { title, content, bmId } = await this.bookmarkService.getBookmarkTitleContent(ctx, req.bm_id, req.share_code, req.cb_id, 'no title', req.raw_content)
     ctx.execution.waitUntil(
       aiSvc.summaryRawContent(ctx, content, writable, async result => {
         bmId > 0 && (await this.bookmarkService.saveSummary(ctx, bmId, result.provider, result.response, result.model))
@@ -81,7 +81,7 @@ export class AigcController {
 
     const [user, { title, content }] = await Promise.all([
       this.userService.getUserInfo(ctx),
-      this.bookmarkService.getBookmarkTitleContent(ctx, req.bmId, req.shareCode, req.cbId, req.title, req.raw_content)
+      this.bookmarkService.getBookmarkTitleContent(ctx, req.bm_id, req.share_code, req.cb_id, req.title, req.raw_content)
     ])
 
     // 设置上下文
