@@ -163,7 +163,7 @@ export class BookmarkService {
         options.ctx.execution.waitUntil(
           this.notifyMessage.sendBookmarkChange(options.ctx.env, {
             user_id: options.ctx.getUserId(),
-            bookmark_id: options.ctx.hashIds.encodeId(relation.id),
+            bookmark_id: options.ctx.hashIds.encodeId(relation.bookmark_id),
             created_at: relation.created_at,
             target_url: options.targetUrl,
             action: 'add'
@@ -382,7 +382,7 @@ export class BookmarkService {
       ctx.execution.waitUntil(
         this.notifyMessage.sendBookmarkChange(ctx.env, {
           user_id: userId,
-          bookmark_id: ctx.hashIds.encodeId(bmInfo.id),
+          bookmark_id: ctx.hashIds.encodeId(bmId),
           created_at: deleteDate,
           target_url: bmInfo.bookmark?.target_url,
           action: 'delete'
