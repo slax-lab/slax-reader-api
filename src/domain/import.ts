@@ -61,6 +61,8 @@ export class ImportService {
       for (const [index, item] of blob.split('\n').entries()) {
         if (index === 0) continue
         const [title, url, time_added, tags, status] = item.split(',')
+
+        if (url.length < 1) continue
         data.push({ title: title || '', url: url || '', time_added: time_added || '', tags: tags || '', status: status || '' })
       }
     } else if (type === 'omnivore') {

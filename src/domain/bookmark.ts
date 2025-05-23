@@ -234,6 +234,8 @@ export class BookmarkService {
     const batchMessage: queueParseMessage[] = []
 
     for (const item of req) {
+      if (!item.target_url || item.target_url === '') continue
+
       // 跳过非法的URL
       const target_url = new URL(item.target_url)
       const urlPolicie = new URLPolicie(ctx.env, target_url)
