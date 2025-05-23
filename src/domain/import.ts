@@ -80,6 +80,8 @@ export class ImportService {
       // 1000/request in Worker
       // 15 min duration limit for Cron Triggers, Durable Object Alarms and Queue Consumers
       // 将数据按每20条分组
+
+      const messageList: importBookmarkMessage[] = []
       for (let i = 0; i < data.length; i += batchSize) {
         const message: importBookmarkMessage = {
           type,
@@ -87,8 +89,17 @@ export class ImportService {
           userId: ctx.getUserId(),
           data: data.slice(i, i + batchSize)
         }
-        await this.queueClient().pushImportMessage(ctx, message)
+        messageList.push(message)
       }
+      try {
+        await ctx.env.IMPORT_OTHER.sendBatch(messageList.map(item => ({ body: item })))
+      } catch (e) {
+        console.error(`import bookmark failed: ${JSON.stringify(e)}`)
+        throw ServerError()
+      } finally {
+        console.log(`import bookmark task: ${res.id} finished`)
+      }
+
       await this.bucketClient().R2Bucket.put(name, blob, {
         httpMetadata: {
           contentType: fileType
