@@ -178,11 +178,11 @@ export class ImportService {
       }))
     } else if (message.info.type === 'pocket') {
       return message.info.data.map(item => ({
-        target_url: item.url,
+        target_url: !!item.target_url && item.target_url && item.target_url.length > 0 ? item.target_url : '',
         thumbnail: '',
         description: '',
-        tags: item.tags.split('|'),
-        target_title: item.title
+        tags: !!item.tags && item.tags && item.tags.length > 0 ? item.tags.split('|') : [],
+        target_title: !!item.title && item.title && item.title.length > 0 ? item.title : ''
       }))
     } else {
       onFaild(`import bookmark type not match: ${message.info.type}`)
