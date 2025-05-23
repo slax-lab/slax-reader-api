@@ -2,15 +2,15 @@ import { ContextManager } from '../../utils/context'
 import { Consumer } from '../../decorators/queue'
 import { inject, injectable } from '../../decorators/di'
 import { UrlParserHandler } from '../../domain/orchestrator/urlParser'
-import { ImportService } from '../../domain/import'
+import { ImportOrchestrator } from '../../domain/orchestrator/import'
 import { receiveThirdPartyMessage, receiveRetryParseMesaage, receiveQueueParseMessage } from '../../domain/orchestrator/urlParser'
-import { importBookmarkMessage, parseMessage, queueThirdPartyMessage } from '../../infra/queue/queueClient'
+import { importBookmarkMessage } from '../../infra/queue/queueClient'
 
 @injectable()
 export class BookmarkConsumer {
   constructor(
     @inject(UrlParserHandler) private urlParserHandler: UrlParserHandler,
-    @inject(ImportService) private importService: ImportService
+    @inject(ImportOrchestrator) private importOrchestrator: ImportOrchestrator
   ) {}
   /**
    * 解析第三方平台URL
@@ -36,7 +36,7 @@ export class BookmarkConsumer {
   @Consumer({ channel: 'slax-reader-import-other' })
   @Consumer({ channel: 'slax-reader-migrate-from-other' })
   public async handleImportOther(ctx: ContextManager, info: { id: number; info: importBookmarkMessage }) {
-    await this.importService.processImportBookmark(ctx, info)
+    await this.importOrchestrator.processImportBookmark(ctx, info)
   }
 
   /**

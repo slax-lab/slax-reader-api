@@ -213,6 +213,7 @@ export class BookmarkController {
     if (!query || !query.type || !query.file_type) {
       return Failed(ErrorParam())
     }
+    if (!['omnivore', 'pocket'].includes(query.type)) return Failed(ErrorParam())
 
     const taskId = await this.importService.importBookmark(ctx, query.type, query.file_type, importData)
     return Successed({ id: ctx.hashIds.encodeId(taskId) })

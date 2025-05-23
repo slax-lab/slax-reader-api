@@ -25,6 +25,14 @@ export interface omnivoreData {
   publishedAt: string
 }
 
+export interface pocketData {
+  title: string
+  url: string
+  time_added: string
+  tags: string
+  status: string
+}
+
 export interface importProcessResponse {
   id: number
   batch_count: number
@@ -45,21 +53,23 @@ export class ImportService {
     @inject(BucketClient) private bucketClient: LazyInstance<BucketClient>
   ) {}
 
-  public async importBookmark(ctx: ContextManager, type: string, fileType: string, blob: string): Promise<number> {
-    switch (type) {
-      case 'omnivore':
-        return this.importBookmarkOmnivore(ctx, type, fileType, blob)
-      default:
-        throw ErrorParam()
-    }
-  }
-
-  async importBookmarkOmnivore(ctx: ContextManager, type: string, fileType: string, blob: string): Promise<number> {
+  async importBookmark(ctx: ContextManager, type: string, fileType: string, blob: string): Promise<number> {
     const name = `import/data/${ctx.getUserId()}/${type}/${randomUUID()}`
-    const data = JSON.parse(blob) as omnivoreData[]
+
+    let data: (omnivoreData | pocketData)[] = []
+    if (type === 'pocket') {
+      for (const [index, item] of blob.split('\n').entries()) {
+        if (index === 0) continue
+        const [title, url, time_added, tags, status] = item.split(',')
+        data.push({ title: title || '', url: url || '', time_added: time_added || '', tags: tags || '', status: status || '' })
+      }
+    } else if (type === 'omnivore') {
+      data = JSON.parse(blob) as omnivoreData[]
+      if (data.length < 1) throw ErrorParam()
+    }
+
     const batchSize = 5
 
-    if (data.length < 1) throw ErrorParam()
     try {
       const res = await this.bookmarkRepo.createBookmarkImportTask(ctx.getUserId(), type, name, data.length, Math.ceil(data.length / batchSize))
       if (!res) throw ServerError()
@@ -82,9 +92,6 @@ export class ImportService {
           contentType: fileType
         }
       })
-      // for (const item of batches) {
-      //   await processImportBookmark(ctx, env, item.body)
-      // }
       console.log(`import task batch count: ${Math.ceil(data.length / batchSize)}`)
       return res.id
     } catch (e) {
@@ -153,21 +160,31 @@ export class ImportService {
       console.error(`import bookmark failed: ${JSON.stringify(err)}`)
       this.bookmarkRepo.appendImportTaskErrLog(message.id, err)
     }
-    if (message.info.type !== 'omnivore') {
-      onFaild(`import bookmark type not match: ${message.info.type}`)
-      return []
-    }
+
     const hashids = new Hashid(ctx.env, message.info.userId)
     const enUserId = hashids.encodeId(message.info.userId)
     ctx.setUserInfo(message.info.userId, enUserId, '', '')
     ctx.setHashIds(hashids)
 
-    return message.info.data.map(item => ({
-      target_url: item.url,
-      thumbnail: item.thumbnail,
-      description: item.description,
-      tags: item.labels,
-      target_title: item.title
-    }))
+    if (message.info.type === 'omnivore') {
+      return message.info.data.map(item => ({
+        target_url: item.url,
+        thumbnail: item.thumbnail,
+        description: item.description,
+        tags: item.labels,
+        target_title: item.title
+      }))
+    } else if (message.info.type === 'pocket') {
+      return message.info.data.map(item => ({
+        target_url: item.url,
+        thumbnail: '',
+        description: '',
+        tags: item.tags.split('|'),
+        target_title: item.title
+      }))
+    } else {
+      onFaild(`import bookmark type not match: ${message.info.type}`)
+      return []
+    }
   }
 }

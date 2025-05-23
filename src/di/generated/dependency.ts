@@ -32,8 +32,8 @@ import { SearchService } from '../../domain/search'
 import { BookmarkOrchestrator } from '../../domain/orchestrator/bookmark'
 import { MarkOrchestrator } from '../../domain/orchestrator/mark'
 import { ShareOrchestrator } from '../../domain/orchestrator/share'
-import { EmailService } from '../../domain/email'
 import { ImportOrchestrator } from '../../domain/orchestrator/import'
+import { EmailService } from '../../domain/email'
 import { BookmarkJob } from '../../handler/cron/bookmarkJob'
 import { BookmarkConsumer } from '../../handler/queue/bookmarkConsumer'
 import { ChatCompletion } from '../../infra/external/chatCompletion'
@@ -165,7 +165,7 @@ container.register(BookmarkJob, {
 })
 
 container.register(BookmarkConsumer, {
-  useFactory: container => new BookmarkConsumer(container.resolve(UrlParserHandler), container.resolve(ImportService))
+  useFactory: container => new BookmarkConsumer(container.resolve(UrlParserHandler), container.resolve(ImportOrchestrator))
 })
 
 container.register(ChatCompletion, {
