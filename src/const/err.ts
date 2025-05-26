@@ -66,7 +66,8 @@ export enum ErrorName {
   RECOVER_SUBSCRIBE_ERROR = 'RECOVER_SUBSCRIBE_ERROR',
   SHARE_COLLECTION_CANT_UPDATE_FREE = 'SHARE_COLLECTION_CANT_UPDATE_FREE',
   NOT_HAVE_STRIPE_ACCOUNT_ERROR = 'NOT_HAVE_STRIPE_ACCOUNT_ERROR',
-  BOOKMARK_CHANGES_SYNC_TOO_OLD = 'BOOKMARK_CHANGES_SYNC_TOO_OLD'
+  BOOKMARK_CHANGES_SYNC_TOO_OLD = 'BOOKMARK_CHANGES_SYNC_TOO_OLD',
+  IMPORT_OTHER_TIMEOUT = 'IMPORT_OTHER_TIMEOUT'
 }
 
 const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = {
@@ -264,3 +265,4 @@ export const RecoverSubscribeError = (): MultiLangError => NewError(ErrorName.RE
 export const ShareCollectionCantUpdateFreeError = (): MultiLangError => NewError(ErrorName.SHARE_COLLECTION_CANT_UPDATE_FREE, 400)
 export const NotHaveStripeAccountError = (): MultiLangError => NewError(ErrorName.NOT_HAVE_STRIPE_ACCOUNT_ERROR, 400)
 export const BookmarkChangesSyncTooOldError = (): MultiLangError => NewError(ErrorName.BOOKMARK_CHANGES_SYNC_TOO_OLD, 501)
+export const ImportOtherTimeoutError = (): MultiLangError => NewError(ErrorName.IMPORT_OTHER_TIMEOUT, 500)

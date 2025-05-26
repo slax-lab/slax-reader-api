@@ -8,6 +8,7 @@ import type { LazyInstance } from '../decorators/lazy'
 import { KVClient } from '../infra/repository/KVClient'
 import { QueueClient, importBookmarkMessage } from '../infra/queue/queueClient'
 import { BucketClient } from '../infra/repository/bucketClient'
+import { parseCSVLine } from '../utils/csv'
 
 export interface omnivoreData {
   id: string
@@ -60,57 +61,66 @@ export class ImportService {
     if (type === 'pocket') {
       for (const [index, item] of blob.split('\n').entries()) {
         if (index === 0) continue
-        const [title, url, time_added, tags, status] = item.split(',')
+
+        const fields = parseCSVLine(item)
+
+        if (fields.length === 0 || fields.length < 5) continue
+
+        const [title, url, time_added, tags, status] = fields
 
         if (!url || url.length < 1) continue
-        data.push({ title: title || '', url: url || '', time_added: time_added || '', tags: tags || '', status: status || '' })
+        data.push({
+          title: title || '',
+          url: url || '',
+          time_added: time_added || '',
+          tags: tags || '',
+          status: status || ''
+        })
       }
     } else if (type === 'omnivore') {
       data = JSON.parse(blob) as omnivoreData[]
       if (data.length < 1) throw ErrorParam()
     }
 
-    const batchSize = 5
+    const batchSize = 1
+    const queueBatchSize = 100
 
-    try {
-      const res = await this.bookmarkRepo.createBookmarkImportTask(ctx.getUserId(), type, name, data.length, Math.ceil(data.length / batchSize))
-      if (!res) throw ServerError()
-      // 基于Cloudflare限制分割任务
-      // 每个Import任务拆分成100个消息一组
-      // 1000/request in Worker
-      // 15 min duration limit for Cron Triggers, Durable Object Alarms and Queue Consumers
-      // 将数据按每20条分组
+    const res = await this.bookmarkRepo.createBookmarkImportTask(ctx.getUserId(), type, name, data.length, Math.ceil(data.length / batchSize))
+    if (!res) throw ServerError()
+    // 基于Cloudflare限制分割任务
+    // 每个Import任务拆分成100个消息一组
+    // 1000/request in Worker
+    // 15 min duration limit for Cron Triggers, Durable Object Alarms and Queue Consumers
+    // 将数据按每20条分组
 
-      const messageList: importBookmarkMessage[] = []
-      for (let i = 0; i < data.length; i += batchSize) {
-        const message: importBookmarkMessage = {
-          type,
-          id: res.id,
-          userId: ctx.getUserId(),
-          data: data.slice(i, i + batchSize)
-        }
-        messageList.push(message)
+    const queueMessages: importBookmarkMessage[] = []
+    for (let i = 0; i < data.length; i += batchSize) {
+      const message: importBookmarkMessage = {
+        type,
+        id: res.id,
+        userId: ctx.getUserId(),
+        data: data.slice(i, i + batchSize)
       }
-      try {
-        await ctx.env.IMPORT_OTHER.sendBatch(messageList.map(item => ({ body: item })))
-      } catch (e) {
-        console.error(`import bookmark failed: ${JSON.stringify(e)}`)
-        throw ServerError()
-      } finally {
-        console.log(`import bookmark task: ${res.id} finished`)
-      }
-
-      await this.bucketClient().R2Bucket.put(name, blob, {
-        httpMetadata: {
-          contentType: fileType
-        }
-      })
-      console.log(`import task batch count: ${Math.ceil(data.length / batchSize)}`)
-      return res.id
-    } catch (e) {
-      console.error(`import bookmark failed: ${JSON.stringify(e)}`)
-      throw ServerError()
+      queueMessages.push(message)
     }
+
+    for (let i = 0; i < queueMessages.length; i += queueBatchSize) {
+      const batch = queueMessages.slice(i, i + queueBatchSize)
+      await ctx.env.IMPORT_OTHER.sendBatch(
+        batch.map(msg => ({
+          body: msg
+        }))
+      )
+      console.log(`Sent batch ${Math.floor(i / queueBatchSize) + 1}/${Math.ceil(queueMessages.length / queueBatchSize)}, messages: ${batch.length}`)
+    }
+
+    await this.bucketClient().R2Bucket.put(name, blob, {
+      httpMetadata: {
+        contentType: fileType
+      }
+    })
+    console.log(`import task batch count: ${Math.ceil(data.length / batchSize)}`)
+    return res.id
   }
 
   public async getImportInfo(ctx: ContextManager): Promise<importProcessResponse[]> {
@@ -189,7 +199,7 @@ export class ImportService {
       }))
     } else if (message.info.type === 'pocket') {
       return message.info.data.map(item => ({
-        target_url: !!item.target_url && item.target_url && item.target_url.length > 0 ? item.target_url : '',
+        target_url: !!item.url && item.url && item.url.length > 0 ? item.url : '',
         thumbnail: '',
         description: '',
         tags: !!item.tags && item.tags && item.tags.length > 0 ? item.tags.split('|') : [],
