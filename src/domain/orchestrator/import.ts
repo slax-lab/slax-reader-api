@@ -7,6 +7,7 @@ import { KVClient } from '../../infra/repository/KVClient'
 import { randomUUID } from 'crypto'
 import { importBookmarkMessage } from '../../infra/queue/queueClient'
 import { UrlParserHandler } from './urlParser'
+import { ImportOtherTimeoutError } from '../../const/err'
 
 @injectable()
 export class ImportOrchestrator {
@@ -19,8 +20,8 @@ export class ImportOrchestrator {
 
   // 队列处理消息
   public async processImportBookmark(ctx: ContextManager, message: { id: number; info: importBookmarkMessage }) {
-    const bookmarkData = await this.importService.processImportBookmark(ctx, message)
-    try {
+    const processImport = async () => {
+      const bookmarkData = await this.importService.processImportBookmark(ctx, message)
       console.log(`import bookmark: ${JSON.stringify(bookmarkData)}`)
       const batchMessage = await this.bookmarkService.batchAddUrlBookmark(ctx, bookmarkData)
       for (const item of batchMessage) {
@@ -29,9 +30,15 @@ export class ImportOrchestrator {
           info: item
         })
       }
-    } catch (e) {
-      console.error(`import bookmark failed: ${JSON.stringify(e)}`)
     }
+
+    await Promise.race([
+      processImport(),
+      new Promise((resolve, reject) => {
+        setTimeout(() => reject(ImportOtherTimeoutError()), 120 * 1000)
+      })
+    ])
+
     console.log(`import bookmark process: ${message.id} finished`)
     await this.kvClient().kv.put(`import/process/${ctx.getUserId()}/${message.info.id}/${randomUUID()}`, '1')
   }
