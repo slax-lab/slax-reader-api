@@ -32,6 +32,10 @@ export class BookmarkOrchestrator {
 
     return {
       ...bookmarkWithoutId,
+      bookmark_id: ctx.hashIds.encodeId(res.bookmark.id),
+      archived: res.archive_status === 1 ? 'archive' : res.archive_status === 2 ? 'later' : 'inbox',
+      starred: res.is_starred ? 'star' : 'unstar',
+      alias_title: res.alias_title,
       marks: marksResult
     }
   }
