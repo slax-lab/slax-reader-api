@@ -1,3 +1,5 @@
+import { TweetInfo } from '../const/struct'
+
 export interface SlaxTopic {
   nickName: string
   avatar: string
@@ -7,38 +9,36 @@ export interface SlaxTopic {
 }
 
 export class HtmlBuilder {
-  public static buildTweet(item: TweetItem): string {
-    if (item.error) return ``
-
-    const tweetStyle = item.media.map(media => {
+  public static buildTweet(item: TweetInfo): string {
+    const tweetStyle = item.extendedEntities.media.map(media => {
       if (media.type === 'photo') {
-        return `<img src="${media.media_url}" alt="Tweet Media">`
+        return `<img src="${media.media_url_https}" alt="Tweet Media">`
       }
       if (media.type === 'video') {
-        return `<video controls="controls" poster="${media.media_url}" ><source src="${media.video_url}"> Your device is not support.</video>`
+        return `<video controls="controls" poster="${media.media_url_https}" ><source src="${media.media_url_https}"> Your device is not support.</video>`
       }
       return ''
     })
 
     return `<div class="tweet">
               <tweet-header
-                  data-avatar="${item.user.profile_image_url_https}" 
-                  data-href="https://x.com/${item.user.screen_name}"
-                  data-name="${item.user.name}"
-                  data-screen-name="${item.user.screen_name}"
-                  data-description="${item.user.description}"
-                  data-location="${item.user.location}"
-                  data-website="${item.user.url}"
-                  data-created-at="${item.user.created_at}"
-                  data-followers="${item.user.followers_count}"
-                  data-followings="${item.user.friends_count}"
+                  data-avatar="${item.author.profilePicture}" 
+                  data-href="${item.author.url}"
+                  data-name="${item.author.name}"
+                  data-screen-name="${item.author.userName}"
+                  data-description="${item.author.description}"
+                  data-location="${item.author.location}"
+                  data-website="${item.author.twitterUrl}"
+                  data-created-at="${item.author.createdAt}"
+                  data-followers="${item.author.followers}"
+                  data-followings="${item.author.following}"
               ></tweet-header>
-              <div class="tweet-content">${(item.full_text || '').trim()}</div>
               <div class="tweet-media">${tweetStyle.join('\n')}</div>
+              <div class="tweet-content">${(item.text || '').trim()}</div>
               <tweet-footer
-                  data-reply-count="${item.reply_count}"
-                  data-retweet-count="${item.retweet_count}"
-                  data-favorite-count="${item.favorite_count}">
+                  data-reply-count="${item.replyCount}"
+                  data-retweet-count="${item.retweetCount}"
+                  data-favorite-count="${item.likeCount}">
               </tweet-footer>
           </div>`
   }

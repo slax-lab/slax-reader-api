@@ -15,9 +15,10 @@ import type { LazyInstance } from '../../decorators/lazy'
 import type { bookmarkParsePO } from '../../infra/repository/dbBookmark'
 import { HtmlBuilder } from '../../utils/htmlBuilder'
 import { parseHTML } from 'linkedom'
-import { Apify } from '../../infra/external/apify'
 import { AigcService } from '../aigc'
 import { SearchService } from '../search'
+import { TweetInfo } from '../../const/struct'
+import { TwitterApi } from '../../infra/external/twitterapi'
 
 export type PostHandler = (meta: { parseRes: { title: string; textContent: string } }) => Promise<void>
 export type receiveQueueParseMessage = receiveParseMessage<queueParseMessage>
@@ -138,19 +139,19 @@ export class UrlParserHandler {
     console.log(`parse ${message.targetUrl} done.`)
   }
 
-  private async parseTweet(env: Env, message: receiveThirdPartyMessage, tweetInfo: TweetItem) {
+  private async parseTweet(env: Env, message: receiveThirdPartyMessage, tweetInfo: TweetInfo) {
     const content = HtmlBuilder.buildTweet(tweetInfo)
     const { document } = parseHTML(content)
     await new Imager(env).batchReplaceImage(new URL(tweetInfo.url), document)
 
     const parseRes = {
-      title: `Tweet by ${tweetInfo.user.name} (${tweetInfo.id})`,
-      textContent: tweetInfo.full_text,
+      title: `Tweet by ${tweetInfo.author.name} (${tweetInfo.id})`,
+      textContent: tweetInfo.text,
       contentDocument: document,
-      excerpt: tweetInfo.full_text.substring(0, 20),
-      byline: tweetInfo.user.name,
+      excerpt: tweetInfo.text.substring(0, 20),
+      byline: tweetInfo.author.name,
       siteName: 'Twitter',
-      publishedTime: new Date(tweetInfo.created_at)
+      publishedTime: new Date(tweetInfo.createdAt)
     }
 
     try {
@@ -197,9 +198,6 @@ export class UrlParserHandler {
     console.log(`processing message: ${id}, messageInfo: ${JSON.stringify(logInfo)}`)
 
     if (!info) return
-    // 默认情况下是根据url police策略去决定
-    // 如果targetUrl是twitter的，则特殊处理
-    // 如果非prod环境、或者是客户端传递了完整内容，则直接解析
     const regexp = new RegExp('http[s]://(x|twitter).com/.*/status/[0-9]+')
     if (regexp.test(info.targetUrl)) {
       message.info.resource = ''
@@ -208,7 +206,7 @@ export class UrlParserHandler {
         encodeBmId: ctx.hashIds.encodeId(message.info.bookmarkId)
       } as queueThirdPartyMessage
 
-      return await this.queueClient().pushParseThirdPartyMessage(ctx, info)
+      return await this.processThirdPartyMessages(ctx, [{ id, info }])
     } else if (ctx.env.RUN_ENV !== 'prod') {
       message.info.parserType = parserType.CLIENT_PARSE
     } else if (message.info.resource !== '') {
@@ -301,25 +299,30 @@ export class UrlParserHandler {
       })
     )
 
-    const urlList = res.map(item => (item.status === 'fulfilled' ? item.value : null)).filter(url => url !== null)
-    if (urlList.length === 0) return
+    const regexp = /.*\/.*\/status\/([0-9]*)\??/
 
-    const resp = await Apify.fetchApifyTwitterUrlScraper(ctx.env, urlList)
-    if (resp instanceof MultiLangError) {
-      console.error(`fetch three party failed: ${resp.message}`)
-      return
+    const tweetIds = res
+      .map(item => (item.status === 'fulfilled' ? item.value : null))
+      .map(url => {
+        const match = url?.match(regexp)
+        return (match && match[1]) || ''
+      })
+      .filter(id => id !== '')
+
+    if (tweetIds.length === 0) return
+
+    let resp
+    try {
+      resp = await TwitterApi.fetchApifyTwitterUrlScraper(ctx.env, tweetIds)
+    } catch (e) {
+      console.error(`fetch three party failed: ${e}`)
     }
 
     const queuePromise = []
-    for (const item of resp) {
-      if (item.error) {
-        console.error(`fetch url ${item.url} three party failed: ${item.error}`)
-        continue
-      }
+    for (const item of resp!) {
       const target = messages.find(m => {
-        const tUrl = m.info.targetUrl.split('/')
-        const msgUrlId = tUrl[tUrl.length - 1]
-        return msgUrlId === item.id
+        const match = m.info.targetUrl.match(regexp)
+        return match && match[1] === item.id
       })
       if (!target) {
         console.error(`fetch url ${item.url} three party failed: target not found`)
