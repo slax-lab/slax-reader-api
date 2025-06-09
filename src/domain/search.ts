@@ -388,7 +388,10 @@ export class SearchService {
   public async fulltextNormalize(ctx: ContextManager, normalizer: Normalizer, bookmarkId: number, title: string, content: string) {
     try {
       const res = await normalizer.processFulltext(title, content)
-      if (res.length < 1) return []
+      if (res.length < 1) {
+        console.log(`fulltext normalize failed, bookmarkId: ${bookmarkId}, content is empty`)
+        return []
+      }
       return await this.bookmarkSearchRepo.createBookmarkRaw(
         res.map((item, idx) => ({
           bookmark_id: bookmarkId,
@@ -411,6 +414,7 @@ export class SearchService {
   public async semanticNormalize(ctx: ContextManager, normalizer: Normalizer, bookmarkId: number, title: string, content: string) {
     try {
       const normalized = await normalizer.processSemantic(bookmarkId, title, content)
+      console.log(`semantic normalize, bookmarkId: ${bookmarkId}, normalized: ${normalized.length}`)
       // 先判断是否存在，如果存在则删除后重新写入
       const shard = await this.bookmarkRepo.upsertVectorShard(bookmarkId, Math.floor(Math.random() * 5))
       if (!shard) {

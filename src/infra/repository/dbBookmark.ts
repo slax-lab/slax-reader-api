@@ -611,7 +611,7 @@ export class BookmarkRepo {
 
     try {
       return await this.prisma().$queryRaw<bookmarkShardPO[]>`SELECT id, vs.bookmark_id, vs.bucket_idx, vs.created_at FROM slax_bookmark_vector_shard vs
-      INNER JOIN (SELECT bookmark_id FROM slax_user_bookmark WHERE user_id = ${userId} AND deleted_at is null) ub on vs.bookmark_id = ub.bookmark_id`
+      INNER JOIN (SELECT bookmark_id FROM slax_user_bookmark WHERE user_id = ${userId}) ub on vs.bookmark_id = ub.bookmark_id`
     } catch (e) {
       console.log(e, 'getBookmarkVectorShard error')
       return []
