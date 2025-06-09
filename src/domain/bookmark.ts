@@ -20,6 +20,7 @@ import { authToken } from '../middleware/auth'
 import { randomUUID } from 'crypto'
 import { selectDORegion } from '../utils/location'
 import { NotificationMessage } from '../infra/message/notification'
+import { Hashid } from '../utils/hashids'
 
 export interface BookmarkDetailResp {
   bookmark_id?: number
@@ -384,7 +385,7 @@ export class BookmarkService {
       ctx.execution.waitUntil(
         this.notifyMessage.sendBookmarkChange(ctx.env, {
           user_id: userId,
-          bookmark_id: ctx.hashIds.encodeId(bmId),
+          bookmark_id: new Hashid(ctx.env, userId).encodeId(bmId),
           created_at: deleteDate,
           target_url: bmInfo.bookmark?.target_url,
           action: 'delete'
@@ -544,6 +545,7 @@ export class BookmarkService {
     // 7. 可选 - 扫描内容中的图片，根据key去真删除
     const bmRepo = this.bookmarkRepo
     const bookmarks = await bmRepo.getExpiredTrashedBookmark()
+
     for (const bookmark of bookmarks) {
       console.log('clear expired trashed bookmark:', bookmark.bookmark_id, ' user:', bookmark.user_id)
       try {

@@ -43,7 +43,7 @@ export class BookmarkSearchRepo {
   async getUserBookmarkRawIds(userId: number) {
     try {
       return await this.prisma().$queryRaw<bookmarkRowPO[]>`SELECT id, br.bookmark_id FROM slax_bookmark_raw br
-        INNER JOIN (SELECT bookmark_id FROM slax_user_bookmark WHERE user_id = ${userId}) ub
+        INNER JOIN (SELECT bookmark_id FROM slax_user_bookmark WHERE user_id = ${userId} AND deleted_at is null) ub
         ON br.bookmark_id = ub.bookmark_id;`
     } catch (e) {
       console.log(e, 'getUserBookmarkRawIds error')
