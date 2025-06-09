@@ -188,6 +188,7 @@ export class UrlParserHandler {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     return async ({ parseRes }) => {
       try {
+        console.log(`add search record, bookmarkId: ${info.bookmarkId}`)
         await this.searchService.addSearchRecordByBmId(ctx, info.bookmarkId)
       } catch (e) {
         console.error(`add search record failed: ${e}`)
