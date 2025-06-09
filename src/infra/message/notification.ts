@@ -124,8 +124,12 @@ export class NotificationMessage {
 
   // 下发新的书签收藏记录更新数据
   public async sendBookmarkChange(env: Env, payload: bookmarkActionChangePO) {
-    const doId = env.WEBSOCKET_SERVER.idFromName('global')
-    const dObj = env.WEBSOCKET_SERVER.get(doId)
-    await dObj.sendBookmarkChange(payload)
+    try {
+      const doId = env.WEBSOCKET_SERVER.idFromName('global')
+      const dObj = env.WEBSOCKET_SERVER.get(doId)
+      await dObj.sendBookmarkChange(payload)
+    } catch (e) {
+      console.error(`send bookmark change failed: ${e}`)
+    }
   }
 }

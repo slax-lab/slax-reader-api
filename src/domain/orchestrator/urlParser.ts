@@ -187,7 +187,11 @@ export class UrlParserHandler {
   async handleSearchTask(ctx: ContextManager, info: { bookmarkId: number }): Promise<PostHandler> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     return async ({ parseRes }) => {
-      await this.searchService.addSearchRecordByBmId(ctx, info.bookmarkId)
+      try {
+        await this.searchService.addSearchRecordByBmId(ctx, info.bookmarkId)
+      } catch (e) {
+        console.error(`add search record failed: ${e}`)
+      }
     }
   }
 
