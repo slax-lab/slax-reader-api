@@ -228,10 +228,10 @@ export class BookmarkRepo {
     })
   }
 
-  public async createBookmarkRelation(userId: number, bmId: number, type: number) {
+  public async createBookmarkRelation(userId: number, bmId: number, type: number, isArchive: boolean) {
     return await this.prisma().slax_user_bookmark.upsert({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
-      create: { user_id: userId, bookmark_id: bmId, created_at: new Date(), updated_at: new Date(), type },
+      create: { user_id: userId, bookmark_id: bmId, created_at: new Date(), updated_at: new Date(), type, archive_status: isArchive ? 1 : 0 },
       update: { updated_at: new Date() }
     })
   }

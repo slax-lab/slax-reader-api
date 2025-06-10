@@ -195,7 +195,8 @@ export class ImportService {
         thumbnail: item.thumbnail,
         description: item.description,
         tags: item.labels,
-        target_title: item.title
+        target_title: item.title,
+        is_archive: false
       }))
     } else if (message.info.type === 'pocket') {
       return message.info.data.map(item => ({
@@ -203,7 +204,8 @@ export class ImportService {
         thumbnail: '',
         description: '',
         tags: !!item.tags && item.tags && item.tags.length > 0 ? item.tags.split('|') : [],
-        target_title: !!item.title && item.title && item.title.length > 0 ? item.title : ''
+        target_title: !!item.title && item.title && item.title.length > 0 ? item.title : '',
+        is_archive: !!item && item.status === 'archive' ? true : false
       }))
     } else {
       onFaild(`import bookmark type not match: ${message.info.type}`)
