@@ -79,6 +79,7 @@ export interface addUrlBookmarkReq {
   thumbnail?: string
   description?: string
   tags: string[]
+  is_archive?: boolean
 }
 
 export interface userBookmarkExistsResp {
@@ -116,6 +117,7 @@ export class BookmarkService {
     privateUser?: number
     description?: string
     siteName?: string
+    isArchive?: boolean
   }) {
     if (options.type === 1) {
       const urlEntity = new URL(options.targetUrl)
@@ -150,7 +152,7 @@ export class BookmarkService {
 
     const [_, relation] = await Promise.all([
       this.bookmarkSearchRepo.upsertUserBookmark(options.ctx.getUserId(), bmInfo.id),
-      this.bookmarkRepo.createBookmarkRelation(options.ctx.getUserId(), bmInfo.id, options.type)
+      this.bookmarkRepo.createBookmarkRelation(options.ctx.getUserId(), bmInfo.id, options.type, options.isArchive || false)
     ])
 
     if (relation.deleted_at) {
@@ -256,7 +258,8 @@ export class BookmarkService {
         title: lastBm?.title ?? item.target_title ?? targetUrl,
         icon: '',
         cover: lastBm?.content_cover ?? item.thumbnail ?? '',
-        description: item.description ?? ''
+        description: item.description ?? '',
+        isArchive: item.is_archive ?? false
       })
 
       if (!bmInfo) {
@@ -271,6 +274,9 @@ export class BookmarkService {
         if (!tagRes) continue
         await this.bookmarkRepo.createBookmarkTag(bmInfo.id, ctx.getUserId(), tagRes.id, tag, false)
       }
+
+      // not parse archive bookmark
+      if (item.is_archive) continue
 
       // 构建批量消息
       batchMessage.push({
