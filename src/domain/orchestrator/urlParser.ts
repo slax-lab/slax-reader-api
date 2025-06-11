@@ -4,9 +4,8 @@ import { BookmarkService } from '../bookmark'
 import { callbackType, parseMessage, QueueClient, queueParseMessage, queueRetryParseMessage, queueThirdPartyMessage, receiveParseMessage } from '../../infra/queue/queueClient'
 import { parserType } from '../../utils/urlPolicie'
 import { fetchResult } from '../../utils/browser'
-import { FetchError, SlaxFetch } from '../../infra/external/remoteFetcher'
+import { SlaxFetch } from '../../infra/external/remoteFetcher'
 import { queueStatus, bookmarkFetchRetryStatus } from '../../infra/repository/dbBookmark'
-import { MultiLangError } from '../../utils/multiLangError'
 import { ContentParser } from '../../utils/parser'
 import { Imager } from '../../utils/imager'
 import { BucketClient } from '../../infra/repository/bucketClient'
@@ -36,7 +35,7 @@ export class UrlParserHandler {
     @inject(QueueClient) private queueClient: LazyInstance<QueueClient>
   ) {}
 
-  private static async fetchContent(env: Env, message: parseMessage): Promise<fetchResult | Error> {
+  private static async fetchContent(env: Env, message: parseMessage): Promise<fetchResult> {
     const startTime = Date.now()
     const fetcher = new SlaxFetch(env)
     try {
@@ -48,31 +47,13 @@ export class UrlParserHandler {
         case parserType.CLIENT_PARSE:
           return { content: message.resource, url: message.targetUrl, title: '' }
         default:
-          return new Error('unknown parser type')
+          throw new Error('unknown parser type')
       }
     } catch (e) {
-      return e instanceof Error ? e : new Error(`fetch failed`)
+      throw e
     } finally {
       console.log(`fetch ${message.targetUrl} done, cost: ${Date.now() - startTime}ms`)
     }
-  }
-
-  private async handleError(err: Error, bookmarkId: number, info: Partial<parseMessage>) {
-    console.log(`fetch bm ${bookmarkId} failed: ${JSON.stringify(info)}: ${err.message}`)
-
-    if (err instanceof FetchError) {
-      await this.bookmarkService.updateBookmarkStatus(bookmarkId, queueStatus.RETRYING)
-      return err
-    }
-
-    const bookmark = await this.bookmarkService.getBookmarkById(bookmarkId)
-    if (!bookmark || bookmark instanceof MultiLangError || bookmark.status === queueStatus.SUCCESS) {
-      console.log('no need to update bookmark status:', bookmark)
-      return err
-    }
-
-    await this.bookmarkService.updateBookmarkStatus(bookmarkId, queueStatus.FAILED)
-    return err
   }
 
   private async saveBookmark(
@@ -118,25 +99,23 @@ export class UrlParserHandler {
       console.log(`parse ${messageId} with cache failed: ${err}`)
     }
 
+    console.log(`json parser ${JSON.stringify(message)}`)
     const fetchRes = await UrlParserHandler.fetchContent(ctx.env, message)
-    if (fetchRes instanceof Error) return this.handleError(fetchRes, bookmarkId, taskInfo)
 
     const uUrl = new URL(fetchRes.url)
     const parseRes = await ContentParser.parse({ url: uUrl, content: fetchRes.content, title: fetchRes.title })
-    if (parseRes instanceof Error) return this.handleError(parseRes, bookmarkId, taskInfo)
 
-    let uploadRes = await new Imager(ctx.env).batchReplaceImage(uUrl, parseRes.contentDocument)
-    if (uploadRes instanceof Error) return this.handleError(uploadRes, bookmarkId, taskInfo)
+    await new Imager(ctx.env).batchReplaceImage(uUrl, parseRes.contentDocument)
 
     try {
       await this.saveBookmark(messageId, bookmarkId, parseRes)
       await Promise.allSettled(postHandlers.map(handler => handler({ parseRes: { title: parseRes.title, textContent: parseRes.textContent } })))
     } catch (err) {
       console.log(`parse ${messageId} failed: ${err}`)
-      return err
+      throw err
+    } finally {
+      console.log(`parse ${message.targetUrl} done.`)
     }
-
-    console.log(`parse ${message.targetUrl} done.`)
   }
 
   private async parseTweet(env: Env, message: receiveThirdPartyMessage, tweetInfo: TweetInfo) {
@@ -203,22 +182,37 @@ export class UrlParserHandler {
     console.log(`processing message: ${id}, messageInfo: ${JSON.stringify(logInfo)}`)
 
     if (!info) return
-    const regexp = new RegExp('http[s]://(x|twitter).com/.*/status/[0-9]+')
-    if (regexp.test(info.targetUrl)) {
-      message.info.resource = ''
-      const info = {
-        ...message.info,
-        encodeBmId: ctx.hashIds.encodeId(message.info.bookmarkId)
-      } as queueThirdPartyMessage
 
-      return await this.processThirdPartyMessages(ctx, [{ id, info }])
-    } else if (ctx.env.RUN_ENV !== 'prod') {
-      message.info.parserType = parserType.CLIENT_PARSE
-    } else if (message.info.resource !== '') {
-      message.info.parserType = parserType.CLIENT_PARSE
+    message.info.parserType = parserType.SERVER_FETCH_PARSE
+
+    const processFunc = async () => {
+      const regexp = new RegExp('http[s]://(x|twitter).com/.*/status/[0-9]+')
+      if (regexp.test(info.targetUrl)) {
+        message.info.resource = ''
+        const info = {
+          ...message.info,
+          encodeBmId: ctx.hashIds.encodeId(message.info.bookmarkId)
+        } as queueThirdPartyMessage
+
+        return await this.processThirdPartyMessages(ctx, [{ id, info }])
+      } else if (message.info.resource !== '') {
+        message.info.parserType = parserType.CLIENT_PARSE
+      }
+
+      await this.processParseTask(ctx, message)
     }
 
-    await this.processParseTask(ctx, message)
+    try {
+      await Promise.race([
+        processFunc(),
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Parse timeout')), 120 * 1000)
+        })
+      ])
+    } catch (err) {
+      console.error(`processParseMessage ${id} failed: ${err}`)
+      await this.bookmarkService.updateBookmarkStatus(info.bookmarkId, queueStatus.FAILED)
+    }
   }
 
   async processParseTask(ctx: ContextManager, taskInfo: receiveQueueParseMessage) {
@@ -237,14 +231,11 @@ export class UrlParserHandler {
 
       await this.parseUrl(ctx, id, info, callbacks)
     } catch (err) {
-      if (err instanceof FetchError) {
-        await this.bookmarkService.updateBookmarkParseQueueRetry(info.bookmarkId, [info.userId], {
-          status: bookmarkFetchRetryStatus.PENDING,
-          retryCount: err.code >= 400 && err.code < 500 ? 1 : 0
-        })
-      } else {
-        await this.bookmarkService.checkAndFillPublicBookmarkData(ctx, info.bookmarkId, info.targetUrl)
-      }
+      await this.bookmarkService.updateBookmarkStatus(info.bookmarkId, queueStatus.PENDING_RETRY)
+      await this.bookmarkService.updateBookmarkParseQueueRetry(info.bookmarkId, [info.userId], {
+        status: bookmarkFetchRetryStatus.PENDING,
+        retryCount: 1
+      })
       console.error(`process message ${id} failed: ${err}`)
     }
   }
@@ -253,13 +244,12 @@ export class UrlParserHandler {
     const { id, info } = message
     console.log(`processing retry message: ${id}, messageInfo: ${JSON.stringify(info)}`)
 
-    const retryCount = info.retry.retryCount + 1
-    try {
-      await this.bookmarkService.updateBookmarkParseQueueRetry(info.bookmarkId, info.retry.userIds || [], {
-        status: bookmarkFetchRetryStatus.PARSING,
-        retryCount
-      })
+    await this.bookmarkService.updateBookmarkParseQueueRetry(info.bookmarkId, info.retry.userIds || [], {
+      status: bookmarkFetchRetryStatus.PARSING,
+      retryCount: info.retry.retryCount + 1
+    })
 
+    const retryFunc = async () => {
       const callbacks: PostHandler[] = [
         await this.handleCallbackTask(ctx, {
           callback: info.callback || callbackType.NOT_CALLBACK,
@@ -270,17 +260,28 @@ export class UrlParserHandler {
       ]
 
       await this.parseUrl(ctx, id, info, callbacks)
-    } catch (err) {
-      if (err instanceof FetchError) {
-        await this.bookmarkService.updateBookmarkParseQueueRetry(info.bookmarkId, info.retry.userIds || [], {
-          status: info.retry.retryCount >= 3 ? bookmarkFetchRetryStatus.FAILED : bookmarkFetchRetryStatus.PENDING
+    }
+
+    try {
+      await Promise.race([
+        retryFunc(),
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Retry timeout')), 120 * 1000)
         })
-      } else {
+      ])
+
+      const bookmark = await this.bookmarkService.getBookmarkById(info.bookmarkId)
+      if (bookmark && bookmark.status === queueStatus.SUCCESS) {
         await this.bookmarkService.updateBookmarkParseQueueRetry(info.bookmarkId, info.retry.userIds || [], {
-          status: bookmarkFetchRetryStatus.FAILED
+          status: bookmarkFetchRetryStatus.SUCCESS
         })
       }
-      console.error(`process message ${id} failed: ${err}`)
+    } catch (err) {
+      console.error(`process retry message ${id} failed: ${err}`)
+      await this.bookmarkService.updateBookmarkStatus(info.bookmarkId, queueStatus.FAILED)
+      await this.bookmarkService.updateBookmarkParseQueueRetry(info.bookmarkId, info.retry.userIds || [], {
+        status: bookmarkFetchRetryStatus.FAILED
+      })
     }
   }
 

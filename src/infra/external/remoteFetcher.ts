@@ -20,12 +20,11 @@ export class SlaxFetch {
 
   constructor(private env: Env) {}
 
-  async http(url: string, timezone: string, lang = 'zh'): Promise<fetchResult | Error> {
+  async http(url: string, timezone: string, lang = 'zh'): Promise<fetchResult> {
     try {
       const resp = (await fetch(url, {
         method: 'GET',
         headers: {
-          // TODO 先写死中文，后续想办法获取到用户的UA lang再去实时传
           'Accept-Language': SlaxFetch.acceptLang,
           Accept: SlaxFetch.acceptContentType,
           'Accept-Encoding': SlaxFetch.acceptEncoding,
@@ -38,15 +37,15 @@ export class SlaxFetch {
         }
       })) as Response
       if (!resp.ok) {
-        return new FetchError(resp.status, `fetch ${url} failed, response is not ok: ${resp.status}, response: ${await resp.text()}`)
+        throw new FetchError(resp.status, `fetch ${url} failed, response is not ok: ${resp.status}, response: ${await resp.text()}`)
       }
       return { url: resp.url, content: await resp.text() }
     } catch (error) {
-      return new FetchError(500, `http fetch ${url} failed, error: ${error}`)
+      throw new FetchError(500, `http fetch ${url} failed, error: ${error}`)
     }
   }
 
-  async headless(url: string, timezone: string, lang = 'zh'): Promise<fetchResult | Error> {
+  async headless(url: string, timezone: string, lang = 'zh'): Promise<fetchResult> {
     try {
       const obj = this.env.SLAX_BROWSER
       const browser = obj.get(obj.idFromName('global'), {
@@ -77,12 +76,12 @@ export class SlaxFetch {
 
       if (!resp || !resp.ok) {
         const body = await resp.text()
-        return new FetchError(resp.status, `fetch ${url} failed, response is not ok: ${body.slice(0, 100)}, status: ${resp.status}`)
+        throw new FetchError(resp.status, `fetch ${url} failed, response is not ok: ${body.slice(0, 100)}, status: ${resp.status}`)
       }
 
       return (await resp.json<fetchResponse>()).data
     } catch (error) {
-      return new FetchError(500, `headless fetch ${url} failed, error: ${error}`)
+      throw new FetchError(500, `headless fetch ${url} failed, error: ${error}`)
     }
   }
 }
