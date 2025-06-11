@@ -7,7 +7,6 @@ import { KVClient } from '../../infra/repository/KVClient'
 import { randomUUID } from 'crypto'
 import { importBookmarkMessage } from '../../infra/queue/queueClient'
 import { UrlParserHandler } from './urlParser'
-import { ImportOtherTimeoutError } from '../../const/err'
 
 @injectable()
 export class ImportOrchestrator {
@@ -32,14 +31,13 @@ export class ImportOrchestrator {
       }
     }
 
-    await Promise.race([
-      processImport(),
-      new Promise((resolve, reject) => {
-        setTimeout(() => reject(ImportOtherTimeoutError()), 120 * 1000)
-      })
-    ])
-
-    console.log(`import bookmark process: ${message.id} finished`)
-    await this.kvClient().kv.put(`import/process/${ctx.getUserId()}/${message.info.id}/${randomUUID()}`, '1')
+    try {
+      await processImport()
+    } catch (err) {
+      console.error(`import bookmark process failed: ${err}`)
+    } finally {
+      console.log(`import bookmark process: ${message.id} finished`)
+      await this.kvClient().kv.put(`import/process/${ctx.getUserId()}/${message.info.id}/${randomUUID()}`, '1')
+    }
   }
 }

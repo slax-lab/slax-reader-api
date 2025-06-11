@@ -230,6 +230,58 @@ export class BookmarkService {
     return bmInfo.id
   }
 
+  public async addUrlBookmarkItem(ctx: ContextManager, item: addUrlBookmarkReq) {
+    // 跳过非法的URL
+    const target_url = new URL(item.target_url)
+    const urlPolicie = new URLPolicie(ctx.env, target_url)
+    let ptype = urlPolicie.getParserType()
+    if (urlPolicie.isBlocked()) return null
+
+    // 参数处理
+    const targetUrl = processTargetUrl(target_url)
+
+    const lastBm = await this.bookmarkRepo.getBookmark(targetUrl, 0)
+    const bmInfo = await this.createBookmarkBase({
+      ctx,
+      targetUrl,
+      hostUrl: target_url.host,
+      privateUser: 0,
+      type: urlPolicie.isUrlShortcut() ? 1 : 0,
+      title: lastBm?.title ?? item.target_title ?? targetUrl,
+      icon: '',
+      cover: lastBm?.content_cover ?? item.thumbnail ?? '',
+      description: item.description ?? '',
+      isArchive: item.is_archive ?? false
+    })
+
+    if (!bmInfo) {
+      console.error(`create bookmark failed: ${item.target_url}`)
+      return null
+    }
+
+    // 创建标签
+    for (const tag of item.tags) {
+      const tagRes = await this.bookmarkRepo.createUserTag(ctx.getUserId(), tag, false)
+      console.log(`create tag: ${JSON.stringify(tagRes)}`)
+      if (!tagRes) continue
+      await this.bookmarkRepo.createBookmarkTag(bmInfo.id, ctx.getUserId(), tagRes.id, tag, false)
+    }
+
+    // not parse archive bookmark
+    if (item.is_archive) return null
+
+    return {
+      targetUrl: targetUrl,
+      resource: '',
+      parserType: ptype === parserType.CLIENT_PARSE ? parserType.SERVER_PUPPETEER_PARSE : ptype,
+      userId: ctx.getUserId(),
+      bookmarkId: bmInfo.id,
+      callback: callbackType.NOT_CALLBACK,
+      ignoreGenerateTag: true,
+      privateUser: bmInfo.private_user
+    }
+  }
+
   /**
    * 批量添加URL收藏
    */
@@ -239,56 +291,10 @@ export class BookmarkService {
     for (const item of req) {
       if (!item.target_url || item.target_url === '') continue
 
-      // 跳过非法的URL
-      const target_url = new URL(item.target_url)
-      const urlPolicie = new URLPolicie(ctx.env, target_url)
-      let ptype = urlPolicie.getParserType()
-      if (urlPolicie.isBlocked()) continue
+      const res = await this.addUrlBookmarkItem(ctx, item)
+      if (!res) continue
 
-      // 参数处理
-      const targetUrl = processTargetUrl(target_url)
-
-      const lastBm = await this.bookmarkRepo.getBookmark(targetUrl, 0)
-      const bmInfo = await this.createBookmarkBase({
-        ctx,
-        targetUrl,
-        hostUrl: target_url.host,
-        privateUser: 0,
-        type: urlPolicie.isUrlShortcut() ? 1 : 0,
-        title: lastBm?.title ?? item.target_title ?? targetUrl,
-        icon: '',
-        cover: lastBm?.content_cover ?? item.thumbnail ?? '',
-        description: item.description ?? '',
-        isArchive: item.is_archive ?? false
-      })
-
-      if (!bmInfo) {
-        console.error(`create bookmark failed: ${item.target_url}`)
-        continue
-      }
-
-      // 创建标签
-      for (const tag of item.tags) {
-        const tagRes = await this.bookmarkRepo.createUserTag(ctx.getUserId(), tag, false)
-        console.log(`create tag: ${JSON.stringify(tagRes)}`)
-        if (!tagRes) continue
-        await this.bookmarkRepo.createBookmarkTag(bmInfo.id, ctx.getUserId(), tagRes.id, tag, false)
-      }
-
-      // not parse archive bookmark
-      if (item.is_archive) continue
-
-      // 构建批量消息
-      batchMessage.push({
-        targetUrl: targetUrl,
-        resource: '',
-        parserType: ptype === parserType.CLIENT_PARSE ? parserType.SERVER_PUPPETEER_PARSE : ptype,
-        userId: ctx.getUserId(),
-        bookmarkId: bmInfo.id,
-        callback: callbackType.NOT_CALLBACK,
-        ignoreGenerateTag: true,
-        privateUser: bmInfo.private_user
-      })
+      batchMessage.push(res)
     }
 
     return batchMessage
