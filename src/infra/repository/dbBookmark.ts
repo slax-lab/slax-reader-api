@@ -11,7 +11,8 @@ export enum queueStatus {
   RETRYING = 'retrying',
   FAILED = 'failed',
   PENDING_RETRY = 'pending_retry', // 失败后如果重新发起抓取，状态变为此状态
-  SUCCESS = 'success'
+  SUCCESS = 'success',
+  PENDING_IMPORT = 'pending_import'
 }
 
 export enum bookmarkParseStatus {
