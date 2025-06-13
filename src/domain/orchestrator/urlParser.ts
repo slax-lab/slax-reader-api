@@ -35,7 +35,7 @@ export class UrlParserHandler {
     @inject(QueueClient) private queueClient: LazyInstance<QueueClient>
   ) {}
 
-  private static async fetchContent(env: Env, message: parseMessage): Promise<fetchResult> {
+  public static async fetchContent(env: Env, message: parseMessage): Promise<fetchResult> {
     const startTime = Date.now()
     const fetcher = new SlaxFetch(env)
     try {
@@ -56,7 +56,7 @@ export class UrlParserHandler {
     }
   }
 
-  private async saveBookmark(
+  public async saveBookmark(
     messageId: string,
     bookmarkId: number,
     parseRes: { title: string; textContent: string; contentDocument: Document; excerpt?: string; byline?: string; siteName?: string; publishedTime?: Date }
@@ -82,7 +82,7 @@ export class UrlParserHandler {
     return newBookmark
   }
 
-  async parseUrl(ctx: ContextManager, messageId: string, message: parseMessage, postHandlers: PostHandler[]) {
+  public async parseUrl(ctx: ContextManager, messageId: string, message: parseMessage, postHandlers: PostHandler[]) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { resource, ...taskInfo } = message
     const bookmarkId = taskInfo.bookmarkId
@@ -118,7 +118,7 @@ export class UrlParserHandler {
     }
   }
 
-  private async parseTweet(env: Env, message: receiveThirdPartyMessage, tweetInfo: TweetInfo) {
+  public async parseTweet(env: Env, message: receiveThirdPartyMessage, tweetInfo: TweetInfo) {
     const content = HtmlBuilder.buildTweet(tweetInfo)
     const { document } = parseHTML(content)
     await new Imager(env).batchReplaceImage(new URL(tweetInfo.url), document)
