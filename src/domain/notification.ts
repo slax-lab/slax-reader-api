@@ -152,6 +152,9 @@ export class NotificationService {
     }
     const { createUser, noticeUser } = await getUsersInfo()
 
+    // do not send notification if the user is the same as the creator
+    if (noticeUserId === markInfo.user_id) return
+
     // 根据被通知用户通知语言生成推送通知
     const noticeEntity = i18n(noticeUser.lang.substring(0, 2))
     const title = !!replyToComment
