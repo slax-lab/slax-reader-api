@@ -200,7 +200,7 @@ export class UserService {
     return {
       userId: ctx.hashIds.encodeId(ctx.getUserId()),
       email: userRes.email,
-      lang: userRes.lang,
+      lang: !!userRes.lang ? userRes.lang.slice(0, 2) : 'en',
       name: userRes.name,
       picture: userRes.picture || '',
       timezone: userRes.timezone || ''
@@ -255,8 +255,8 @@ export class UserService {
       name: user.name,
       account: user.account,
       email: user.email,
-      lang: user.lang,
-      ai_lang: !!user.ai_lang ? user.ai_lang : user.lang,
+      lang: !!user.lang ? user.lang.slice(0, 2) : 'en',
+      ai_lang: !!user.ai_lang ? user.ai_lang : user.lang?.slice(0, 2) || 'en',
       timezone: user.timezone,
       avatar: user.picture,
       id: ctx.hashIds.encodeId(ctx.getUserId()),

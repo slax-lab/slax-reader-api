@@ -48,7 +48,7 @@ export class AigcController {
     })
 
     const user = await this.userService.getUserInfo(ctx)
-    ctx.set('ai_lang', user.ai_lang)
+    ctx.set('ai_lang', user.ai_lang || user.lang?.slice(0, 2) || 'en')
     ctx.set('country', request.cf?.country || '')
     ctx.set('continent', request.cf?.continent || '')
 
@@ -87,7 +87,7 @@ export class AigcController {
     // 设置上下文
     ctx.set('country', request.cf?.country || '')
     ctx.set('continent', request.cf?.continent || '')
-    ctx.set('ai_lang', user.ai_lang)
+    ctx.set('ai_lang', user.ai_lang || user.lang?.slice(0, 2) || 'en')
 
     const aiSvc = this.aigcService
     const { readable, writable } = new TransformStream()
