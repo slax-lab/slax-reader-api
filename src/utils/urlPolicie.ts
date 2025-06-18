@@ -17,10 +17,6 @@ export class URLPolicie {
     '(.*.||)(dafahao|minghui|dongtaiwang|epochtimes|ntdtv|falundafa|wujieliulan|slax).(org|com|net|dev)': parserType.BLOCK_PARSE,
     '(x|twitter).com': parserType.SERVER_FETCH_PARSE
   }
-  private directRule: Record<string, parserType> = {
-    'mp.weixin.qq.com': parserType.SERVER_PUPPETEER_PARSE,
-    'cn.nytimes.com': parserType.SERVER_PUPPETEER_PARSE
-  }
 
   constructor(
     private env: Env,
@@ -41,10 +37,6 @@ export class URLPolicie {
       } else {
         this.parseType = parserType.CLIENT_PARSE
       }
-      return
-    }
-    if (this.directRule.hasOwnProperty(this._src.host)) {
-      this.parseType = this.directRule[this._src.host]
       return
     }
     for (const [k, v] of Object.entries(this.urlRegexRule)) {
