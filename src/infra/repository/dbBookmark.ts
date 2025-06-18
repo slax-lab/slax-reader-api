@@ -463,7 +463,7 @@ export class BookmarkRepo {
       SELECT EXISTS (
         SELECT 1 
         FROM slax_user_bookmark_tag 
-        WHERE user_id = ${userId} AND tag_id = ${tagId}
+        WHERE user_id = ${userId} AND tag_id = ${tagId} AND is_deleted = false
       ) as "exists"`
     return result.exists
   }
