@@ -15,6 +15,7 @@ export interface parseMessage {
   callback?: callbackType
   ignoreGenerateTag: boolean
   callbackPayload?: any
+  targetTitle?: string
 }
 
 export interface importBookmarkMessage {
