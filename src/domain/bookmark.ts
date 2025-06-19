@@ -222,7 +222,8 @@ export class BookmarkService {
           bookmarkId: bmInfo.id,
           callback: callbackType.NOT_CALLBACK,
           ignoreGenerateTag: false,
-          privateUser: bmInfo.private_user
+          privateUser: bmInfo.private_user,
+          targetTitle: target_title ?? ''
         }
       }
     }
