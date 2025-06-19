@@ -15,8 +15,8 @@ importers:
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
       '@slax-lab/readability':
-        specifier: 0.6.2
-        version: 0.6.2
+        specifier: 0.6.3
+        version: 0.6.3
       '@types/node':
         specifier: ^20.16.5
         version: 20.16.5
@@ -842,8 +842,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@slax-lab/readability@0.6.2':
-    resolution: {integrity: sha512-FZrnvgJH0S2gAtFQk8vTo05FOLSOLxf6b66MHZMXHD2t4Ii4twXVyEIRQgh08bazQZlVuVs5bZCKgXPMvHOGHw==}
+  '@slax-lab/readability@0.6.3':
+    resolution: {integrity: sha512-ipVCKokORVH2jWxZMmc/Qe6oLEDu6PxWgJ0IMnJGu3v1+U2ZHplGuV6tp83ssrFfBOdsT7ow7j+cBa3rYVjFUA==}
     engines: {node: '>=14.0.0'}
 
   '@tootallnate/quickjs-emscripten@0.23.0':
@@ -2840,7 +2840,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.34.9':
     optional: true
 
-  '@slax-lab/readability@0.6.2': {}
+  '@slax-lab/readability@0.6.3': {}
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 

@@ -25,7 +25,7 @@
   "dependencies": {
     "@prisma/adapter-d1": "^5.22.0",
     "@prisma/client": "^5.22.0",
-    "@slax-lab/readability": "0.6.2",
+    "@slax-lab/readability": "0.6.3",
     "@types/node": "^20.16.5",
     "@types/web": "^0.0.151",
     "@upstash/redis": "^1.34.3",
