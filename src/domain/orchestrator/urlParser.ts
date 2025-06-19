@@ -99,7 +99,6 @@ export class UrlParserHandler {
       console.log(`parse ${messageId} with cache failed: ${err}`)
     }
 
-    console.log(`json parser ${JSON.stringify(message)}`)
     const fetchRes = await UrlParserHandler.fetchContent(ctx.env, message)
 
     const uUrl = new URL(fetchRes.url)
