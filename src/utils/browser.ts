@@ -26,17 +26,11 @@ export interface browserParams {
 }
 
 export class SlaxBrowser extends DurableObject {
-  static readonly alarm_seconds = 30 // 每次alarm的秒数
-  static readonly alaram_time = this.alarm_seconds * 1000 // 每次alarm的时间间隔
-  static readonly trash_time = 3 * 60 // 被标记回收3分钟后关闭
-  static readonly alive_time = 7 * 60 // 存活时间7分钟
+  static readonly destroy_delay = 60 * 1000
 
   private bins: Fetcher
   private browser?: Browser
   private storage: DurableObjectStorage
-  private pendingTrashBrowser?: Browser
-  private aliveTotalTime: number = 0
-  private pendingTrashTotalTime: number = 0
 
   constructor(state: DurableObjectState, env: Env) {
     super(state, env)
@@ -44,22 +38,27 @@ export class SlaxBrowser extends DurableObject {
     this.storage = state.storage
   }
 
-  private async createAlarm() {
-    await this.storage.setAlarm(Date.now() + SlaxBrowser.alaram_time)
+  private async resetDestroyAlarm() {
+    const alarmTime = Date.now() + SlaxBrowser.destroy_delay
+    await this.storage.setAlarm(alarmTime)
   }
 
   private async getBrowser() {
-    if (!!this.browser) return this.browser
+    if (!!this.browser) {
+      await this.resetDestroyAlarm()
+      return this.browser
+    }
 
     const sessions = await puppeteer.sessions(this.bins)
     if (sessions.length > 0) {
       this.browser = await connect(this.bins, sessions[0].sessionId)
     } else {
-      this.browser = await puppeteer.launch(this.bins, { keep_alive: 600000 })
-      if ((await this.storage.getAlarm()) == null) await this.createAlarm()
+      this.browser = await puppeteer.launch(this.bins, { keep_alive: 120000 })
     }
     if (!this.browser) {
       console.error(`Browser DO: get browser failed, sessions: ${JSON.stringify(sessions)}`)
+    } else {
+      await this.resetDestroyAlarm()
     }
 
     return this.browser
@@ -254,32 +253,9 @@ export class SlaxBrowser extends DurableObject {
 
   async alarm() {
     try {
-      this.aliveTotalTime += SlaxBrowser.alarm_seconds
-      this.pendingTrashTotalTime += SlaxBrowser.alarm_seconds
-
-      if (this.aliveTotalTime >= SlaxBrowser.alive_time) {
-        if (this.browser) {
-          await this.browser.close()
-          this.browser = undefined
-        }
-        this.aliveTotalTime = 0
-      } else if (this.browser) {
-        await this.browser.version()
-      }
-
-      if (this.pendingTrashTotalTime >= SlaxBrowser.trash_time) {
-        if (this.pendingTrashBrowser) {
-          const pages = await this.pendingTrashBrowser.pages()
-          if (pages.length < 1) {
-            await this.pendingTrashBrowser.close()
-            this.pendingTrashBrowser = undefined
-          }
-        }
-        this.pendingTrashTotalTime = 0
-      }
-
-      if ((this.aliveTotalTime > 0 || this.pendingTrashTotalTime > 0) && (this.pendingTrashBrowser || this.browser)) {
-        await this.createAlarm()
+      if (this.browser) {
+        await this.browser.close()
+        this.browser = undefined
       }
     } catch (error) {
       console.error('Error in alarm method:', error)
