@@ -28,12 +28,7 @@ export class SlaxFetch {
           'Accept-Language': SlaxFetch.acceptLang,
           Accept: SlaxFetch.acceptContentType,
           'Accept-Encoding': SlaxFetch.acceptEncoding,
-          'Cache-Control': 'no-cache',
-          Referer: new URL(url).origin,
-          DNT: '1'
-        },
-        cf: {
-          resolveOverride: 'proxy-hk.slax.dev'
+          Referer: new URL(url).origin
         }
       })) as Response
       if (!resp.ok) {
@@ -48,9 +43,8 @@ export class SlaxFetch {
   async headless(url: string, timezone: string, lang = 'zh'): Promise<fetchResult> {
     try {
       const obj = this.env.SLAX_BROWSER
-      const browser = obj.get(obj.idFromName('global'), {
-        locationHint: 'apac'
-      })
+      const doId = Math.floor(Math.random() * 5)
+      const browser = obj.get(obj.idFromName(`${doId}`))
 
       const body: browserParams = {
         url,
@@ -58,8 +52,7 @@ export class SlaxFetch {
         width: 1280,
         height: 1960,
         scale: 1,
-        timezone,
-        requestInterception: !url.includes('mp.weixin.qq.com')
+        timezone
       }
       const init: RequestInit = {
         method: 'POST',
