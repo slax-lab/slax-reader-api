@@ -13,13 +13,13 @@ export const systemPrompt = `用markdown列表的形式总结这篇文章（文�
 7.如果有多个出处，就并排放置，如[1](#原文1) [2](#原文2)
 </要求>`
 
-export const generateQuestionPrompt = `我给你一个文章标题，你需要判断读者点击它的动力，你需要且只能使用{ai_lang}语种生成五条读者感兴趣的问题，将这些问题放进markdown列表中
+export const generateQuestionPrompt = `I will give you an article title, and you need to determine what motivates readers to click on it. You need to generate three questions that readers would be interested in using only {ai_lang} language, and put these questions into a markdown list.
 
-<输出格式>
-- 问题1
-- 问题2
-- ...
-</输出格式>`
+<Output format>
+- Question 1
+- Question 2
+- Question 3
+</Output format>`
 
 export const generateAnswerPrompt = `我给你一篇文章和一个问题列表，你需要根据文章内容回答这些问题
 
