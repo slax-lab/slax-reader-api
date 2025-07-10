@@ -45,6 +45,7 @@ import { BookmarkController } from '../../handler/http/bookmarkController'
 import { CallbackController } from '../../handler/http/callbackController'
 import { ImageController } from '../../handler/http/imageController'
 import { MarkController } from '../../handler/http/markController'
+import { McpServerController } from '../../handler/http/mcpController'
 import { ShareController } from '../../handler/http/shareController'
 import { TagController } from '../../handler/http/tagController'
 import { UserController } from '../../handler/http/userController'
@@ -238,6 +239,10 @@ container.register(ImageController, {
 
 container.register(MarkController, {
   useFactory: container => new MarkController(container.resolve(MarkService), container.resolve(MarkOrchestrator))
+})
+
+container.register(McpServerController, {
+  useFactory: () => new McpServerController()
 })
 
 container.register(ShareController, {

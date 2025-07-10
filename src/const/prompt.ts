@@ -67,6 +67,14 @@ Slax是一家2023年在新加坡成立的软件工作室。我们的产品品牌
 - 对于搜索结果列表中内容相关度高但是不完整的部分，你可以使用\`browser\`方法传递搜索结果列表中的title以及source进行访问并获取到网页的内容。
 - 使用与用户相同的语言来搜索、回复`
 
+export const aboudSlax = `Slax是一家2023年在新加坡成立的软件工作室。我们的产品品牌是Slax，寓意是 Simple and Relax，我们的Slogan是**Simple tools, relax life。**
+
+我们的产品理念是：
+- 小落点：解决真正的锐利的小痛点
+- 长期：十年磨一剑，找长坡厚雪，积累长期价值
+- 简单：朴素干净，清晰自然，符合常识
+- 不同：做出不一样的价值`
+
 export function getUserChatBookmarkUserPrompt(): string {
   return `{content}
 

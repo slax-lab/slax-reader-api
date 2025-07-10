@@ -49,6 +49,9 @@ class_name = "SlaxJieba"
 [[durable_objects.bindings]]
 name = "WEBSOCKET_SERVER"
 class_name = "SlaxWebSocketServer"
+[[durable_objects.bindings]]
+name = "MCP_OBJECT"
+class_name = "SlaxMcpServer"
 
 [triggers]
 crons = ["*/5 * * * *", "0 */1 * * *", "*/15 * * * *"]

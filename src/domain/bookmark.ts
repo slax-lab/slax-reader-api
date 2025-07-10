@@ -497,7 +497,7 @@ export class BookmarkService {
   }
 
   /** 获取收藏列表 */
-  public async bookmarkList(ctx: ContextManager, page: number, size: number, filter: string): Promise<bookmarkPO[]> {
+  public async bookmarkList(ctx: ContextManager, page: number, size: number, filter: string) {
     return (await this.bookmarkRepo.listUserBookmarks(ctx.getUserId(), (page - 1) * size, size, filter)).map(
       ({ bookmark, alias_title, archive_status, is_starred, deleted_at, type }) => {
         const { private_user, content_md_key, content_key, ...bookmarkWithout } = bookmark!
@@ -849,6 +849,14 @@ export class BookmarkService {
     if (!bookmarkId || bookmarkId < 1) throw ErrorParam()
 
     return await this.bookmarkRepo.getUserBookmarkSummary(bookmarkId, ctx.getUserId(), ctx.get('ai_lang'))
+  }
+
+  public async getUserBookmarkSummaryByMCP(bmId: number, userId: number, lang: string) {
+    const bookmark = await this.getBookmarkById(bmId)
+    if (!bookmark || bookmark instanceof MultiLangError || !bookmark.content_md_key) {
+      throw BookmarkNotFoundError()
+    }
+    return await this.bookmarkRepo.getUserBookmarkSummary(bmId, userId, lang)
   }
 
   async saveSummary(ctx: ContextManager, bmId: number, provider: string, content: string, model: string) {
