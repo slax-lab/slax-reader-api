@@ -9,6 +9,7 @@ import { BookmarkController } from '../../handler/http/bookmarkController'
 import { CallbackController } from '../../handler/http/callbackController'
 import { ImageController } from '../../handler/http/imageController'
 import { MarkController } from '../../handler/http/markController'
+import { McpServerController } from '../../handler/http/mcpController'
 import { ShareController } from '../../handler/http/shareController'
 import { TagController } from '../../handler/http/tagController'
 import { UserController } from '../../handler/http/userController'
@@ -133,6 +134,10 @@ router.post('/v1/mark/delete', async (req: Request, ctx: ContextManager) => {
 router.get('/v1/mark/list', async (req: Request, ctx: ContextManager) => {
   const controller = container.resolve(MarkController)
   return await controller.getMarkList(ctx, req)
+})
+router.all('/v1/mcp/*', async (req: Request, ctx: ContextManager) => {
+  const controller = container.resolve(McpServerController)
+  return await controller.handleMcpRequest(ctx, req)
 })
 router.get('/v1/share/detail', async (req: Request, ctx: ContextManager) => {
   const controller = container.resolve(ShareController)

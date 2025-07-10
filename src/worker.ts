@@ -9,6 +9,7 @@ import { initializeInfrastructure, initializeCore } from './di/generated/depende
 import { handleMessage } from './di/generated/consumer'
 import { handleCronjob } from './di/generated/cronjob'
 import { router } from './di/generated/readerRouter'
+import { SlaxMcpServer } from './domain/orchestrator/mcp'
 
 initializeCore()
 
@@ -42,4 +43,4 @@ export default {
   }
 }
 
-export { SlaxBrowser, SlaxJieba, SlaxWebSocketServer }
+export { SlaxBrowser, SlaxJieba, SlaxWebSocketServer, SlaxMcpServer }

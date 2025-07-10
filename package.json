@@ -20,16 +20,20 @@
     "gen:router": "tsx ./script/gen-routers.ts",
     "gen:all": "pnpm gen:model && pnpm types && pnpm gen:cron && pnpm gen:consumer && pnpm gen:router && pnpm gen:di && pnpm prettier --write ./src/di/generated && pnpm prettier --write ./worker-configuration.d.ts",
     "migration:local": "wrangler d1 migrations apply slax-reader-backend --local -c ./config/dev.toml",
-    "migration:local:fulltext": "wrangler d1 migrations apply slax-reader-backend-fulltext --local -c ./config/config.toml"
+    "migration:local:fulltext": "wrangler d1 migrations apply slax-reader-backend-fulltext --local -c ./config/config.toml",
+    "mcp:tool": "npx @modelcontextprotocol/inspector"
   },
   "dependencies": {
     "@cloudflare/puppeteer": "^1.0.2",
+    "@modelcontextprotocol/inspector": "^0.15.0",
+    "@modelcontextprotocol/sdk": "^1.15.0",
     "@prisma/adapter-d1": "^5.22.0",
     "@prisma/client": "^5.22.0",
     "@slax-lab/readability": "0.6.3",
     "@types/node": "^20.16.5",
     "@types/web": "^0.0.151",
     "@upstash/redis": "^1.34.3",
+    "agents": "^0.0.101",
     "approx-string-match": "^2.0.0",
     "aws4fetch": "^1.0.20",
     "date-fns": "^3.6.0",
@@ -41,7 +45,8 @@
     "linkedom": "^0.18.4",
     "moment-timezone": "^0.5.45",
     "openai": "^4.61.0",
-    "stripe": "^16.11.0"
+    "stripe": "^16.11.0",
+    "zod": "^3.25.75"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.7.6",
@@ -61,6 +66,6 @@
     "typescript": "^5.6.2",
     "typescript-eslint": "^8.26.0",
     "vitest": "^3.0.7",
-    "wrangler": "^3.112.0"
+    "wrangler": "^4.24.0"
   }
 }
