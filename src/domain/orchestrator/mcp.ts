@@ -2,7 +2,7 @@ import { McpAgent } from 'agents/mcp'
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { State } from 'cloudflare/resources/cache/cache-reserve.mjs'
 import { z } from 'zod'
-import { aboudSlax } from '../../const/prompt'
+import { aboutSlax } from '../../const/prompt'
 import { BookmarkService } from '../bookmark'
 import { container } from '../../decorators/di'
 import { BookmarkContentNotFoundError, BookmarkNotFoundError } from '../../const/err'
@@ -155,19 +155,19 @@ export class SlaxMcpServer extends McpAgent<Env, State, Props> {
 
     this.server.resource('about', 'about://slax', async (uri: URL) => {
       return {
-        contents: [{ uri: uri.href, text: aboudSlax }]
+        contents: [{ uri: uri.href, text: aboutSlax }]
       }
     })
 
     this.server.prompt('slax', async () => {
       return {
-        content: [{ type: 'text', text: aboudSlax }],
+        content: [{ type: 'text', text: aboutSlax }],
         messages: [
           {
             role: 'user',
             content: {
               type: 'text',
-              text: aboudSlax
+              text: aboutSlax
             }
           }
         ]
