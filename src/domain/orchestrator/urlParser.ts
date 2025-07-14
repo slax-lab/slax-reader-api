@@ -174,13 +174,13 @@ export class UrlParserHandler {
     }
   }
 
-  async processParseMessage(ctx: ContextManager, message: receiveQueueParseMessage) {
+  async processParseMessage(ctx: ContextManager, message: receiveQueueParseMessage): Promise<{ success: boolean; bookmarkId: number }> {
     const { id, info } = message
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { resource, ...logInfo } = info
     console.log(`processing message: ${id}, messageInfo: ${JSON.stringify(logInfo)}`)
 
-    if (!info) return
+    if (!info) return { success: false, bookmarkId: message.info.bookmarkId }
 
     message.info.parserType = parserType.SERVER_FETCH_PARSE
 
@@ -208,9 +208,11 @@ export class UrlParserHandler {
           setTimeout(() => reject(new Error('Parse timeout')), 120 * 1000)
         })
       ])
+      return { success: true, bookmarkId: message.info.bookmarkId }
     } catch (err) {
       console.error(`processParseMessage ${id} failed: ${err}`)
       await this.bookmarkService.updateBookmarkStatus(info.bookmarkId, queueStatus.FAILED)
+      return { success: false, bookmarkId: message.info.bookmarkId }
     }
   }
 
