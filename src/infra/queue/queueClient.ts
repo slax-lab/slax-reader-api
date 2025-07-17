@@ -28,6 +28,7 @@ export interface importBookmarkMessage {
 export interface queueParseMessage extends parseMessage {
   userId: number
   privateUser: number
+  skipParse: boolean
 }
 
 export interface queueRetryParseMessage extends parseMessage {
