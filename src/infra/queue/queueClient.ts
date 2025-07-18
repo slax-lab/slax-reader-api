@@ -39,7 +39,7 @@ export interface queueRetryParseMessage extends parseMessage {
 }
 
 export interface queueThirdPartyMessage extends parseMessage {
-  encodeBmId: number
+  userId: number
 }
 
 export interface receiveParseMessage<T extends parseMessage> {
