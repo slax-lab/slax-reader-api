@@ -41,13 +41,10 @@ export class ContentParser {
 
     // 发布时间转换
     let publishedTime = new Date()
-    if (res.publishedTime) {
-      try {
-        res.publishedTime = res.publishedTime.replace(/年|月/g, '-').replace('日', '')
-        publishedTime = moment(res.publishedTime).toDate()
-      } catch (err: any) {
-        console.log(`Published time parse error: ${err.message}`)
-      }
+    if (res.publishedTime && res.publishedTime.trim()) {
+      res.publishedTime = res.publishedTime.replace(/年|月/g, '-').replace('日', '')
+      const parsedTime = moment(res.publishedTime)
+      if (parsedTime.isValid()) publishedTime = parsedTime.toDate()
     }
 
     return {
