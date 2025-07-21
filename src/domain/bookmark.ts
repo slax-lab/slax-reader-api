@@ -268,9 +268,6 @@ export class BookmarkService {
       await this.bookmarkRepo.createBookmarkTag(bmInfo.id, ctx.getUserId(), tagRes.id, tag, false)
     }
 
-    // not parse archive bookmark
-    if (item.is_archive) return null
-
     return {
       targetUrl: targetUrl,
       resource: '',
@@ -279,7 +276,8 @@ export class BookmarkService {
       bookmarkId: bmInfo.id,
       callback: callbackType.NOT_CALLBACK,
       ignoreGenerateTag: true,
-      privateUser: bmInfo.private_user
+      privateUser: bmInfo.private_user,
+      skipParse: item.is_archive || false
     }
   }
 

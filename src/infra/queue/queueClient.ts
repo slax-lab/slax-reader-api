@@ -28,6 +28,7 @@ export interface importBookmarkMessage {
 export interface queueParseMessage extends parseMessage {
   userId: number
   privateUser: number
+  skipParse: boolean
 }
 
 export interface queueRetryParseMessage extends parseMessage {
@@ -38,7 +39,7 @@ export interface queueRetryParseMessage extends parseMessage {
 }
 
 export interface queueThirdPartyMessage extends parseMessage {
-  encodeBmId: number
+  userId: number
 }
 
 export interface receiveParseMessage<T extends parseMessage> {
