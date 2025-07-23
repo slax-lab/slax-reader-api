@@ -190,7 +190,6 @@ export class AigcService {
     }
 
     const data = await res.json<{ code: number; message: string; data: { title: string; content: string; bookmark_id: number }[] }>()
-    console.log(`searchBookmark: ${JSON.stringify(data)}`)
     await this.writeProgress('tool', 'searchBookmark', JSON.stringify(data), toolStatus.SUCCESSFULLY)
     return data
   }
