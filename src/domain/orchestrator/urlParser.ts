@@ -18,6 +18,7 @@ import { AigcService } from '../aigc'
 import { SearchService } from '../search'
 import { TweetInfo } from '../../const/struct'
 import { TwitterApi } from '../../infra/external/twitterapi'
+import { Hashid } from '../../utils/hashids'
 
 export type PostHandler = (meta: { parseRes: { title: string; textContent: string } }) => Promise<void>
 export type receiveQueueParseMessage = receiveParseMessage<queueParseMessage>
@@ -135,7 +136,9 @@ export class UrlParserHandler {
     try {
       await this.saveBookmark(message.id, message.info.bookmarkId, parseRes)
       if (message.info.callback === callbackType.CALLBACK_TELEGRAM) {
-        await this.telegramBotService.callback(message.info.encodeBmId, message.info.callbackPayload)
+        const hashids = new Hashid(env, message.info.userId)
+        const encodeBmId = hashids.encodeId(message.info.bookmarkId)
+        await this.telegramBotService.callback(encodeBmId, message.info.callbackPayload)
       }
     } catch (err) {
       console.log(`parse tweet ${message.id} ${message.info.targetUrl} failed: ${err}`)
@@ -157,7 +160,7 @@ export class UrlParserHandler {
         return
       }
 
-      const tags = await this.aigcService.generateTags(ctx, meta.parseRes.title || '', meta.parseRes.textContent)
+      const tags = await this.aigcService.generateTagsFromPresupposition(meta.parseRes.title || '', meta.parseRes.textContent)
       await Promise.all(info.userIds.map(userId => this.bookmarkService.tagBookmark(ctx, userId, info.bookmarkId, tags)))
     }
   }
@@ -296,7 +299,9 @@ export class UrlParserHandler {
           if (!res) return message.info.targetUrl
 
           if (message.info.callback === callbackType.CALLBACK_TELEGRAM) {
-            await this.telegramBotService.callback(message.info.encodeBmId, message.info.callbackPayload)
+            const hashids = new Hashid(ctx.env, message.info.userId)
+            const encodeBmId = hashids.encodeId(message.info.bookmarkId)
+            await this.telegramBotService.callback(encodeBmId, message.info.callbackPayload)
           }
         } catch (err) {
           console.log(`parse ${message.id} ${message.info.targetUrl} cache failed: ${err}`)

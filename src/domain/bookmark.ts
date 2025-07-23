@@ -223,7 +223,8 @@ export class BookmarkService {
           callback: callbackType.NOT_CALLBACK,
           ignoreGenerateTag: false,
           privateUser: bmInfo.private_user,
-          targetTitle: target_title ?? ''
+          targetTitle: target_title ?? '',
+          skipParse: false
         }
       }
     }
@@ -342,7 +343,8 @@ export class BookmarkService {
           callback,
           callbackPayload,
           ignoreGenerateTag: false,
-          privateUser: bmInfo.private_user
+          privateUser: bmInfo.private_user,
+          skipParse: false
         }
       }
     }
