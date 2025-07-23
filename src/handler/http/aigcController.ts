@@ -2,13 +2,13 @@ import { ContextManager } from '../../utils/context'
 import { corsHeader } from '../../middleware/cors'
 import { ChatCompletionMessageParam } from 'openai/resources/index.mjs'
 import { AigcService, completionQuote } from '../../domain/aigc'
-import { ErrorParam } from '../../const/err'
 import { inject } from '../../decorators/di'
 import { Controller } from '../../decorators/controller'
 import { Post } from '../../decorators/route'
 import { UserService } from '../../domain/user'
 import { BookmarkService } from '../../domain/bookmark'
 import { RequestUtils } from '../../utils/requestUtils'
+import { convertToCore } from '../../utils/ai'
 
 type SummaryRequest = {
   bm_id?: number
@@ -64,7 +64,7 @@ export class AigcController {
 
     const { title, content, bmId } = await this.bookmarkService.getBookmarkTitleContent(ctx, req.bm_id, req.share_code, req.cb_id, 'no title', req.raw_content)
     ctx.execution.waitUntil(
-      aiSvc.summaryRawContent(ctx, content, writable, async result => {
+      aiSvc.bookmarkSummary(ctx, content, writable, async result => {
         bmId > 0 && (await this.bookmarkService.saveSummary(ctx, bmId, result.provider, result.response, result.model))
       })
     )
@@ -91,10 +91,22 @@ export class AigcController {
 
     const aiSvc = this.aigcService
     const { readable, writable } = new TransformStream()
-    ctx.execution.waitUntil(aiSvc.chatRawContent(ctx, title, content, req.messages, writable, req.quote || []))
+    ctx.execution.waitUntil(aiSvc.bookmarkChat(ctx, title, content, convertToCore(req.messages), writable, req.quote || []))
 
     return new Response(readable, {
       headers: { 'Content-Type': 'text/event-stream; charset=utf-8', ...corsHeader }
+    })
+  }
+
+  @Post('/tags')
+  public async handleTagsRequest(ctx: ContextManager, request: Request): Promise<Response> {
+    const req = await RequestUtils.json<{ tags: string[]; title: string; content: string }>(request)
+
+    const aiSvc = this.aigcService
+    const { tags, overview } = await aiSvc.generateOverviewTags(ctx, req.title, req.content, req.tags)
+
+    return new Response(JSON.stringify({ tags, overview }), {
+      headers: { 'Content-Type': 'application/json', ...corsHeader }
     })
   }
 }

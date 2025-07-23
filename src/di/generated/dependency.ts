@@ -9,7 +9,8 @@ import {
   BUCKET_REGISTRY,
   MIDDLEWARES,
   CONTROLLERS,
-  ROUTER
+  ROUTER,
+  CHAT_COMPLETION
 } from '../../const/symbol'
 import { BookmarkRepo } from '../../infra/repository/dbBookmark'
 import { BookmarkSearchRepo } from '../../infra/repository/dbBookmarkSearch'
@@ -36,7 +37,6 @@ import { ImportOrchestrator } from '../../domain/orchestrator/import'
 import { EmailService } from '../../domain/email'
 import { BookmarkJob } from '../../handler/cron/bookmarkJob'
 import { BookmarkConsumer } from '../../handler/queue/bookmarkConsumer'
-import { ChatCompletion } from '../../infra/external/chatCompletion'
 import { QueueClient } from '../../infra/queue/queueClient'
 import { BucketClient } from '../../infra/repository/bucketClient'
 import { KVClient } from '../../infra/repository/KVClient'
@@ -54,7 +54,7 @@ import { DatabaseRegistry } from '../data'
 container.register(AigcService, {
   useFactory: container =>
     new AigcService(
-      lazy(() => container.resolve(ChatCompletion)),
+      lazy(() => container.resolve(CHAT_COMPLETION)),
       lazy(() => container.resolve(BucketClient))
     )
 })
@@ -167,10 +167,6 @@ container.register(BookmarkJob, {
 
 container.register(BookmarkConsumer, {
   useFactory: container => new BookmarkConsumer(container.resolve(UrlParserHandler), container.resolve(ImportOrchestrator))
-})
-
-container.register(ChatCompletion, {
-  useClass: ChatCompletion
 })
 
 container.register(NotificationMessage, {

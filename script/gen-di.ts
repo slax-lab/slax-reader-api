@@ -213,6 +213,8 @@ class DIGenerator {
           return
         }
 
+        if (this.isGenericParameter(cls, typeName)) return
+
         serviceInfo.dependencies.push({
           paramName,
           typeName,
@@ -227,6 +229,15 @@ class DIGenerator {
         }
       })
     }
+  }
+
+  private isGenericParameter(cls: any, typeName: string): boolean {
+    const typeParameters = cls.getTypeParameters()
+    if (!typeParameters || typeParameters.length === 0) {
+      return false
+    }
+
+    return typeParameters.some((param: any) => param.getName() === typeName)
   }
 
   private extractTypeNameFromGeneric(typeText: string): string | null {
@@ -356,6 +367,10 @@ class DIGenerator {
     if (!filePath || !className) return
 
     if (['Array', 'Promise', 'Map', 'Set', 'any', 'string', 'number', 'boolean', 'Env'].includes(className)) {
+      return
+    }
+
+    if (/^[A-Z]$/.test(className) || ['T', 'K', 'V', 'U', 'P', 'R'].includes(className)) {
       return
     }
 

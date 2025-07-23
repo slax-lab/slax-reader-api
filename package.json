@@ -24,6 +24,11 @@
     "mcp:tool": "npx @modelcontextprotocol/inspector"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^1.2.12",
+    "@ai-sdk/azure": "^1.3.24",
+    "@ai-sdk/google": "^1.2.22",
+    "@ai-sdk/openai": "^1.3.23",
+    "@ai-sdk/xai": "^1.2.18",
     "@cloudflare/puppeteer": "^1.0.2",
     "@modelcontextprotocol/inspector": "^0.15.0",
     "@modelcontextprotocol/sdk": "^1.15.0",
@@ -34,8 +39,8 @@
     "@types/web": "^0.0.151",
     "@upstash/redis": "^1.34.3",
     "agents": "^0.0.101",
+    "ai": "^4.3.19",
     "approx-string-match": "^2.0.0",
-    "aws4fetch": "^1.0.20",
     "date-fns": "^3.6.0",
     "grammy": "^1.30.0",
     "hashids": "^2.3.0",
@@ -44,7 +49,7 @@
     "letterparser": "^0.1.7",
     "linkedom": "^0.18.4",
     "moment-timezone": "^0.5.45",
-    "openai": "^4.61.0",
+    "openai": "^5.10.1",
     "stripe": "^16.11.0",
     "zod": "^3.25.75"
   },

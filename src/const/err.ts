@@ -138,7 +138,7 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.SUBSCRIPTION_NOT_EXPIRED]: 'You have a subscription not expired',
     [ErrorName.INTERNET_SEARCH_FAIL]: 'Internet search fail',
     [ErrorName.AI_RATE_LIMIT]: 'AI rate limit',
-    [ErrorName.AI_ERROR]: `The AI provider has made a mistake. Don't worry, it's switching to the backup provider. \n`,
+    [ErrorName.AI_ERROR]: `The AI provider has made a mistake. Don't worry, it's switching to the backup provider. \n\n`,
     [ErrorName.NOT_SUBSCRIPTION]: 'Not subscription',
     [ErrorName.AI_CONTENT_HARMFUL]: `Apologies, your message can't be processed due to potentially harmful content in the chat history or article. `,
     [ErrorName.CREATE_BOOKMARK_SHARE_UNIQUE_FAIL]: 'Create bookmark share unique fail',

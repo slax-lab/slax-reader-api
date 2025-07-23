@@ -1,30 +1,29 @@
-import OpenAI from 'openai'
-
+import { CoreAssistantMessage, CoreMessage, CoreUserMessage, ToolCallPart, tool } from 'ai'
+import { z } from 'zod'
 import {
-  generateAnswerPrompt,
   generateQuestionPrompt,
   systemPrompt,
-  generateUserAnserPrompt,
   userChatBookmarkSystemPrompt,
   getUserChatBookmarkUserPrompt,
-  generateRelatedTagPrompt
+  generateRelatedTagPrompt,
+  generateOverviewTagsPrompt,
+  generateOverviewTagsTemplatePrompt
 } from '../const/prompt'
 import { ContextManager } from '../utils/context'
-import { ChatCompletionMessageToolCall, ChatCompletionMessageParam, ChatCompletionContentPart } from 'openai/resources/chat/completions'
 import { GoogleSearch } from '../infra/external/searchGoogle'
 import { ContentParser } from '../utils/parser'
 import { systemTag } from '../const/systemTag'
 import { inject, injectable } from '../decorators/di'
 import type { LazyInstance } from '../decorators/lazy'
-import { ChatCompletion } from '../infra/external/chatCompletion'
 import { BucketClient } from '../infra/repository/bucketClient'
 import { MultiLangError } from '../utils/multiLangError'
+import { CHAT_COMPLETION } from '../const/symbol'
+import { AppChatCompletion } from '../di/data'
 
 export type deltaType = {
   role?: 'system' | 'user' | 'assistant' | 'tool'
   content?: string
   function_call?: { name: string; arguments: string }
-  tool_calls?: ChatCompletionMessageToolCall[]
   name?: string
   tool_call_id?: string
 }
@@ -40,6 +39,11 @@ export enum toolStatus {
   FAILED = 'finished_failed'
 }
 
+export type MixTagsOverviewResult = {
+  tags: string[]
+  overview: string
+}
+
 @injectable()
 export class AigcService {
   private chunks: Uint8Array[] = []
@@ -49,22 +53,26 @@ export class AigcService {
   static target = '<relatedQuestionStart>'
 
   constructor(
-    @inject(ChatCompletion) private aigc: LazyInstance<ChatCompletion>,
+    @inject(CHAT_COMPLETION) private aigc: LazyInstance<AppChatCompletion>,
     @inject(BucketClient) private bucket: LazyInstance<BucketClient>
   ) {}
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async recordChunks(chunk: Uint8Array, controller: TransformStreamDefaultController<any>) {
+  async recordChunks(chunk: Uint8Array, controller: TransformStreamDefaultController<Uint8Array>) {
     this.chunks.push(chunk)
     controller.enqueue(chunk)
   }
 
-  private isToolCallMessage(message: ChatCompletionMessageParam): message is OpenAI.Chat.ChatCompletionUserMessageParam & { tool_calls: ChatCompletionMessageToolCall[] } {
-    return message.role === 'assistant' && 'tool_calls' in message
-  }
-
   private async writeDone() {
     await this.wr.write(this.ted.encode('data: [DONE]'))
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private isToolCallPart(part: any): part is ToolCallPart {
+    return part.type === 'tool-call'
+  }
+
+  private isToolCall(message: CoreMessage): message is CoreAssistantMessage {
+    return message.role === 'assistant' && Array.isArray(message.content) && message.content.length > 0 && message.content.every(part => this.isToolCallPart(part))
   }
 
   private async writeChunk(delta: deltaType[], status: string | null = null, finishReason: string | null = null) {
@@ -88,10 +96,8 @@ export class AigcService {
     await this.writeChunk([{ role, name, content }], status, finishReason)
   }
 
-  /** GPT 4o 浏览器工具 */
+  /** LLM Browser Tool */
   private async chatToolBrowser(args: { title: string; url: string }) {
-    console.log(`chat tool browser fetching: ${args.url}`)
-
     let response: Response | null = null
     const controller = new AbortController()
     let status: toolStatus = toolStatus.FAILED
@@ -124,9 +130,8 @@ export class AigcService {
     }
   }
 
-  /** GPT 4o 搜索工具 */
+  /** LLM Search Tool */
   private async chatToolSeach(env: Env, args: { q: string }) {
-    console.log(`chat tool search searching: ${args.q}`)
     await this.writeProgress('tool', 'search', args.q, toolStatus.PROCESSING)
     const res = await new GoogleSearch(env).search(args.q)
     if (res instanceof MultiLangError) {
@@ -144,156 +149,55 @@ export class AigcService {
     })
   }
 
-  async generateTags(ctx: ContextManager, bmTitle: string, bmContent: string) {
-    let buffer = ''
-    let isErr = false
+  /** Chat with bookmark */
+  private async chatRawContentText(ctx: ContextManager, rawContent: string, content: string, messages: CoreMessage[], quote: completionQuote[]) {
+    if (!rawContent) return await this.writeChunk([{ role: 'assistant', content: 'No Content' }])
 
-    const messages: ChatCompletionMessageParam[] = [
-      { role: 'system', content: generateRelatedTagPrompt },
-      { role: 'user', content: `title: ${bmTitle}\n content: ${bmContent.slice(0, 200)}` }
-    ]
-
-    await this.aigc().universal(ctx, messages, async (chunk: string | MultiLangError) => {
-      if (chunk instanceof MultiLangError || isErr) {
-        isErr = true
-      } else buffer += chunk
+    messages.pop()
+    const systemMessage = userChatBookmarkSystemPrompt.replace('{article}', rawContent)
+    const userContent = getUserChatBookmarkUserPrompt().replace('{content}', content).replace('{ai_lang}', ctx.get('ai_lang'))
+    const quoteMessage: CoreUserMessage[] = quote.map(item => {
+      if (item.type === 'text') {
+        return { role: 'user', content: item.content }
+      } else {
+        return {
+          role: 'user',
+          content: [{ type: 'image', image: new URL(item.content) }]
+        }
+      }
     })
 
-    const tags = buffer
-      .split('\n')
-      .filter(t => systemTag.has(t))
-      .filter(tag => tag.length >= 1)
+    messages.push({ role: 'system', content: systemMessage })
+    messages.push(...quoteMessage, { role: 'user', content: userContent })
 
-    console.log(`generate tags: ${tags}`)
-    return tags
-  }
-
-  async chatRawContent(
-    ctx: ContextManager,
-    title: string,
-    rawContent: string,
-    messages: ChatCompletionMessageParam[],
-    writer: WritableStream<Uint8Array>,
-    quote: completionQuote[]
-  ) {
-    this.wr = writer.getWriter()
-    const latestMessageIdx = messages.length - 1
-    if (messages.length < 1) return this.wr.write(this.ted.encode('Invalid request\n'))
-
-    // 只处理最后一条信息
-    const latestMessage = messages[latestMessageIdx]
-    const content = typeof latestMessage.content === 'string' ? latestMessage.content : ''
-
-    try {
-      // chat or tool call
-      if (!this.isToolCallMessage(latestMessage)) return await this.chatRawContentText(ctx, rawContent, content, messages, quote)
-
-      // tool call chat
-      switch (latestMessage.tool_calls[0].function.name) {
-        case 'generateQuestion':
-          return await this.chatToolGenerateRawContentQuestion(ctx, title)
-        case 'replyAnswer':
-          return await this.chatToolGenerateRawContentAnswer(ctx, content, rawContent)
-        default:
-          return this.wr.write(this.ted.encode('Invalid request\n'))
-      }
-    } catch (err) {
-      console.error(err)
-      this.writeChunk([{ role: 'assistant', content: 'Failed to generate question, please try again later.\n' }])
-    } finally {
-      this.wr.close()
-    }
-  }
-
-  async summaryRawContent(
-    ctx: ContextManager,
-    rawContent: string,
-    writer: WritableStream<Uint8Array>,
-    callbackHandler?: (result: { provider: string; model: string; response: string }) => Promise<void>
-  ) {
-    let providerInfo
-    this.wr = writer.getWriter()
-
-    try {
-      const callback = async (chunk: string | MultiLangError) => {
-        if (chunk instanceof MultiLangError) return this.wr.write(this.ted.encode(chunk.message))
-        await this.wr.write(this.ted.encode(chunk))
-      }
-
-      const prompt = systemPrompt.replace('{ai_lang}', ctx.get('ai_lang'))
-      const messages: ChatCompletionMessageParam[] = [
-        { role: 'system', content: prompt },
-        { role: 'user', content: rawContent }
-      ]
-
-      providerInfo = await this.aigc().universal(ctx, messages, callback)
-    } catch (error) {
-      console.error(error)
-      this.wr.write(this.ted.encode(error instanceof MultiLangError ? error.message : 'Failed to get summary, please try again later.\n'))
-    } finally {
-      this.wr.close()
-
-      if (!callbackHandler || !this.chunks || !providerInfo) return
-
-      const blob = new Blob(this.chunks)
-
-      await callbackHandler({
-        provider: providerInfo?.provider || '',
-        model: providerInfo?.model || '',
-        response: await blob.text()
+    const tools = {
+      search: tool({
+        description: 'Search for information',
+        parameters: z.object({
+          q: z.string().describe('Search query')
+        }),
+        execute: this.chatToolSeach.bind(this, ctx.env)
+      }),
+      browser: tool({
+        description: 'Browse a web page',
+        parameters: z.object({
+          title: z.string().describe('Page title'),
+          url: z.string().describe('URL to browse')
+        }),
+        execute: this.chatToolBrowser.bind(this)
+      }),
+      relatedQuestion: tool({
+        description: 'Generate related questions',
+        parameters: z.object({
+          question: z.string().describe('Related question to generate')
+        }),
+        execute: async (args: { question: string }) => {
+          console.log('relatedQuestion', args.question)
+          await this.writeProgress('tool', 'relatedQuestion', args.question, toolStatus.SUCCESSFULLY)
+          return `Generated related question: ${args.question}`
+        }
       })
     }
-  }
-
-  /** 基于文章内容回答问题 */
-  private async chatRawContentText(ctx: ContextManager, rawContent: string, content: string, messages: ChatCompletionMessageParam[], quote: completionQuote[]) {
-    if (!rawContent) return this.writeChunk([{ role: 'assistant', content: 'No Content' }])
-
-    // 去掉最后一条消息
-    messages.pop()
-    const raw = rawContent
-    const systemMessage = userChatBookmarkSystemPrompt.replace('{article}', raw)
-    const userMessage = { type: 'text', text: getUserChatBookmarkUserPrompt().replace('{content}', content).replace('{ai_lang}', ctx.get('ai_lang')) } as ChatCompletionContentPart
-    const quoteMessage = quote.map(item => {
-      return item.type === 'text' ? { type: 'text', text: item.content } : { type: 'image_url', image_url: { url: item.content } }
-    }) as Array<ChatCompletionContentPart>
-
-    messages.push({ role: 'system', content: systemMessage })
-    messages.push({ role: 'user', content: [...quoteMessage, userMessage] })
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tools: any[] = [
-      {
-        type: 'function',
-        function: {
-          name: 'search',
-          function: this.chatToolSeach.bind(this, ctx.env),
-          parse: JSON.parse,
-          parameters: { type: 'object', properties: { q: { type: 'string' } } }
-        }
-      },
-      {
-        type: 'function',
-        function: {
-          name: 'browser',
-          function: this.chatToolBrowser.bind(this),
-          parse: JSON.parse,
-          parameters: { type: 'object', properties: { title: { type: 'string' }, url: { type: 'string' } } }
-        }
-      },
-      {
-        type: 'function',
-        function: {
-          name: 'relatedQuestion',
-          function: async (args: { question: string }) => {
-            console.log('relatedQuestion', args.question)
-            await this.writeProgress('tool', 'relatedQuestion', args.question, toolStatus.SUCCESSFULLY)
-          },
-          parse: JSON.parse,
-          parameters: { type: 'object', properties: { question: { type: 'string' } } }
-        }
-      }
-    ]
     //
     let buffer = ''
     let matchIndex = 0
@@ -324,21 +228,24 @@ export class AigcService {
       }
     }
 
-    await this.aigc().runTools(ctx, messages, callback, tools)
-
-    if (buffer && !outputDone) {
-      await this.writeChunk([{ role: 'assistant', content: buffer }])
+    try {
+      await this.aigc().streamText(messages, callback, { tools, model: 'azure-gpt-4o' })
+    } catch (error) {
+      console.error('StreamText error:', error)
+      throw error
     }
+
+    if (buffer && !outputDone) await this.writeChunk([{ role: 'assistant', content: buffer }])
 
     await this.writeProgress('assistant', 'chat', undefined, 'completed')
     await this.writeDone()
   }
 
-  /** GPT 4o 生成问题 */
+  /** LLM Tool: Generate Question */
   private async chatToolGenerateRawContentQuestion(ctx: ContextManager, title: string) {
     if (!title) return this.writeChunk([{ role: 'assistant', content: 'No raw content' }])
 
-    const messages: ChatCompletionMessageParam[] = [
+    const messages: CoreMessage[] = [
       { role: 'system', content: generateQuestionPrompt.replace('{ai_lang}', ctx.get('ai_lang')) },
       { role: 'user', content: title }
     ]
@@ -362,7 +269,9 @@ export class AigcService {
     await this.writeProgress('tool', 'generateQuestion', undefined, toolStatus.PROCESSING)
 
     // 调用GPT-4o生成问题
-    await this.aigc().universal(ctx, messages, callback)
+    await this.aigc().streamText(messages, callback, {
+      model: 'azure-gpt-4o'
+    })
 
     // 如果buffer还有内容，则直接输出
     if (buffer) await this.writeProgress('tool', 'generateQuestion', JSON.stringify([buffer]), toolStatus.SUCCESSFULLY)
@@ -370,18 +279,124 @@ export class AigcService {
     await this.writeDone()
   }
 
-  /** GPT 4o 解答问题 */
-  private async chatToolGenerateRawContentAnswer(ctx: ContextManager, rawContent: string, question: string) {
-    if (!rawContent) return await this.writeChunk([{ role: 'assistant', content: 'No raw content' }])
-
-    const messages: ChatCompletionMessageParam[] = [
-      { role: 'system', content: generateAnswerPrompt.replace('{ai_lang}', ctx.get('ai_lang')) },
-      { role: 'user', content: generateUserAnserPrompt.replace('{raw}', rawContent).replace('{questions}', question) }
+  // Generate tags from system tag list
+  public async generateTagsFromPresupposition(bmTitle: string, bmContent: string): Promise<string[]> {
+    const messages: CoreMessage[] = [
+      { role: 'system', content: generateRelatedTagPrompt },
+      { role: 'user', content: `title: ${bmTitle}\n content: ${bmContent.slice(0, 200)}` }
     ]
 
-    return await this.aigc().universal(ctx, messages, async (chunk: string | MultiLangError) => {
-      if (chunk instanceof MultiLangError) return this.writeChunk([{ role: 'assistant', content: chunk.message }])
-      await this.writeChunk([{ role: 'assistant', content: chunk }])
-    })
+    const result = await this.aigc().generateText(messages)
+
+    const tags = result.text
+      .split('\n')
+      .filter(t => systemTag.has(t))
+      .filter(tag => tag.length >= 1)
+
+    console.log(`generate tags: ${tags}`)
+    return tags
+  }
+
+  // Generate tags from user tags
+  public async generateOverviewTags(ctx: ContextManager, bmTitle: string, bmContent: string, userTags: string[]): Promise<MixTagsOverviewResult> {
+    const model = this.aigc().hasOrDefaultModel(ctx.get('ai_tag_model'))
+
+    const content = generateOverviewTagsTemplatePrompt
+      .replace('{TAG_LIST}', userTags.join(', '))
+      .replace('{LANGUAGE}', ctx.get('ai_lang') || 'EN')
+      .replace('{TITLE}', bmTitle)
+      .replace('{CONTENT}', bmContent.slice(0, 3000))
+
+    const messages: CoreMessage[] = [
+      {
+        role: 'system',
+        content: generateOverviewTagsPrompt
+      },
+      { role: 'user', content }
+    ]
+
+    const result = await this.aigc().generateText(messages, { model })
+
+    const overviewMatch = result.text.match(/<OVERVIEW>(.*?)<\/OVERVIEW>/s)
+    const overview = overviewMatch ? overviewMatch[1].trim() : ''
+
+    const tagsMatches = result.text.matchAll(/<TAGS>(.*?)<\/TAGS>/g)
+    const tags = [...tagsMatches].map(match => match[1].trim())
+
+    console.log(`${model} generate overview tags result: ${result.text}`)
+    console.log(`generate overview tags: ${overview}`)
+    console.log(`generate overview tags: ${tags}`)
+
+    return { tags, overview }
+  }
+
+  // chat with bookmark
+  public async bookmarkChat(ctx: ContextManager, title: string, rawContent: string, messages: CoreMessage[], writer: WritableStream<Uint8Array>, quote: completionQuote[]) {
+    this.wr = writer.getWriter()
+    const latestMessageIdx = messages.length - 1
+    if (messages.length < 1) return this.wr.write(this.ted.encode('Invalid request\n'))
+
+    // just process the latest message
+    const latestMessage = messages[latestMessageIdx]
+    const isToolCall = this.isToolCall(latestMessage)
+    const content = typeof latestMessage.content === 'string' ? latestMessage.content : ''
+
+    try {
+      if (!isToolCall) return await this.chatRawContentText(ctx, rawContent, content, messages, quote)
+      if (!this.isToolCallPart(latestMessage.content[0])) return this.wr.write(this.ted.encode('Invalid request\n'))
+
+      switch (latestMessage.content[0].toolName) {
+        case 'generateQuestion':
+          return await this.chatToolGenerateRawContentQuestion(ctx, title)
+        default:
+          return this.wr.write(this.ted.encode('Invalid request\n'))
+      }
+    } catch (err) {
+      console.error(err)
+      this.writeChunk([{ role: 'assistant', content: 'Failed to generate question, please try again later.\n' }])
+    } finally {
+      this.wr.close()
+    }
+  }
+
+  // generate bookmark summary
+  public async bookmarkSummary(
+    ctx: ContextManager,
+    rawContent: string,
+    writer: WritableStream<Uint8Array>,
+    callbackHandler?: (result: { provider: string; model: string; response: string }) => Promise<void>
+  ) {
+    let providerInfo
+    this.wr = writer.getWriter()
+
+    try {
+      const callback = async (chunk: string | MultiLangError) => {
+        if (chunk instanceof MultiLangError) return this.wr.write(this.ted.encode(chunk.message))
+        await this.wr.write(this.ted.encode(chunk))
+      }
+
+      const prompt = systemPrompt.replace('{ai_lang}', ctx.get('ai_lang'))
+      const messages: CoreMessage[] = [
+        { role: 'system', content: prompt },
+        { role: 'user', content: rawContent }
+      ]
+
+      providerInfo = await this.aigc().streamText(messages, callback)
+    } catch (error) {
+      console.error(error)
+      this.wr.write(this.ted.encode(error instanceof MultiLangError ? error.message : 'Failed to get summary, please try again later.\n'))
+    } finally {
+      this.wr.close()
+
+      if (!callbackHandler || !this.chunks || !providerInfo) return
+
+      const blob = new Blob(this.chunks)
+
+      await callbackHandler({
+        provider: providerInfo?.model || '',
+        model: providerInfo?.model || '',
+        response: await blob.text()
+      })
+    }
   }
 }
