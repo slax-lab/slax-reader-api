@@ -85,6 +85,8 @@ export class AigcController {
     ])
 
     // 设置上下文
+    ctx.set('req_url', request.url)
+    ctx.set('req_auth', request.headers.get('Authorization') || '')
     ctx.set('country', request.cf?.country || '')
     ctx.set('continent', request.cf?.continent || '')
     ctx.set('ai_lang', user.ai_lang || user.lang?.slice(0, 2) || 'en')

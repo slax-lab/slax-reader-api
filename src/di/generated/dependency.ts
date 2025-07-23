@@ -55,7 +55,8 @@ container.register(AigcService, {
   useFactory: container =>
     new AigcService(
       lazy(() => container.resolve(CHAT_COMPLETION)),
-      lazy(() => container.resolve(BucketClient))
+      lazy(() => container.resolve(BucketClient)),
+      container.resolve(BookmarkRepo)
     )
 })
 

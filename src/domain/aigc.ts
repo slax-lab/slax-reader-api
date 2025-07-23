@@ -19,6 +19,8 @@ import { BucketClient } from '../infra/repository/bucketClient'
 import { MultiLangError } from '../utils/multiLangError'
 import { CHAT_COMPLETION } from '../const/symbol'
 import { AppChatCompletion } from '../di/data'
+import { SlaxFetch } from '../infra/external/remoteFetcher'
+import { BookmarkRepo } from '../infra/repository/dbBookmark'
 
 export type deltaType = {
   role?: 'system' | 'user' | 'assistant' | 'tool'
@@ -54,7 +56,8 @@ export class AigcService {
 
   constructor(
     @inject(CHAT_COMPLETION) private aigc: LazyInstance<AppChatCompletion>,
-    @inject(BucketClient) private bucket: LazyInstance<BucketClient>
+    @inject(BucketClient) private bucket: LazyInstance<BucketClient>,
+    @inject(BookmarkRepo) private bookmarkRepo: BookmarkRepo
   ) {}
 
   async recordChunks(chunk: Uint8Array, controller: TransformStreamDefaultController<Uint8Array>) {
@@ -96,42 +99,49 @@ export class AigcService {
     await this.writeChunk([{ role, name, content }], status, finishReason)
   }
 
+  /** LLM Detail Bookmark Tool */
+  public async chatToolDetailBookmark(ctx: ContextManager, args: { bookmark_id: number }) {
+    const bmId = ctx.hashIds.decodeId(args.bookmark_id)
+
+    const bookmark = await this.bookmarkRepo.getBookmarkById(bmId)
+    if (!bookmark) return 'Bookmark not found'
+    if (!bookmark.content_md_key) return 'Bookmark content not found'
+
+    const content = await this.bucket().R2Bucket.get(bookmark.content_md_key)
+    if (!content) return 'Bookmark content not found'
+
+    return {
+      title: bookmark.title,
+      content: content,
+      bookmark_id: bookmark.id
+    }
+  }
+
   /** LLM Browser Tool */
-  private async chatToolBrowser(args: { title: string; url: string }) {
-    let response: Response | null = null
-    const controller = new AbortController()
-    let status: toolStatus = toolStatus.FAILED
-    const timeoutId = setTimeout(() => controller.abort(), 3000)
-    const headers = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
+  public async chatToolBrowser(env: Env, args: { title: string; url: string }) {
     await this.writeProgress('tool', 'browser', args.title, toolStatus.PROCESSING)
 
-    try {
-      response = (await fetch(args.url, {
-        method: 'GET',
-        signal: controller.signal,
-        headers: {
-          'User-Agent': headers,
-          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
-        }
-      })) as Response
-      if (!response.ok) return 'fetch failed, please use your knowledge to answer the question.'
-      //
-      const content = await ContentParser.parse({ url: new URL(args.url), content: await response.text(), title: args.title })
-      if (content instanceof Error) return 'fetch success, buf parse content failed, please use your knowledge to answer the question.'
+    const fetchUrl = async () => {
+      const fetcher = new SlaxFetch(env)
+      const result = await fetcher.headless(args.url, 'Asia/Hong_Kong')
+      const content = await ContentParser.parse({ url: new URL(args.url), content: result.content, title: args.title })
 
-      status = toolStatus.SUCCESSFULLY
+      this.writeProgress('tool', 'browser', args.title, toolStatus.SUCCESSFULLY)
       return content.textContent
+    }
+
+    try {
+      // max 10s timeout
+      return await Promise.race([fetchUrl(), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))])
     } catch (e) {
       console.log(`fetch failed: ${e as Error}`)
+      await this.writeProgress('tool', 'browser', args.title, toolStatus.FAILED)
       return `fetch failed, please use your knowledge to answer the question`
-    } finally {
-      clearTimeout(timeoutId)
-      await this.writeProgress('tool', 'browser', '', status)
     }
   }
 
   /** LLM Search Tool */
-  private async chatToolSeach(env: Env, args: { q: string }) {
+  public async chatToolSeach(env: Env, args: { q: string }) {
     await this.writeProgress('tool', 'search', args.q, toolStatus.PROCESSING)
     const res = await new GoogleSearch(env).search(args.q)
     if (res instanceof MultiLangError) {
@@ -149,11 +159,48 @@ export class AigcService {
     })
   }
 
+  /** LLM Search bookmark tool */
+  public async chatToolSearchBookmark(ctx: ContextManager, args: { q: string }) {
+    // HOOK: Due to hierarchical issues
+    // It is not possible to use the search method directly
+    // But we can to call the HTTP request first.
+    this.writeProgress('tool', 'searchBookmark', args.q, toolStatus.PROCESSING)
+
+    const url = ctx.get('req_url')
+    const auth = ctx.get('req_auth')
+    if (!url) {
+      await this.writeProgress('tool', 'searchBookmark', args.q, toolStatus.FAILED)
+      return 'Search fail, context no found.'
+    }
+    const urlObj = new URL(url)
+    urlObj.pathname = '/v1/bookmark/search'
+
+    const res = await fetch(urlObj.toString(), {
+      method: 'POST',
+      headers: {
+        Authorization: auth
+      },
+      body: JSON.stringify({ keyword: args.q })
+    })
+
+    if (!res.ok) {
+      await this.writeProgress('tool', 'searchBookmark', args.q, toolStatus.FAILED)
+      const body = await res.text()
+      return `Search fail, ${body}`
+    }
+
+    const data = await res.json<{ code: number; message: string; data: { title: string; content: string; bookmark_id: number }[] }>()
+    console.log(`searchBookmark: ${JSON.stringify(data)}`)
+    await this.writeProgress('tool', 'searchBookmark', JSON.stringify(data), toolStatus.SUCCESSFULLY)
+    return data
+  }
+
   /** Chat with bookmark */
-  private async chatRawContentText(ctx: ContextManager, rawContent: string, content: string, messages: CoreMessage[], quote: completionQuote[]) {
+  public async chatRawContentText(ctx: ContextManager, rawContent: string, content: string, messages: CoreMessage[], quote: completionQuote[]) {
     if (!rawContent) return await this.writeChunk([{ role: 'assistant', content: 'No Content' }])
 
     messages.pop()
+    const model = this.aigc().hasOrDefaultModel(ctx.get('ai_chat_model'))
     const systemMessage = userChatBookmarkSystemPrompt.replace('{article}', rawContent)
     const userContent = getUserChatBookmarkUserPrompt().replace('{content}', content).replace('{ai_lang}', ctx.get('ai_lang'))
     const quoteMessage: CoreUserMessage[] = quote.map(item => {
@@ -172,19 +219,33 @@ export class AigcService {
 
     const tools = {
       search: tool({
-        description: 'Search for information',
+        description: 'Search for information in network',
         parameters: z.object({
           q: z.string().describe('Search query')
         }),
         execute: this.chatToolSeach.bind(this, ctx.env)
       }),
+      searchBookmark: tool({
+        description: 'Search for user bookmarks in database',
+        parameters: z.object({
+          q: z.string().describe('Search query')
+        }),
+        execute: this.chatToolSearchBookmark.bind(this, ctx)
+      }),
+      getBookmarkDetail: tool({
+        description: 'Get bookmark detail by bookmark id',
+        parameters: z.object({
+          bookmark_id: z.number().describe('Bookmark ID')
+        }),
+        execute: this.chatToolDetailBookmark.bind(this, ctx)
+      }),
       browser: tool({
-        description: 'Browse a web page',
+        description: 'Browse a web page by url',
         parameters: z.object({
           title: z.string().describe('Page title'),
           url: z.string().describe('URL to browse')
         }),
-        execute: this.chatToolBrowser.bind(this)
+        execute: this.chatToolBrowser.bind(this, ctx.env)
       }),
       relatedQuestion: tool({
         description: 'Generate related questions',
@@ -229,7 +290,7 @@ export class AigcService {
     }
 
     try {
-      await this.aigc().streamText(messages, callback, { tools, model: 'azure-gpt-4o' })
+      await this.aigc().streamText(messages, callback, { tools, model })
     } catch (error) {
       console.error('StreamText error:', error)
       throw error
@@ -242,7 +303,7 @@ export class AigcService {
   }
 
   /** LLM Tool: Generate Question */
-  private async chatToolGenerateRawContentQuestion(ctx: ContextManager, title: string) {
+  public async chatToolGenerateRawContentQuestion(ctx: ContextManager, title: string) {
     if (!title) return this.writeChunk([{ role: 'assistant', content: 'No raw content' }])
 
     const messages: CoreMessage[] = [
@@ -251,6 +312,8 @@ export class AigcService {
     ]
 
     let buffer: string = ''
+    const model = this.aigc().hasOrDefaultModel(ctx.get('ai_chat_model'))
+
     const callback = async (chunk: string | MultiLangError) => {
       if (chunk instanceof MultiLangError) return this.writeChunk([{ role: 'assistant', content: chunk.message }])
 
@@ -270,7 +333,7 @@ export class AigcService {
 
     // 调用GPT-4o生成问题
     await this.aigc().streamText(messages, callback, {
-      model: 'azure-gpt-4o'
+      model
     })
 
     // 如果buffer还有内容，则直接输出
@@ -334,6 +397,7 @@ export class AigcService {
   public async bookmarkChat(ctx: ContextManager, title: string, rawContent: string, messages: CoreMessage[], writer: WritableStream<Uint8Array>, quote: completionQuote[]) {
     this.wr = writer.getWriter()
     const latestMessageIdx = messages.length - 1
+
     if (messages.length < 1) return this.wr.write(this.ted.encode('Invalid request\n'))
 
     // just process the latest message
@@ -368,6 +432,7 @@ export class AigcService {
   ) {
     let providerInfo
     this.wr = writer.getWriter()
+    const model = this.aigc().hasOrDefaultModel(ctx.get('ai_chat_model'))
 
     try {
       const callback = async (chunk: string | MultiLangError) => {
@@ -381,7 +446,7 @@ export class AigcService {
         { role: 'user', content: rawContent }
       ]
 
-      providerInfo = await this.aigc().streamText(messages, callback)
+      providerInfo = await this.aigc().streamText(messages, callback, { model })
     } catch (error) {
       console.error(error)
       this.wr.write(this.ted.encode(error instanceof MultiLangError ? error.message : 'Failed to get summary, please try again later.\n'))
