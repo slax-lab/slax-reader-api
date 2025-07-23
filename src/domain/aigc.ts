@@ -65,7 +65,7 @@ export class AigcService {
     controller.enqueue(chunk)
   }
 
-  private async writeDone() {
+  public async writeDone() {
     await this.wr.write(this.ted.encode('data: [DONE]'))
   }
 
@@ -78,7 +78,7 @@ export class AigcService {
     return message.role === 'assistant' && Array.isArray(message.content) && message.content.length > 0 && message.content.every(part => this.isToolCallPart(part))
   }
 
-  private async writeChunk(delta: deltaType[], status: string | null = null, finishReason: string | null = null) {
+  public async writeChunk(delta: deltaType[], status: string | null = null, finishReason: string | null = null) {
     const chunk = {
       id: `slax-chat-${Date.now()}`,
       object: 'chat.completion.chunk',
@@ -89,7 +89,7 @@ export class AigcService {
     await this.wr.write(this.ted.encode(`data: ${JSON.stringify(chunk)}\n\n`))
   }
 
-  private async writeProgress(
+  public async writeProgress(
     role: 'system' | 'user' | 'assistant' | 'tool',
     name: string | undefined = undefined,
     content: string | undefined = undefined,
