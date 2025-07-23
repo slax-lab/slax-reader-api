@@ -27,10 +27,6 @@ router.post('/v1/aigc/chat', async (req: Request, ctx: ContextManager) => {
   const controller = container.resolve(AigcController)
   return await controller.handleCompletionsRequest(ctx, req)
 })
-router.post('/v1/aigc/tags', async (req: Request, ctx: ContextManager) => {
-  const controller = container.resolve(AigcController)
-  return await controller.handleTagsRequest(ctx, req)
-})
 router.post('/v1/bookmark/add', async (req: Request, ctx: ContextManager) => {
   const controller = container.resolve(BookmarkController)
   return await controller.handleUserAddBookmarkRequest(ctx, req)

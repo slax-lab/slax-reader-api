@@ -97,16 +97,4 @@ export class AigcController {
       headers: { 'Content-Type': 'text/event-stream; charset=utf-8', ...corsHeader }
     })
   }
-
-  @Post('/tags')
-  public async handleTagsRequest(ctx: ContextManager, request: Request): Promise<Response> {
-    const req = await RequestUtils.json<{ tags: string[]; title: string; content: string }>(request)
-
-    const aiSvc = this.aigcService
-    const { tags, overview } = await aiSvc.generateOverviewTags(ctx, req.title, req.content, req.tags)
-
-    return new Response(JSON.stringify({ tags, overview }), {
-      headers: { 'Content-Type': 'application/json', ...corsHeader }
-    })
-  }
 }
