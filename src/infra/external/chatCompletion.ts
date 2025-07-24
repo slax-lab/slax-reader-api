@@ -9,7 +9,7 @@ export type ModelSelector<T extends Record<string, LanguageModel> = Record<strin
 
 export interface ChatOptions<T extends Record<string, LanguageModel> = Record<string, LanguageModel>> {
   tools?: Record<string, any>
-  model?: ModelSelector<T>
+  models?: ModelSelector<T>[]
 }
 
 export class ChatCompletion<T extends Record<string, LanguageModel> = Record<string, LanguageModel>> {
@@ -70,7 +70,8 @@ export class ChatCompletion<T extends Record<string, LanguageModel> = Record<str
   }
 
   async streamText(messages: CoreMessage[], callback: StreamCallbackHandle, options: ChatOptions<T> = {}): Promise<{ model: string }> {
-    let compatibleProviders = options.model ? [...this.providers].filter(p => p.modelId === options.model) : this.providers
+    const compatibleProviders = options.models ? [...this.providers].filter(p => options.models!.includes(p.modelId as ModelSelector<T>)) : this.providers
+
     for (const providerInstance of compatibleProviders) {
       try {
         const result = await this.executeWithProvider(providerInstance.model, messages, options.tools, true, callback)
@@ -85,7 +86,8 @@ export class ChatCompletion<T extends Record<string, LanguageModel> = Record<str
   }
 
   async generateText(messages: CoreMessage[], options: ChatOptions<T> = {}): Promise<GenerateResult> {
-    let compatibleProviders = options.model ? [...this.providers].filter(p => p.modelId === options.model) : this.providers
+    const compatibleProviders = options.models ? [...this.providers].filter(p => options.models!.includes(p.modelId as ModelSelector<T>)) : this.providers
+
     for (const providerInstance of compatibleProviders) {
       try {
         const result = await this.executeWithProvider(providerInstance.model, messages, options.tools, false)
