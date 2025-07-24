@@ -289,7 +289,7 @@ export class AigcService {
     }
 
     try {
-      await this.aigc().streamText(messages, callback, { tools, model })
+      await this.aigc().streamText(messages, callback, { tools, models: [model] })
     } catch (error) {
       console.error('StreamText error:', error)
       throw error
@@ -332,7 +332,7 @@ export class AigcService {
 
     // 调用GPT-4o生成问题
     await this.aigc().streamText(messages, callback, {
-      model
+      models: [model]
     })
 
     // 如果buffer还有内容，则直接输出
@@ -377,7 +377,7 @@ export class AigcService {
       { role: 'user', content }
     ]
 
-    const result = await this.aigc().generateText(messages, { model })
+    const result = await this.aigc().generateText(messages, { models: [model] })
 
     const overviewMatch = result.text.match(/<OVERVIEW>(.*?)<\/OVERVIEW>/s)
     const overview = overviewMatch ? overviewMatch[1].trim() : ''
@@ -445,7 +445,7 @@ export class AigcService {
         { role: 'user', content: rawContent }
       ]
 
-      providerInfo = await this.aigc().streamText(messages, callback, { model })
+      providerInfo = await this.aigc().streamText(messages, callback, { models: [model] })
     } catch (error) {
       console.error(error)
       this.wr.write(this.ted.encode(error instanceof MultiLangError ? error.message : 'Failed to get summary, please try again later.\n'))
