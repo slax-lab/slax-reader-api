@@ -158,7 +158,8 @@ container.register(UrlParserHandler, {
       container.resolve(AigcService),
       container.resolve(TelegramBotService),
       container.resolve(SearchService),
-      lazy(() => container.resolve(QueueClient))
+      lazy(() => container.resolve(QueueClient)),
+      container.resolve(TagService)
     )
 })
 

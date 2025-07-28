@@ -7,7 +7,7 @@ import {
   getUserChatBookmarkUserPrompt,
   generateRelatedTagPrompt,
   generateOverviewTagsPrompt,
-  generateOverviewTagsTemplatePrompt
+  generateOverviewTagsUserPrompt
 } from '../const/prompt'
 import { ContextManager } from '../utils/context'
 import { GoogleSearch } from '../infra/external/searchGoogle'
@@ -361,23 +361,21 @@ export class AigcService {
 
   // Generate tags from user tags
   public async generateOverviewTags(ctx: ContextManager, bmTitle: string, bmContent: string, userTags: string[]): Promise<MixTagsOverviewResult> {
+    const userLang = ctx.get('ai_lang') || 'EN'
     const model = this.aigc().hasOrDefaultModel(ctx.get('ai_tag_model'))
-
-    const content = generateOverviewTagsTemplatePrompt
-      .replace('{TAG_LIST}', userTags.join(', '))
-      .replace('{LANGUAGE}', ctx.get('ai_lang') || 'EN')
-      .replace('{TITLE}', bmTitle)
-      .replace('{CONTENT}', bmContent.slice(0, 3000))
 
     const messages: CoreMessage[] = [
       {
         role: 'system',
-        content: generateOverviewTagsPrompt
+        content: generateOverviewTagsPrompt(bmTitle, bmContent)
       },
-      { role: 'user', content }
+      {
+        role: 'system',
+        content: generateOverviewTagsUserPrompt(userLang, userTags)
+      }
     ]
 
-    const result = await this.aigc().generateText(messages, { models: [model] })
+    const result = await this.aigc().generateText(messages, { models: [model, 'gpt-4o-mini'] })
 
     const overviewMatch = result.text.match(/<OVERVIEW>(.*?)<\/OVERVIEW>/s)
     const overview = overviewMatch ? overviewMatch[1].trim() : ''
