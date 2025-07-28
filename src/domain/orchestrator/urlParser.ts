@@ -19,6 +19,7 @@ import { SearchService } from '../search'
 import { TweetInfo } from '../../const/struct'
 import { TwitterApi } from '../../infra/external/twitterapi'
 import { Hashid } from '../../utils/hashids'
+import { TagService } from '../tag'
 
 export type PostHandler = (meta: { parseRes: { title: string; textContent: string } }) => Promise<void>
 export type receiveQueueParseMessage = receiveParseMessage<queueParseMessage>
@@ -33,7 +34,8 @@ export class UrlParserHandler {
     @inject(AigcService) private aigcService: AigcService,
     @inject(TelegramBotService) private telegramBotService: TelegramBotService,
     @inject(SearchService) private searchService: SearchService,
-    @inject(QueueClient) private queueClient: LazyInstance<QueueClient>
+    @inject(QueueClient) private queueClient: LazyInstance<QueueClient>,
+    @inject(TagService) private tagService: TagService
   ) {}
 
   public static async fetchContent(env: Env, message: parseMessage): Promise<fetchResult> {
@@ -159,9 +161,11 @@ export class UrlParserHandler {
       if (info.ignoreGenerateTag || !info.userIds || info.userIds.length === 0) {
         return
       }
+      // get user setting tags list
+      const userTags = (await this.tagService.listUserTags(ctx)).map(item => item.name)
+      const { overview, tags } = await this.aigcService.generateOverviewTags(ctx, meta.parseRes.title || '', meta.parseRes.textContent, userTags)
 
-      const tags = await this.aigcService.generateTagsFromPresupposition(meta.parseRes.title || '', meta.parseRes.textContent)
-      await Promise.all(info.userIds.map(userId => this.bookmarkService.tagBookmark(ctx, userId, info.bookmarkId, tags)))
+      await Promise.all(info.userIds.map(userId => this.bookmarkService.tagBookmark(ctx, userId, info.bookmarkId, [...tags, ...userTags])))
     }
   }
 

@@ -12,7 +12,7 @@ import { ChatCompletion } from '../infra/external/chatCompletion'
 export const createModelRegistry = (env: Env) =>
   ({
     'azure-gpt-4o': ChatProvider.createAzureOpenAI(env.AZURE_OPENAI_JAPAN_EAST_KEY, 'slax-common-openai-japan-east', 'gpt-4o', '2024-09-01-preview'),
-    'openai-gpt-4o': ChatProvider.createOpenAI(env.OPENAI_API_KEY, 'https://api.openai.com/v1')
+    'gpt-4o-mini': ChatProvider.createAzureOpenAI(env.AZURE_OPENAI_JAPAN_EAST_KEY, 'slax-common-openai-japan-east', 'gpt-4o-mini', '2024-09-01-preview')
   }) as const
 
 export type AppModelRegistry = ReturnType<typeof createModelRegistry>

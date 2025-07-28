@@ -85,84 +85,43 @@ export function getUserChatBookmarkUserPrompt(): string {
 - 在回答完问题后，你需要根据上下文生成一些与当前问题相关的问题。如果用户是在恶意攻击，需要生成与文章主题相关的问题。首先，输出标签：“<relatedQuestionStart>”，然后，将最终结果多次调用\`relatedQuestion\`方法进行输出，除此之外不用说明任何其他东西。`
 }
 
-export const generateOverviewTagsTemplatePrompt = `## 输入格式
-**标签列表：**
-{TAG_LIST}
+export const generateOverviewTagsPrompt = function (title: string, content: string) {
+  return `你是一个专业的内容分析专家，你总是很擅长根据文章在标签列表中挑选出最合适的几个：
 
-**输出语言：**
-{LANGUAGE}
-
-**文章标题：**
-{TITLE}
+** 文章标题 **
+${title}
 
 **文章内容：**
-{CONTENT}`
+${content}`
+}
 
-export const generateOverviewTagsPrompt = `你是一个专业的内容分析专家。请根据给定的文章标题(title)和内容(content)，完成以下任务：
-
-1. 深入分析文章的主要内容和核心主题
-2. 生成一个简洁的内容概述(overview)
-3. 从提供的标签列表中选择1-3个最符合文章内容的标签
-
-## 输入格式
-**标签列表：**
-{TAG_LIST}
-
-**输出语言：**
-{LANGUAGE} (ZH=中文, EN=英文, 等其他语言代码)
-
-**文章标题：**
-{TITLE}
-
-**文章内容：**
-{CONTENT}
-
-## 分析要求
-
-### 内容分析维度：
-- **主题识别**：文章讨论的核心话题是什么？
-- **内容类型**：是新闻报道、技术教程、观点评论、产品介绍等？
-- **目标受众**：针对什么样的读者群体？
-- **关键信息**：文章传达的最重要信息是什么？
-- **情感色彩**：文章的整体情感倾向（积极、中性、批判等）
-
-### 标签选择原则：
-- **相关性**：标签必须与文章核心内容高度相关
-- **准确性**：标签能够准确反映文章的主要特征
-- **代表性**：选择的标签应该能代表文章的不同维度
-- **优先级**：选择最能概括文章essence的1-3个标签
-
-### Overview 撰写要求：
-- **语言**：必须使用指定的输出语言
-- **长度**：控制在200字左右（中文约200字符，英文约200词）
-- **内容要求**：
-  - 简洁概括文章的核心内容和关键信息
-  - 包含你对文章观点的理解和评价
-  - 体现文章的价值和意义
-  - 保持客观但不失洞察力的分析视角
-
-## 输出格式要求
-
-请严格按照以下格式输出结果：
-
-\`\`\`markdown
-<REASON>详细说明你的分析推理过程，包括：文章主要讲述了什么内容，为什么选择这些标签，每个标签与文章内容的关联性</REASON>
-
-<OVERVIEW>使用指定语言，用约200字概括文章核心内容，并融入你的观点分析。要体现文章的主要价值、作者立场、以及你对其论点的理解</OVERVIEW>
-
-<TAGS>标签1</TAGS>
-<TAGS>标签2</TAGS>
-<TAGS>标签3</TAGS>
-\`\`\`
-
-## 注意事项
-- 如果只找到2~3个合适的标签，不要强行添加不相关的标签
-- OVERVIEW 必须使用指定的输出语言，字数控制在200字左右
-- OVERVIEW 要包含客观的内容概括和适度的观点分析
-- REASON 部分要逻辑清晰，解释标签选择的合理性
+export const generateOverviewTagsUserPrompt = function (userLang: string, tags: string[]) {
+  return `## 你需要输出tags
+- 从提供的标签列表中选择10个最符合文章内容的标签
+- 标签必须与文章核心内容高度相关
+- 标签能够准确反映文章的主要特征
+- 选择的标签应该能代表文章的不同维度
 - 标签选择要基于文章实际内容，避免主观臆测
+- 生成ovverview时，你能且只能使用指定的语言：${userLang} (zh=中文, en=英文, 等其他语言代码)
+- 生成标签列表时，语言则只能跟随用户的标签列表，不可以擅自翻译
+- 标签的列表：
+  ${tags.join(',')}
 
-现在请开始分析：`
+## 你需要输出overview
+- 概述文章的核心主题和主要内容，overview的内容包括
+    - 寥寥几句的主旨（The Gist，需要带有主观的看法）
+    - 3~5 条核心要点（Key Takeaways)
+
+## 输出的格式
+\`\`\`
+<overview>输出的overview内容</overview>
+<tags>标签1</tags>
+<tags>标签2</tags>
+<tags>标签3</tags>
+<tags>标签4</tags>
+<tags>...</tags>
+\`\`\``
+}
 
 export const generateRelatedTagPrompt = `<role>
 You are a helpful assistant tasked with labeling articles using the most suitable topics from a provided list.
