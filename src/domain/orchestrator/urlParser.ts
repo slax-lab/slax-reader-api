@@ -163,7 +163,7 @@ export class UrlParserHandler {
       }
       // get user setting tags list
       const userTags = (await this.tagService.listUserTags(ctx)).map(item => item.name)
-      const { overview, tags } = await this.aigcService.generateOverviewTags(ctx, meta.parseRes.title || '', meta.parseRes.textContent, userTags)
+      const { overview, tags } = await this.aigcService.generateOverviewTags(ctx, meta.parseRes.title || '', meta.parseRes.textContent, '', userTags)
 
       await Promise.all(info.userIds.map(userId => this.bookmarkService.tagBookmark(ctx, userId, info.bookmarkId, [...tags, ...userTags])))
     }

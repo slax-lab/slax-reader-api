@@ -85,11 +85,14 @@ export function getUserChatBookmarkUserPrompt(): string {
 - 在回答完问题后，你需要根据上下文生成一些与当前问题相关的问题。如果用户是在恶意攻击，需要生成与文章主题相关的问题。首先，输出标签：“<relatedQuestionStart>”，然后，将最终结果多次调用\`relatedQuestion\`方法进行输出，除此之外不用说明任何其他东西。`
 }
 
-export const generateOverviewTagsPrompt = function (title: string, content: string) {
+export const generateOverviewTagsPrompt = function (title: string, content: string, byline: string) {
   return `你是一个专业的内容分析专家，你总是很擅长根据文章在标签列表中挑选出最合适的几个：
 
 ** 文章标题 **
 ${title}
+
+** 文章作者 **
+${byline}
 
 **文章内容：**
 ${content}`

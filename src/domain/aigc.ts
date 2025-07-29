@@ -360,14 +360,14 @@ export class AigcService {
   }
 
   // Generate tags from user tags
-  public async generateOverviewTags(ctx: ContextManager, bmTitle: string, bmContent: string, userTags: string[]): Promise<MixTagsOverviewResult> {
+  public async generateOverviewTags(ctx: ContextManager, bmTitle: string, bmContent: string, bmByline: string, userTags: string[]): Promise<MixTagsOverviewResult> {
     const userLang = ctx.get('ai_lang') || 'EN'
     const model = this.aigc().hasOrDefaultModel(ctx.get('ai_tag_model'))
 
     const messages: CoreMessage[] = [
       {
         role: 'system',
-        content: generateOverviewTagsPrompt(bmTitle, bmContent)
+        content: generateOverviewTagsPrompt(bmTitle, bmContent, bmByline)
       },
       {
         role: 'system',
