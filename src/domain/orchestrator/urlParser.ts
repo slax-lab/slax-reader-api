@@ -21,7 +21,7 @@ import { TwitterApi } from '../../infra/external/twitterapi'
 import { Hashid } from '../../utils/hashids'
 import { TagService } from '../tag'
 
-export type PostHandler = (meta: { parseRes: { title: string; textContent: string } }) => Promise<void>
+export type PostHandler = (meta: { parseRes: { title: string; textContent: string; byline?: string } }) => Promise<void>
 export type receiveQueueParseMessage = receiveParseMessage<queueParseMessage>
 export type receiveRetryParseMesaage = receiveParseMessage<queueRetryParseMessage>
 export type receiveThirdPartyMessage = receiveParseMessage<queueThirdPartyMessage>
@@ -111,7 +111,7 @@ export class UrlParserHandler {
 
     try {
       await this.saveBookmark(messageId, bookmarkId, parseRes)
-      await Promise.allSettled(postHandlers.map(handler => handler({ parseRes: { title: parseRes.title, textContent: parseRes.textContent } })))
+      await Promise.allSettled(postHandlers.map(handler => handler({ parseRes: { title: parseRes.title, textContent: parseRes.textContent, byline: parseRes.byline || '' } })))
     } catch (err) {
       console.log(`parse ${messageId} failed: ${err}`)
       throw err
@@ -163,7 +163,7 @@ export class UrlParserHandler {
       }
       // get user setting tags list
       const userTags = (await this.tagService.listUserTags(ctx)).map(item => item.name)
-      const { overview, tags } = await this.aigcService.generateOverviewTags(ctx, meta.parseRes.title || '', meta.parseRes.textContent, userTags)
+      const { overview, tags } = await this.aigcService.generateOverviewTags(ctx, meta.parseRes.title || '', meta.parseRes.textContent, meta.parseRes.byline || '', userTags)
 
       await Promise.all(info.userIds.map(userId => this.bookmarkService.tagBookmark(ctx, userId, info.bookmarkId, [...tags, ...userTags])))
     }
