@@ -12,7 +12,6 @@ import {
 import { ContextManager } from '../utils/context'
 import { GoogleSearch } from '../infra/external/searchGoogle'
 import { ContentParser } from '../utils/parser'
-import { systemTag } from '../const/systemTag'
 import { inject, injectable } from '../decorators/di'
 import type { LazyInstance } from '../decorators/lazy'
 import { BucketClient } from '../infra/repository/bucketClient'
@@ -350,10 +349,7 @@ export class AigcService {
 
     const result = await this.aigc().generateText(messages)
 
-    const tags = result.text
-      .split('\n')
-      .filter(t => systemTag.has(t))
-      .filter(tag => tag.length >= 1)
+    const tags = result.text.split('\n').filter(tag => tag.length >= 1)
 
     console.log(`generate tags: ${tags}`)
     return tags
