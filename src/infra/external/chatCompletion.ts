@@ -70,7 +70,9 @@ export class ChatCompletion<T extends Record<string, LanguageModel> = Record<str
   }
 
   async streamText(messages: CoreMessage[], callback: StreamCallbackHandle, options: ChatOptions<T> = {}): Promise<{ model: string }> {
-    const compatibleProviders = options.models ? [...this.providers].filter(p => options.models!.includes(p.modelId as ModelSelector<T>)) : this.providers
+    const compatibleProviders = options.models
+      ? (options.models.map(modelId => this.providers.find(p => p.modelId === modelId)).filter(Boolean) as typeof this.providers)
+      : this.providers
 
     for (const providerInstance of compatibleProviders) {
       try {
@@ -86,7 +88,9 @@ export class ChatCompletion<T extends Record<string, LanguageModel> = Record<str
   }
 
   async generateText(messages: CoreMessage[], options: ChatOptions<T> = {}): Promise<GenerateResult> {
-    const compatibleProviders = options.models ? [...this.providers].filter(p => options.models!.includes(p.modelId as ModelSelector<T>)) : this.providers
+    const compatibleProviders = options.models
+      ? (options.models.map(modelId => this.providers.find(p => p.modelId === modelId)).filter(Boolean) as typeof this.providers)
+      : this.providers
 
     for (const providerInstance of compatibleProviders) {
       try {
