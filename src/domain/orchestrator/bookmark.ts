@@ -48,10 +48,11 @@ export class BookmarkOrchestrator {
     if (!res) throw BookmarkNotFoundError()
     if (res.bookmark.private_user > 0 && res.bookmark.private_user !== userId) throw BookmarkNotFoundError()
 
-    const [contentResult, marksResult, tagsResult] = await Promise.allSettled([
+    const [contentResult, marksResult, tagsResult, overviewResult] = await Promise.allSettled([
       this.bookmarkService.getBookmarkContent(res.bookmark.content_key),
       this.markService.getBookmarkMarkList(ctx, res.id, true),
-      this.tagService.getBookmarkTags(ctx, userId, bmId)
+      this.tagService.getBookmarkTags(ctx, userId, bmId),
+      this.bookmarkService.getUserBookmarkOverview(userId, bmId)
     ])
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -67,7 +68,8 @@ export class BookmarkOrchestrator {
       alias_title: res.alias_title,
       tags: tagsResult.status === 'fulfilled' ? tagsResult.value : [],
       user_id: ctx.hashIds.encodeId(userId),
-      type: res.type === 1 ? 'shortcut' : 'article'
+      type: res.type === 1 ? 'shortcut' : 'article',
+      overview: overviewResult.status === 'fulfilled' && overviewResult.value ? overviewResult.value.overview : undefined
     }
   }
 

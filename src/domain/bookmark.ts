@@ -44,6 +44,7 @@ export interface BookmarkDetailResp {
   marks: markDetail
   tags: BookmarkTag[]
   type: 'shortcut' | 'article'
+  overview?: string
 }
 
 export interface markDetail {
@@ -626,6 +627,11 @@ export class BookmarkService {
   /** 创建书签概述 */
   public async createBookmarkOverview(userId: number, bookmarkId: number, overview: string) {
     return await this.bookmarkRepo.createBookmarkOverview(userId, bookmarkId, overview)
+  }
+
+  /** 获取用户书签概述 */
+  public async getUserBookmarkOverview(userId: number, bookmarkId: number) {
+    return await this.bookmarkRepo.getUserBookmarkOverview(userId, bookmarkId)
   }
 
   /** 更新书签解析队列重试 */
