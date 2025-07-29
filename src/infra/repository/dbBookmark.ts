@@ -501,6 +501,18 @@ export class BookmarkRepo {
     })
   }
 
+  public async getUserBookmarkOverview(userId: number, bookmarkId: number) {
+    return await this.prisma().slax_user_bookmark_overview.findFirst({
+      where: {
+        user_id: userId,
+        bookmark_id: bookmarkId
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    })
+  }
+
   public async createBookmarkImportTask(userId: number, type: string, objectKey: string, totalCount: number, batchCount: number) {
     return await this.prisma().slax_bookmark_import.create({
       data: {
