@@ -181,11 +181,10 @@ model slax_user_tag {
   id         Int      @id @default(autoincrement())
   user_id    Int      @default(0)
   tag_name   String   @default("")
-  system_tag Boolean  @default(false)
   display    Boolean  @default(true)
   created_at DateTime @default(now())
 
-  @@unique([user_id, tag_name, system_tag])
+  @@unique([user_id, tag_name])
 }
 
 model slax_user_bookmark_tag {
@@ -194,7 +193,6 @@ model slax_user_bookmark_tag {
   bookmark_id Int      @default(0)
   tag_name    String   @default("")
   tag_id      Int      @default(0)
-  system_tag  Boolean  @default(false)
   created_at  DateTime @default(now())
   is_deleted  Boolean  @default(false)
 
@@ -309,4 +307,15 @@ model slax_user_bookmark_change {
   created_at  DateTime @default(now())
 
   @@index([user_id, created_at])
+}
+
+model slax_user_bookmark_overview {
+  id Int @id @default(autoincrement())
+
+  user_id     Int      @default(0)
+  bookmark_id Int      @default(0)
+  overview    String   @default("")
+  created_at  DateTime @default(now())
+
+  @@index([bookmark_id, user_id])
 }

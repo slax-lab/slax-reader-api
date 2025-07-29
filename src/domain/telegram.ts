@@ -4,7 +4,6 @@ import { Hashid } from '../utils/hashids'
 import { hashSHA256 } from '../utils/strings'
 import { platformBindType, UserRepo } from '../infra/repository/dbUser'
 import { URLPolicie } from '../utils/urlPolicie'
-import { systemTag } from '../const/systemTag'
 import { i18n } from '../const/i18n'
 import { inject, injectable } from '../decorators/di'
 import { BookmarkRepo } from '../infra/repository/dbBookmark'
@@ -168,11 +167,11 @@ export class TelegramBotService {
       const firstTag = tags[i]
       const secondTag = i + 1 < tags.length ? tags[i + 1] : null
 
-      const firstTagName = firstTag.system_tag ? `🤖 ${systemTag.get(firstTag.tag_name)?.get(language) || firstTag.tag_name}` : `🔖 ${firstTag.tag_name}`
+      const firstTagName = `🔖 ${firstTag.tag_name}`
       keyboard.text(`${firstTagName}`, `bookmark_list-${firstTag.id}`)
 
       if (secondTag) {
-        const secondTagName = secondTag.system_tag ? `🤖 ${systemTag.get(secondTag.tag_name)?.get(language) || secondTag.tag_name}` : `🔖 ${secondTag.tag_name}`
+        const secondTagName = `🔖 ${secondTag.tag_name}`
         keyboard.text(`${secondTagName}`, `bookmark_list-${secondTag.id}`)
       }
       keyboard.row()
