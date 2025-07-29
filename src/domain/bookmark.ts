@@ -263,10 +263,10 @@ export class BookmarkService {
 
     // 创建标签
     for (const tag of item.tags) {
-      const tagRes = await this.bookmarkRepo.createUserTag(ctx.getUserId(), tag, false)
+      const tagRes = await this.bookmarkRepo.createUserTag(ctx.getUserId(), tag)
       console.log(`create tag: ${JSON.stringify(tagRes)}`)
       if (!tagRes) continue
-      await this.bookmarkRepo.createBookmarkTag(bmInfo.id, ctx.getUserId(), tagRes.id, tag, false)
+      await this.bookmarkRepo.createBookmarkTag(bmInfo.id, ctx.getUserId(), tagRes.id, tag)
     }
 
     return {
@@ -617,10 +617,15 @@ export class BookmarkService {
     const bookmarkRepo = this.bookmarkRepo
 
     for (const tag of tags) {
-      const repoTag = await bookmarkRepo.createUserTag(userId, tag, true)
+      const repoTag = await bookmarkRepo.createUserTag(userId, tag)
       if (!repoTag) continue
-      await bookmarkRepo.createBookmarkTag(bmId, userId, repoTag.id, repoTag.tag_name, repoTag.system_tag)
+      await bookmarkRepo.createBookmarkTag(bmId, userId, repoTag.id, repoTag.tag_name)
     }
+  }
+
+  /** 创建书签概述 */
+  public async createBookmarkOverview(userId: number, bookmarkId: number, overview: string) {
+    return await this.bookmarkRepo.createBookmarkOverview(userId, bookmarkId, overview)
   }
 
   /** 更新书签解析队列重试 */

@@ -362,7 +362,6 @@ export class AigcService {
   // Generate tags from user tags
   public async generateOverviewTags(ctx: ContextManager, bmTitle: string, bmContent: string, byline: string, userTags: string[]): Promise<MixTagsOverviewResult> {
     const userLang = ctx.get('ai_lang') || 'EN'
-    const model = this.aigc().hasOrDefaultModel(ctx.get('ai_tag_model'))
 
     const messages: CoreMessage[] = [
       {
@@ -375,15 +374,15 @@ export class AigcService {
       }
     ]
 
-    const result = await this.aigc().generateText(messages, { models: [model, 'gpt-4o-mini'] })
+    const result = await this.aigc().generateText(messages, { models: ['gcp-gemini-2.5-flash', 'gpt-4o-mini'] })
 
-    const overviewMatch = result.text.match(/<OVERVIEW>(.*?)<\/OVERVIEW>/s)
+    const overviewMatch = result.text.match(/<overview>(.*?)<\/overview>/s)
     const overview = overviewMatch ? overviewMatch[1].trim() : ''
 
-    const tagsMatches = result.text.matchAll(/<TAGS>(.*?)<\/TAGS>/g)
+    const tagsMatches = result.text.matchAll(/<tags>(.*?)<\/tags>/g)
     const tags = [...tagsMatches].map(match => match[1].trim())
 
-    console.log(`${model} generate overview tags result: ${result.text}`)
+    console.log(`${result.model} generate overview tags result: ${result.text}`)
     console.log(`generate overview tags: ${overview}`)
     console.log(`generate overview tags: ${tags}`)
 

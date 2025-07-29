@@ -414,20 +414,18 @@ export class BookmarkRepo {
     })
   }
 
-  public async createUserTag(userId: number, tag: string, systemTag: boolean) {
+  public async createUserTag(userId: number, tag: string) {
     if (!tag) return
     return this.prisma().slax_user_tag.upsert({
       where: {
-        user_id_tag_name_system_tag: {
+        user_id_tag_name: {
           user_id: userId,
-          tag_name: tag,
-          system_tag: systemTag
+          tag_name: tag
         }
       },
       create: {
         user_id: userId,
         tag_name: tag,
-        system_tag: systemTag,
         created_at: new Date(),
         display: true
       },
@@ -444,10 +442,10 @@ export class BookmarkRepo {
     })
   }
 
-  public async createBookmarkTag(bmId: number, userId: number, tagId: number, tagName: string, systemTag: boolean) {
+  public async createBookmarkTag(bmId: number, userId: number, tagId: number, tagName: string) {
     return await this.prisma().slax_user_bookmark_tag.upsert({
       where: { bookmark_id_user_id_tag_id: { bookmark_id: bmId, user_id: userId, tag_id: tagId } },
-      create: { user_id: userId, bookmark_id: bmId, tag_id: tagId, tag_name: tagName, system_tag: systemTag, created_at: new Date() },
+      create: { user_id: userId, bookmark_id: bmId, tag_id: tagId, tag_name: tagName, created_at: new Date() },
       update: {}
     })
   }
@@ -490,6 +488,17 @@ export class BookmarkRepo {
 
   public async updateBookmarkTag(userId: number, tagId: number, tagName: string) {
     await this.prisma().slax_user_bookmark_tag.updateMany({ where: { tag_id: tagId, user_id: userId }, data: { tag_name: tagName } })
+  }
+
+  public async createBookmarkOverview(userId: number, bookmarkId: number, overview: string) {
+    return await this.prisma().slax_user_bookmark_overview.create({
+      data: {
+        user_id: userId,
+        bookmark_id: bookmarkId,
+        overview: overview,
+        created_at: new Date()
+      }
+    })
   }
 
   public async createBookmarkImportTask(userId: number, type: string, objectKey: string, totalCount: number, batchCount: number) {
