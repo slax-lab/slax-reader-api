@@ -15,16 +15,18 @@ export class Container {
   }
 
   resolve<T>(token: { new (...args: any[]): T } | symbol): T {
+    const provider = this.providers.get(token)
+    if (provider && 'useFactory' in provider && provider.uncached) {
+      return this.createInstance<T>(provider)
+    }
+
     if (this.instances.has(token)) {
       return this.instances.get(token) as T
     }
 
-    const provider = this.providers.get(token)
     if (provider) {
       const instance = this.createInstance<T>(provider)
-      if (!('useFactory' in provider && provider.uncached)) {
-        this.instances.set(token, instance)
-      }
+      this.instances.set(token, instance)
       return instance
     }
 
