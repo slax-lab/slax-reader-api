@@ -100,7 +100,8 @@ ${content}`
 
 export const generateOverviewTagsUserPrompt = function (userLang: string, tags: string[]) {
   return `## 你需要输出tags
-- 从提供的标签列表中选择10个最符合文章内容的标签
+- 从提供的标签列表中选择2~3个最符合文章内容的标签
+- 如果存在含义相近的标签，则需要选择最合适的标签，不要选择多个相近的标签
 - 标签必须与文章核心内容高度相关
 - 标签能够准确反映文章的主要特征
 - 选择的标签应该能代表文章的不同维度
