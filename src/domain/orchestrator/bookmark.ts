@@ -27,9 +27,10 @@ export class BookmarkOrchestrator {
     if (!res) throw BookmarkNotFoundError()
     if (res.bookmark.private_user > 0 && res.bookmark.private_user !== ctx.getUserId()) throw BookmarkNotFoundError()
 
-    const [marksResult, overviewResult] = await Promise.allSettled([
+    const [marksResult, overviewResult, tagsResult] = await Promise.allSettled([
       this.markService.getBookmarkMarkList(ctx, res.id, true),
-      this.bookmarkService.getUserBookmarkOverview(ctx.getUserId(), bmId)
+      this.bookmarkService.getUserBookmarkOverview(ctx.getUserId(), bmId),
+      this.tagService.getBookmarkTags(ctx, ctx.getUserId(), bmId)
     ])
     const { id, content_key, content_md_key, private_user, ...bookmarkWithoutId } = res.bookmark
 
@@ -39,7 +40,8 @@ export class BookmarkOrchestrator {
       archived: res.archive_status === 1 ? 'archive' : res.archive_status === 2 ? 'later' : 'inbox',
       starred: res.is_starred ? 'star' : 'unstar',
       alias_title: res.alias_title,
-      marks: marksResult,
+      tags: tagsResult.status === 'fulfilled' ? tagsResult.value : [],
+      marks: marksResult.status === 'fulfilled' ? marksResult.value : [],
       overview: overviewResult.status === 'fulfilled' && overviewResult.value ? overviewResult.value.overview : undefined
     }
   }
