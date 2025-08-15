@@ -129,7 +129,7 @@ export class NotificationMessage {
       const dObj = env.WEBSOCKET_SERVER.get(doId)
       await dObj.sendBookmarkChange(payload)
     } catch (e) {
-      console.error(`send bookmark change failed: ${e}`)
+      console.log(`send bookmark change failed: ${e}`)
     }
   }
 }
