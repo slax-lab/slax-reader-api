@@ -79,7 +79,7 @@ export class AigcController {
     // TODO 拿到CTX中的user_id进行速率限制
     const req = await RequestUtils.json<CompletionsRequest>(request)
 
-    const [user, { title, content }] = await Promise.all([
+    const [user, { title, content, bmId }] = await Promise.all([
       this.userService.getUserInfo(ctx),
       this.bookmarkService.getBookmarkTitleContent(ctx, req.bm_id, req.share_code, req.cb_id, req.title, req.raw_content)
     ])
@@ -90,6 +90,7 @@ export class AigcController {
     ctx.set('country', request.cf?.country || '')
     ctx.set('continent', request.cf?.continent || '')
     ctx.set('ai_lang', user.ai_lang || user.lang?.slice(0, 2) || 'en')
+    ctx.set('bm_id', bmId)
 
     const aiSvc = this.aigcService
     const { readable, writable } = new TransformStream()
