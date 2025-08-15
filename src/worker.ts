@@ -17,7 +17,7 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     initializeInfrastructure(env)
     return router
-      .handle(request, new ContextManager(ctx, env))
+      .fetch(request, new ContextManager(ctx, env))
       .catch(err => {
         if (err instanceof MultiLangError) return Failed(err)
         console.error(err)
