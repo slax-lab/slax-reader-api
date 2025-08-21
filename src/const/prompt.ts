@@ -106,16 +106,15 @@ export const generateOverviewTagsUserPrompt = function (userLang: string, tags: 
 - 标签能够准确反映文章的主要特征
 - 选择的标签应该能代表文章的不同维度
 - 标签选择要基于文章实际内容，避免主观臆测
-- 生成ovverview时，你能且只能使用指定的语言：${userLang} (zh=中文, en=英文, 等其他语言代码)
+- 生成overview时，你能且只能使用指定的语言：${userLang} (zh=中文, en=英文, 等其他语言代码)
 - 生成标签列表时，语言则只能跟随用户的标签列表，不可以擅自翻译
 - 标签的列表：
   ${tags.join(',')}
 
 ## 你需要输出overview
 - 概述文章的核心主题和主要内容，overview的内容包括
-    - 寥寥几句的主旨（The Gist，需要带有主观的看法）
-    - 3~5 条核心要点（Key Takeaways)
-
+    - 寥寥几句的主旨（The Gist，需要带有主观的看法），字数控制在200字以内
+    - 3~5 条核心要点（Key Takeaways)，核心要点列表不需要带上标题,每条核心要点控制在40个字以内
 ## 输出的格式
 \`\`\`
 <overview>输出的overview内容</overview>
