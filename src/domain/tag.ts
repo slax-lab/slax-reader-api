@@ -43,6 +43,20 @@ export class TagService {
     }
   }
 
+  public async addBookmarkTags(ctx: ContextManager, bmId: number, tags: { name: string; id: number }[]): Promise<BookmarkTag[]> {
+    const bmRepo = this.bookmarkRepo
+
+    const res = await bmRepo.getUserBookmark(bmId, ctx.getUserId())
+    if (!res) throw BookmarkNotFoundError()
+
+    const tasks = []
+    for (const tag of tags) {
+      tasks.push(this.addBookmarkTag(ctx, bmId, tag.name, tag.id))
+    }
+
+    return Promise.all(tasks)
+  }
+
   public async deleteBookmarkTag(ctx: ContextManager, bmId: number, tagId: number) {
     const bmRepo = this.bookmarkRepo
     const res = await bmRepo.getUserBookmark(bmId, ctx.getUserId())

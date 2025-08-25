@@ -277,6 +277,21 @@ export class BookmarkController {
   }
 
   /**
+   * 添加标签
+   */
+  @Post('/add_tags')
+  public async handleUserBookmarkAddTagsRequest(ctx: ContextManager, request: Request) {
+    const req = await RequestUtils.json<{ bookmark_id: number; tags: { name: string; id: number }[] }>(request)
+    if (!req || !req.bookmark_id || !req.tags || !req.tags.length) return Failed(ErrorParam())
+
+    req.bookmark_id = ctx.hashIds.decodeId(req.bookmark_id)
+    if (!req.bookmark_id) return Failed(ErrorParam())
+
+    const res = await this.tagService.addBookmarkTags(ctx, req.bookmark_id, req.tags)
+    return Successed(res)
+  }
+
+  /**
    * 删除标签
    */
   @Post('/del_tag')

@@ -91,6 +91,10 @@ router.post('/v1/bookmark/add_tag', async (req: Request, ctx: ContextManager) =>
   const controller = container.resolve(BookmarkController)
   return await controller.handleUserBookmarkAddTagRequest(ctx, req)
 })
+router.post('/v1/bookmark/add_tags', async (req: Request, ctx: ContextManager) => {
+  const controller = container.resolve(BookmarkController)
+  return await controller.handleUserBookmarkAddTagsRequest(ctx, req)
+})
 router.post('/v1/bookmark/del_tag', async (req: Request, ctx: ContextManager) => {
   const controller = container.resolve(BookmarkController)
   return await controller.handleUserBookmarkDelTagRequest(ctx, req)
