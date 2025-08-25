@@ -315,6 +315,7 @@ model slax_user_bookmark_overview {
   user_id     Int      @default(0)
   bookmark_id Int      @default(0)
   overview    String   @default("")
+  content     String   @default("") // 新增 JSON 字段
   created_at  DateTime @default(now())
 
   @@index([bookmark_id, user_id])
