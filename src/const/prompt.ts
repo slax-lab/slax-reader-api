@@ -106,25 +106,26 @@ export const generateOverviewTagsUserPrompt = function (userLang: string, tags: 
 - 标签能够准确反映文章的主要特征
 - 选择的标签应该能代表文章的不同维度
 - 标签选择要基于文章实际内容，避免主观臆测
-- 生成ovverview时，你能且只能使用指定的语言：${userLang} (zh=中文, en=英文, 等其他语言代码)
 - 生成标签列表时，语言则只能跟随用户的标签列表，不可以擅自翻译
 - 标签的列表：
-  ${tags.join(',')}
+${tags.join(',')}
 
 ## 你需要输出overview
 - 概述文章的核心主题和主要内容，overview的内容包括
     - 寥寥几句的主旨（The Gist，需要带有主观的看法）
-    - 3~5 条核心要点（Key Takeaways)
+## 你需要输出key_takeaways
+- 3~5 条核心要点（key_takeaways)，每条字数控制在40个字以内
+
+## 输出语言
+  - 输出overview, key_takeaways时，你能且只能使用指定的语言：${userLang} (zh=中文, en=英文, 等其他语言代码)
 
 ## 输出的格式
-\`\`\`
-<overview>输出的overview内容</overview>
-<tags>标签1</tags>
-<tags>标签2</tags>
-<tags>标签3</tags>
-<tags>标签4</tags>
-<tags>...</tags>
-\`\`\``
+{
+  overview: 输出的overview内容
+  key_takeaways: 3~5 条核心要点
+  tags: [标签1, 标签2, 标签3, 标签4, ...]
+}
+`
 }
 
 export const generateRelatedTagPrompt = `<role>
