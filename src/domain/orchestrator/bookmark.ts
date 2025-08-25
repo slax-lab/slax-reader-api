@@ -42,7 +42,8 @@ export class BookmarkOrchestrator {
       alias_title: res.alias_title,
       tags: tagsResult.status === 'fulfilled' ? tagsResult.value : [],
       marks: marksResult.status === 'fulfilled' ? marksResult.value : [],
-      overview: overviewResult.status === 'fulfilled' && overviewResult.value ? overviewResult.value.overview : undefined
+      overview:
+        overviewResult.status === 'fulfilled' ? (overviewResult.value?.content?.length ? JSON.parse(overviewResult.value.content) : overviewResult.value?.overview) : undefined
     }
   }
 
@@ -75,7 +76,8 @@ export class BookmarkOrchestrator {
       tags: tagsResult.status === 'fulfilled' ? tagsResult.value : [],
       user_id: ctx.hashIds.encodeId(userId),
       type: res.type === 1 ? 'shortcut' : 'article',
-      overview: overviewResult.status === 'fulfilled' && overviewResult.value ? overviewResult.value.overview : undefined
+      overview:
+        overviewResult.status === 'fulfilled' ? (overviewResult.value?.content?.length ? JSON.parse(overviewResult.value.content) : overviewResult.value?.overview) : undefined
     }
   }
 
