@@ -370,19 +370,27 @@ export class AigcService {
       }
     ]
 
-    const result = await this.aigc().generateText(messages, { models: ['gcp-gemini-2.5-flash', 'gpt-4o-mini'] })
+    const result = await this.aigc().generateObject(
+      messages,
+      z.object({
+        overview: z.string(),
+        key_takeaways: z.array(z.string()),
+        tags: z.array(z.string())
+      }),
+      { models: ['gcp-gemini-2.5-flash', 'gpt-4o-mini'] }
+    )
 
-    const overviewMatch = result.text.match(/<overview>(.*?)<\/overview>/s)
-    const overview = overviewMatch ? overviewMatch[1].trim() : ''
+    const object = result.object as { overview?: string; key_takeaways?: string[]; tags?: string[] }
 
-    const tagsMatches = result.text.matchAll(/<tags>(.*?)<\/tags>/g)
-    const tags = [...tagsMatches].map(match => match[1].trim())
+    const overview = object.overview || ''
+    const key_takeaways = object.key_takeaways || []
+    const tags = (object.tags || []).map(tag => tag.trim())
 
-    console.log(`${result.model} generate overview tags result: ${result.text}`)
+    console.log(`${result.model} generate overview tags result: ${result.object}`)
     console.log(`generate overview tags: ${overview}`)
     console.log(`generate overview tags: ${tags}`)
 
-    return { tags, overview }
+    return { tags, overview: JSON.stringify({ overview, key_takeaways }) }
   }
 
   // chat with bookmark
