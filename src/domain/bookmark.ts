@@ -625,8 +625,8 @@ export class BookmarkService {
   }
 
   /** 创建书签概述 */
-  public async createBookmarkOverview(userId: number, bookmarkId: number, overview: string) {
-    return await this.bookmarkRepo.createBookmarkOverview(userId, bookmarkId, overview)
+  public async createBookmarkOverview(userId: number, bookmarkId: number, content: string) {
+    return await this.bookmarkRepo.createBookmarkOverview(userId, bookmarkId, content)
   }
 
   /** 获取用户书签概述 */
