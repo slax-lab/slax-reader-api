@@ -119,10 +119,10 @@ ${tags.join(',')}
 ## 输出语言
   - 输出overview, key_takeaways时，你能且只能使用指定的语言：${userLang} (zh=中文, en=英文, 等其他语言代码)
 
-## 输出的格式如下，注意为JSON格式
+## 输出的格式
 {
-  overview: 输出的overview内容,
-  key_takeaways: 3~5 条核心要点,
+  overview: 输出的overview内容
+  key_takeaways: 3~5 条核心要点
   tags: [标签1, 标签2, 标签3, 标签4, ...]
 }
 `
