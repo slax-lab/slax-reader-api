@@ -490,11 +490,12 @@ export class BookmarkRepo {
     await this.prisma().slax_user_bookmark_tag.updateMany({ where: { tag_id: tagId, user_id: userId }, data: { tag_name: tagName } })
   }
 
-  public async createBookmarkOverview(userId: number, bookmarkId: number, content: string) {
+  public async createBookmarkOverview(userId: number, bookmarkId: number, overview: string, content: string) {
     return await this.prisma().slax_user_bookmark_overview.create({
       data: {
         user_id: userId,
         bookmark_id: bookmarkId,
+        overview: overview,
         content: content,
         created_at: new Date()
       }
