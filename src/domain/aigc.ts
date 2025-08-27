@@ -43,6 +43,7 @@ export enum toolStatus {
 export type MixTagsOverviewResult = {
   tags: string[]
   overview: string
+  key_takeaways: string[]
 }
 
 @injectable()
@@ -390,7 +391,7 @@ export class AigcService {
     console.log(`generate overview tags: ${overview}`)
     console.log(`generate overview tags: ${tags}`)
 
-    return { tags, overview: JSON.stringify({ overview, key_takeaways }) }
+    return { tags, overview, key_takeaways }
   }
 
   // chat with bookmark

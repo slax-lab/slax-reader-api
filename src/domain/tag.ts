@@ -43,18 +43,52 @@ export class TagService {
     }
   }
 
-  public async addBookmarkTags(ctx: ContextManager, bmId: number, tags: { name: string; id: number }[]): Promise<BookmarkTag[]> {
+  public async addBookmarkTags(ctx: ContextManager, bmId: number, tags: { name: string; id?: number }[]): Promise<BookmarkTag[]> {
     const bmRepo = this.bookmarkRepo
 
-    const res = await bmRepo.getUserBookmark(bmId, ctx.getUserId())
-    if (!res) throw BookmarkNotFoundError()
+    const needInsert = tags.filter(t => !t.id)
+    const needUpdate = tags.filter(t => t.id).map(t => ({ ...t, id: ctx.hashIds.decodeId(t.id!) }))
 
-    const tasks = []
-    for (const tag of tags) {
-      tasks.push(this.addBookmarkTag(ctx, bmId, tag.name, tag.id))
+    if (!needInsert.length && !needUpdate.length) {
+      throw ErrorParam()
     }
 
-    return Promise.all(tasks)
+    let insertRes: { id: number; name: string }[] = []
+    if (needInsert.length > 0) {
+      insertRes =
+        (
+          await bmRepo.createUserTags(
+            ctx.getUserId(),
+            needInsert.map(t => t.name)
+          )
+        )?.map(item => ({
+          id: ctx.hashIds.encodeId(item.id),
+          name: item.tag_name
+        })) || []
+
+      if (!insertRes.length) {
+        throw ServerError()
+      }
+    }
+
+    const needUpsert = [...insertRes, ...needUpdate]
+
+    const updateRes = await bmRepo.updateUserTagsDisplay(
+      ctx.getUserId(),
+      needUpsert.map(t => t.name)
+    )
+
+    if (updateRes.length > 0) {
+      const res = await bmRepo.upsertBookmarkTags(bmId, ctx.getUserId(), updateRes)
+      if (!res) throw ServerError()
+    }
+
+    return updateRes.map(res => ({
+      id: ctx.hashIds.encodeId(res.id),
+      display: true,
+      name: res.tag_name,
+      show_name: res.tag_name
+    }))
   }
 
   public async deleteBookmarkTag(ctx: ContextManager, bmId: number, tagId: number) {
