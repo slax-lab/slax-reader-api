@@ -3,35 +3,24 @@ import { MultiLangError } from '../../utils/multiLangError'
 import { AIContentHarmful, AIError, AIRateLimitError } from '../../const/err'
 import z from 'zod'
 
+// callback handle
 export type StreamTextCallbackHandle = (chunk: string | MultiLangError) => Promise<void>
-export type StreamSchemaCallbackHandle = (chunk: any | MultiLangError) => Promise<void>
+export type StreamObjectCallbackHandle<T = any> = (chunk: T | MultiLangError) => Promise<void>
+
+// generate result
 export type GenerateTextResult = { text: string; model: string }
 export type GenerateObjectResult = { object: any; model: string }
+export type GenerateResult = { model: string }
 
-export type ProviderTextParams = {
-  providerInstance: LanguageModel
-  messages: CoreMessage[]
-  tools?: Record<string, any>
-} & { isStreaming: boolean; callback?: StreamTextCallbackHandle }
-
-export type ProviderSchemaParams = {
-  providerInstance: LanguageModel
-  messages: CoreMessage[]
-  schema: z.Schema<any>
-} & {
-  isStreaming: boolean
-  callback?: StreamSchemaCallbackHandle
-}
-
-export type ProviderParams = ProviderTextParams | ProviderSchemaParams
-
-type ProviderResult<T extends ProviderParams> = T extends ProviderSchemaParams ? { object?: any; model: string } : { text?: string; model: string }
-
+// model selector
 export type ModelSelector<T extends Record<string, LanguageModel> = Record<string, LanguageModel>> = keyof T
 
 export interface ChatOptions<T extends Record<string, LanguageModel> = Record<string, LanguageModel>> {
+  isStreaming: boolean
   tools?: Record<string, any>
   models?: ModelSelector<T>[]
+  schema?: z.Schema<any>
+  callback?: StreamTextCallbackHandle | StreamObjectCallbackHandle
 }
 
 export class ChatCompletion<T extends Record<string, LanguageModel> = Record<string, LanguageModel>> {
@@ -47,176 +36,92 @@ export class ChatCompletion<T extends Record<string, LanguageModel> = Record<str
     return model in this.modelRegistry ? (model as ModelSelector<T>) : this.providers[0].modelId
   }
 
-  private async executeWithProvider<T extends ProviderParams>(params: T): Promise<ProviderResult<T>> {
-    const { messages, isStreaming, providerInstance } = params
-    const model = providerInstance
+  private async executeWithProvider(
+    providerInstance: LanguageModel,
+    messages: CoreMessage[],
+    options: {
+      isStreaming: boolean
+      schema?: z.Schema<any>
+      tools?: Record<string, any>
+      callback?: StreamTextCallbackHandle | StreamObjectCallbackHandle
+      temperature?: number
+      maxTokens?: number
+    }
+  ) {
+    const config = {
+      model: providerInstance,
+      messages,
+      temperature: options.temperature ?? 0.6,
+      maxTokens: options.maxTokens ?? 4096
+    }
 
-    if ('schema' in params) {
-      if (isStreaming && params.callback) {
-        const result = await streamObject({
-          model,
-          messages,
-          schema: params.schema,
-          temperature: 0.6,
-          maxTokens: 4096
-        })
-
+    // object generation
+    if (options.schema) {
+      if (options.isStreaming && options.callback) {
+        const result = await streamObject({ ...config, schema: options.schema })
         for await (const part of result.fullStream) {
-          if (part.type === 'object') {
-            await params.callback!(part.object)
-          } else if (part.type === 'error') {
-            throw part.error
-          }
+          if (part.type === 'object') await options.callback(part.object)
+          else if (part.type === 'error') throw part.error
         }
-      } else if (!isStreaming) {
-        const result = await generateObject({
-          model,
-          messages,
-          schema: params.schema,
-          temperature: 0.6,
-          maxTokens: 4096
-        })
-
-        return {
-          object: result.object,
-          model: providerInstance.modelId
-        } as unknown as ProviderResult<T>
+        return { model: providerInstance.modelId }
       }
-    } else {
-      if (isStreaming) {
-        const result = await streamText({
-          model,
-          messages,
-          tools: params.tools,
-          temperature: 0.6,
-          maxTokens: 4096
-        })
 
-        for await (const part of result.fullStream) {
-          if (part.type === 'text-delta') {
-            await params.callback!(part.textDelta)
-          } else if (part.type === 'error') {
-            throw part.error
-          }
-        }
-      } else {
-        const result = await generateText({
-          model,
-          messages,
-          tools: params.tools,
-          temperature: 0.6,
-          maxTokens: 4096
-        })
-
-        return {
-          text: result.text,
-          model: providerInstance.modelId
-        } as unknown as ProviderResult<T>
-      }
+      const result = await generateObject({ ...config, schema: options.schema })
+      return { object: result.object, model: providerInstance.modelId }
     }
 
-    return { model: providerInstance.modelId } as unknown as ProviderResult<T>
+    // text generation
+    if (options.isStreaming && options.callback) {
+      const result = await streamText({ ...config, tools: options.tools })
+      for await (const part of result.fullStream) {
+        if (part.type === 'text-delta') await options.callback(part.textDelta)
+        else if (part.type === 'error') throw part.error
+      }
+      return { model: providerInstance.modelId }
+    }
+
+    const result = await generateText({ ...config, tools: options.tools })
+    return { text: result.text, model: providerInstance.modelId }
   }
 
-  async streamText(messages: CoreMessage[], callback: StreamTextCallbackHandle, options: ChatOptions<T> = {}): Promise<{ model: string }> {
-    const compatibleProviders = options.models
-      ? (options.models.map(modelId => this.providers.find(p => p.modelId === modelId)).filter(Boolean) as typeof this.providers)
-      : this.providers
+  // generate text
+  generate(messages: CoreMessage[], options: { isStreaming: false; tools?: Record<string, any>; models?: ModelSelector<T>[] }): Promise<GenerateTextResult>
+  // generate object
+  generate<S>(messages: CoreMessage[], options: { isStreaming: false; schema: z.Schema<S>; models?: ModelSelector<T>[] }): Promise<{ object: S; model: string }>
+  // generate text stream
+  generate(
+    messages: CoreMessage[],
+    options: { isStreaming: true; tools?: Record<string, any>; models?: ModelSelector<T>[]; callback: StreamTextCallbackHandle }
+  ): Promise<GenerateResult>
+  // generate object stream
+  generate<S>(
+    messages: CoreMessage[],
+    options: { isStreaming: true; schema: z.Schema<S>; models?: ModelSelector<T>[]; callback: StreamObjectCallbackHandle<S> }
+  ): Promise<GenerateResult>
 
-    for (const providerInstance of compatibleProviders) {
+  // base function
+  async generate(messages: CoreMessage[], options: ChatOptions<T>): Promise<GenerateResult | GenerateObjectResult | GenerateTextResult> {
+    const providers = this.getCompatibleProviders(options.models)
+
+    for (const provider of providers) {
       try {
-        const result = await this.executeWithProvider({
-          providerInstance: providerInstance.model,
-          messages,
-          tools: options.tools,
-          isStreaming: true,
-          callback
-        })
-        return { model: result.model }
+        return await this.executeWithProvider(provider.model, messages, { ...options })
       } catch (error) {
-        console.log(`Provider ${providerInstance.modelId} failed:`, error)
-        await this.catchAIError(error, callback)
+        console.log(`Provider ${provider.modelId} failed:`, error)
+        await this.catchAIError(error, options.callback)
       }
     }
 
     throw new Error('All AI providers failed')
   }
 
-  async streamObject(messages: CoreMessage[], schema: z.Schema<any>, callback: StreamSchemaCallbackHandle, options: ChatOptions<T> = {}): Promise<{ model: string }> {
-    const compatibleProviders = options.models
-      ? (options.models.map(modelId => this.providers.find(p => p.modelId === modelId)).filter(Boolean) as typeof this.providers)
-      : this.providers
-
-    for (const providerInstance of compatibleProviders) {
-      try {
-        const result = await this.executeWithProvider({
-          providerInstance: providerInstance.model,
-          messages,
-          schema,
-          isStreaming: true,
-          callback
-        })
-        return { model: result.model }
-      } catch (error) {
-        console.log(`Provider ${providerInstance.modelId} failed:`, error)
-        await this.catchAIError(error, callback)
-      }
-    }
-
-    throw new Error('All AI providers failed')
+  private getCompatibleProviders(modelIds?: ModelSelector<T>[]) {
+    return modelIds ? (modelIds.map(id => this.providers.find(p => p.modelId === id)).filter(Boolean) as typeof this.providers) : this.providers
   }
 
-  async generateText(messages: CoreMessage[], options: ChatOptions<T> = {}): Promise<GenerateTextResult> {
-    const compatibleProviders = options.models
-      ? (options.models.map(modelId => this.providers.find(p => p.modelId === modelId)).filter(Boolean) as typeof this.providers)
-      : this.providers
+  private async catchAIError(error: unknown, callback?: StreamTextCallbackHandle | StreamObjectCallbackHandle<unknown>) {
+    if (!callback) return
 
-    for (const providerInstance of compatibleProviders) {
-      try {
-        const result = await this.executeWithProvider({
-          providerInstance: providerInstance.model,
-          messages,
-          tools: options.tools,
-          isStreaming: false
-        })
-        return {
-          text: result.text!,
-          model: result.model
-        }
-      } catch (error) {
-        console.log(`Provider ${providerInstance.modelId} failed:`, error)
-      }
-    }
-
-    throw new Error('All AI providers failed')
-  }
-
-  async generateObject(messages: CoreMessage[], schema: z.Schema<any>, options: ChatOptions<T> = {}): Promise<GenerateObjectResult> {
-    const compatibleProviders = options.models
-      ? (options.models.map(modelId => this.providers.find(p => p.modelId === modelId)).filter(Boolean) as typeof this.providers)
-      : this.providers
-
-    for (const providerInstance of compatibleProviders) {
-      try {
-        const result = await this.executeWithProvider({
-          providerInstance: providerInstance.model,
-          messages,
-          isStreaming: false,
-          schema
-        })
-        return {
-          object: result.object!,
-          model: result.model
-        }
-      } catch (error) {
-        console.log(`Provider ${providerInstance.modelId} failed:`, error)
-      }
-    }
-
-    throw new Error('All AI providers failed')
-  }
-
-  private async catchAIError(error: unknown, callback: StreamTextCallbackHandle) {
     const err = error as { status?: number; error?: { message?: string; code?: string } }
     if (!err || typeof err !== 'object') {
       console.error(`Failed to run AI: ${error}`)

@@ -289,7 +289,7 @@ export class AigcService {
     }
 
     try {
-      await this.aigc().streamText(messages, callback, { tools, models: [model] })
+      await this.aigc().generate(messages, { tools, models: [model], isStreaming: true, callback })
     } catch (error) {
       console.error('StreamText error:', error)
       throw error
@@ -331,9 +331,7 @@ export class AigcService {
     await this.writeProgress('tool', 'generateQuestion', undefined, toolStatus.PROCESSING)
 
     // 调用GPT-4o生成问题
-    await this.aigc().streamText(messages, callback, {
-      models: [model]
-    })
+    await this.aigc().generate(messages, { models: [model], isStreaming: true, callback })
 
     // 如果buffer还有内容，则直接输出
     if (buffer) await this.writeProgress('tool', 'generateQuestion', JSON.stringify([buffer]), toolStatus.SUCCESSFULLY)
@@ -348,7 +346,7 @@ export class AigcService {
       { role: 'user', content: `title: ${bmTitle}\n content: ${bmContent.slice(0, 200)}` }
     ]
 
-    const result = await this.aigc().generateText(messages)
+    const result = await this.aigc().generate(messages, { models: ['gcp-gemini-2.5-flash', 'gpt-4o-mini'], isStreaming: false })
 
     const tags = result.text.split('\n').filter(tag => tag.length >= 1)
 
@@ -371,15 +369,15 @@ export class AigcService {
       }
     ]
 
-    const result = await this.aigc().generateObject(
-      messages,
-      z.object({
+    const result = await this.aigc().generate(messages, {
+      models: ['gcp-gemini-2.5-flash', 'gpt-4o-mini'],
+      isStreaming: false,
+      schema: z.object({
         overview: z.string(),
         key_takeaways: z.array(z.string()),
         tags: z.array(z.string())
-      }),
-      { models: ['gcp-gemini-2.5-flash', 'gpt-4o-mini'] }
-    )
+      })
+    })
 
     const object = result.object as Partial<MixTagsOverviewResult>
 
@@ -447,7 +445,7 @@ export class AigcService {
         { role: 'user', content: rawContent }
       ]
 
-      providerInfo = await this.aigc().streamText(messages, callback, { models: [model] })
+      providerInfo = await this.aigc().generate(messages, { models: [model], isStreaming: true, callback })
     } catch (error) {
       console.error(error)
       this.wr.write(this.ted.encode(error instanceof MultiLangError ? error.message : 'Failed to get summary, please try again later.\n'))
