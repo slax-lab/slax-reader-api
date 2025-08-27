@@ -168,9 +168,10 @@ export class BookmarkRepo {
     try {
       const bookmark = await this.prisma().slax_bookmark.findUnique({ where: { id: bmId } })
       if (!bookmark || bookmark.private_user !== userId) return null
-      const res = await this.prisma().slax_bookmark.delete({ where: { id: bmId } })
 
-      return { bookmark_id: res.id, ...res }
+      await this.prisma().$executeRaw`DELETE FROM slax_bookmark WHERE id = ${bmId}`
+
+      return { bookmark_id: bookmark.id, ...bookmark }
     } catch (e) {
       console.log(`delete bookmark failed:`, e)
       return null
