@@ -387,7 +387,7 @@ export class AigcService {
     const key_takeaways = object.key_takeaways || []
     const tags = (object.tags || []).map(tag => tag.trim())
 
-    console.log(`${result.model} generate overview tags result: ${result.object}`)
+    console.log(`${result.model} generate overview tags result: ${JSON.stringify(result.object)}`)
     console.log(`generate overview tags: ${overview}`)
     console.log(`generate overview tags: ${tags}`)
 
