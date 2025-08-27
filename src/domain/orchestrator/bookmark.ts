@@ -34,23 +34,7 @@ export class BookmarkOrchestrator {
       this.tagService.getBookmarkTags(ctx, ctx.getUserId(), bmId)
     ])
     const { id, content_key, content_md_key, private_user, ...bookmarkWithoutId } = res.bookmark
-
-    let overview = ''
-    let key_takeaways: string[] = []
-
-    if (overviewResult.status === 'fulfilled' && overviewResult.value) {
-      if (overviewResult.value.content && overviewResult.value.content.length > 0) {
-        try {
-          const overviewContent = JSON.parse(overviewResult.value.content) as Omit<MixTagsOverviewResult, 'tags'>
-          overview = overviewContent.overview
-          key_takeaways = overviewContent.key_takeaways
-        } catch (e) {
-          throw BookmarkOverviewContentError()
-        }
-      } else if (overviewResult.value.overview) {
-        overview = overviewResult.value.overview
-      }
-    }
+    const { overview, key_takeaways } = this.parseOverviewRes(overviewResult.status === 'fulfilled' ? (overviewResult.value ?? null) : null)
 
     return {
       ...bookmarkWithoutId,
@@ -82,23 +66,7 @@ export class BookmarkOrchestrator {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, content_key, content_md_key, private_user, ...bookmarkWithoutId } = res.bookmark
-
-    let overview = ''
-    let key_takeaways: string[] = []
-
-    if (overviewResult.status === 'fulfilled' && overviewResult.value) {
-      if (overviewResult.value.content && overviewResult.value.content.length > 0) {
-        try {
-          const overviewContent = JSON.parse(overviewResult.value.content) as Omit<MixTagsOverviewResult, 'tags'>
-          overview = overviewContent.overview
-          key_takeaways = overviewContent.key_takeaways
-        } catch (e) {
-          throw BookmarkOverviewContentError()
-        }
-      } else if (overviewResult.value.overview) {
-        overview = overviewResult.value.overview
-      }
-    }
+    const { overview, key_takeaways } = this.parseOverviewRes(overviewResult.status === 'fulfilled' ? (overviewResult.value ?? null) : null)
 
     return {
       ...bookmarkWithoutId,
@@ -120,5 +88,24 @@ export class BookmarkOrchestrator {
   // 书签加星标
   public async bookmarkStar(ctx: ContextManager, bmId: number, status: 'star' | 'unstar') {
     return await this.bookmarkService.updateBookmarkStarStatus(ctx.getUserId(), bmId, status === 'star')
+  }
+
+  parseOverviewRes(overviewRes: { overview: string; content: string } | null) {
+    let overview = ''
+    let key_takeaways: string[] = []
+
+    if (overviewRes?.content && overviewRes.content.length > 0) {
+      try {
+        const overviewContent = JSON.parse(overviewRes.content) as Omit<MixTagsOverviewResult, 'tags'>
+        overview = overviewContent.overview
+        key_takeaways = overviewContent.key_takeaways
+      } catch (e) {
+        console.error('Failed to parse overview content:', e)
+      }
+    } else if (overviewRes?.overview) {
+      overview = overviewRes.overview
+    }
+
+    return { overview, key_takeaways }
   }
 }

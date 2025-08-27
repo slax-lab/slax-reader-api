@@ -171,7 +171,7 @@ export class UrlParserHandler {
         userTags
       )
 
-      await Promise.all(info.userIds.map(userId => this.bookmarkService.createBookmarkOverview(userId, info.bookmarkId, overview, key_takeaways)))
+      await Promise.all(info.userIds.map(userId => this.bookmarkService.createBookmarkOverview(userId, info.bookmarkId, '', JSON.stringify({ overview, key_takeaways }))))
 
       const filteredTags = tags.filter(tag => userTags.includes(tag))
 
