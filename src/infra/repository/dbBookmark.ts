@@ -436,6 +436,18 @@ export class BookmarkRepo {
     })
   }
 
+  public async createUserTags(userId: number, tags: string[]) {
+    if (!tags.length) return
+    return this.prisma().slax_user_tag.createManyAndReturn({
+      data: tags.map(tag => ({
+        user_id: userId,
+        tag_name: tag,
+        created_at: new Date(),
+        display: true
+      }))
+    })
+  }
+
   public async updateUserTagDisplay(userId: number, tagId: number, display: boolean) {
     return await this.prisma().slax_user_tag.update({
       where: { id: tagId, user_id: userId },
@@ -491,11 +503,12 @@ export class BookmarkRepo {
     await this.prisma().slax_user_bookmark_tag.updateMany({ where: { tag_id: tagId, user_id: userId }, data: { tag_name: tagName } })
   }
 
-  public async createBookmarkOverview(userId: number, bookmarkId: number, content: string) {
+  public async createBookmarkOverview(userId: number, bookmarkId: number, overview: string, content: string) {
     return await this.prisma().slax_user_bookmark_overview.create({
       data: {
         user_id: userId,
         bookmark_id: bookmarkId,
+        overview: overview,
         content: content,
         created_at: new Date()
       }
@@ -692,5 +705,25 @@ export class BookmarkRepo {
     })
 
     return res as bookmarkActionChangePO[]
+  }
+
+  // 批量upsert
+  public async upsertBookmarkTags(bmId: number, userId: number, tags: { id: number; tag_name: string }[]) {
+    return await this.prisma().$executeRaw`
+      INSERT INTO slax_user_bookmark_tag(user_id, bookmark_id ,tag_id, tag_name, created_at)
+      VALUES ${Prisma.join(tags.map(tag => Prisma.sql`(${userId}, ${bmId}, ${tag.id}, ${tag.tag_name}, ${new Date().toISOString()})`))}
+      ON CONFLICT(user_id, bookmark_id ,tag_id) DO NOTHING;
+    `
+  }
+
+  // 批量插入且更新display接口
+  public async updateUserTagsDisplay(userId: number, names: string[]) {
+    return await this.prisma().$queryRaw<{ id: number; tag_name: string }[]>`
+      INSERT INTO slax_user_tag(user_id, tag_name, display) 
+      VALUES ${Prisma.join(names.map(name => Prisma.sql`(${userId}, ${name}, true)`))} 
+      ON CONFLICT(user_id, tag_name) 
+      DO UPDATE SET display = true, created_at = ${new Date().toISOString()}
+      RETURNING id, tag_name;
+    `
   }
 }

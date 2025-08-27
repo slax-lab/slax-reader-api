@@ -67,7 +67,8 @@ export enum ErrorName {
   SHARE_COLLECTION_CANT_UPDATE_FREE = 'SHARE_COLLECTION_CANT_UPDATE_FREE',
   NOT_HAVE_STRIPE_ACCOUNT_ERROR = 'NOT_HAVE_STRIPE_ACCOUNT_ERROR',
   BOOKMARK_CHANGES_SYNC_TOO_OLD = 'BOOKMARK_CHANGES_SYNC_TOO_OLD',
-  IMPORT_OTHER_TIMEOUT = 'IMPORT_OTHER_TIMEOUT'
+  IMPORT_OTHER_TIMEOUT = 'IMPORT_OTHER_TIMEOUT',
+  BOOKMARK_OVERVIEW_CONTENT_ERROR = 'BOOKMARK_OVERVIEW_CONTENT_ERROR'
 }
 
 const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = {
@@ -110,7 +111,8 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.RECOVER_SUBSCRIBE_ERROR]: '重新订阅功能正在开发中，敬请期待',
     [ErrorName.SHARE_COLLECTION_CANT_UPDATE_FREE]: '分享的collection不能免费转付费',
     [ErrorName.NOT_HAVE_STRIPE_ACCOUNT_ERROR]: '没有stripe账户',
-    [ErrorName.BOOKMARK_CHANGES_SYNC_TOO_OLD]: '书签更改同步过旧'
+    [ErrorName.BOOKMARK_CHANGES_SYNC_TOO_OLD]: '书签更改同步过旧',
+    [ErrorName.BOOKMARK_OVERVIEW_CONTENT_ERROR]: '书签概览内容错误'
   },
   en: {
     [ErrorName.NOT_FOUND]: 'Resource not found',
@@ -171,7 +173,8 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.RECOVER_SUBSCRIBE_ERROR]: "We're working on resubscribe feature.",
     [ErrorName.SHARE_COLLECTION_CANT_UPDATE_FREE]: 'Share collection cant update to free',
     [ErrorName.NOT_HAVE_STRIPE_ACCOUNT_ERROR]: 'No stripe account',
-    [ErrorName.BOOKMARK_CHANGES_SYNC_TOO_OLD]: 'Bookmark changes sync too old'
+    [ErrorName.BOOKMARK_CHANGES_SYNC_TOO_OLD]: 'Bookmark changes sync too old',
+    [ErrorName.BOOKMARK_OVERVIEW_CONTENT_ERROR]: 'Bookmark overview content error'
   },
   es: {
     [ErrorName.NOT_FOUND]: 'Recurso no encontrado',
@@ -266,3 +269,4 @@ export const ShareCollectionCantUpdateFreeError = (): MultiLangError => NewError
 export const NotHaveStripeAccountError = (): MultiLangError => NewError(ErrorName.NOT_HAVE_STRIPE_ACCOUNT_ERROR, 400)
 export const BookmarkChangesSyncTooOldError = (): MultiLangError => NewError(ErrorName.BOOKMARK_CHANGES_SYNC_TOO_OLD, 501)
 export const ImportOtherTimeoutError = (): MultiLangError => NewError(ErrorName.IMPORT_OTHER_TIMEOUT, 500)
+export const BookmarkOverviewContentError = (): MultiLangError => NewError(ErrorName.BOOKMARK_OVERVIEW_CONTENT_ERROR, 500)

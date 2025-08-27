@@ -43,6 +43,7 @@ export enum toolStatus {
 export type MixTagsOverviewResult = {
   tags: string[]
   overview: string
+  key_takeaways: string[]
 }
 
 @injectable()
@@ -378,17 +379,17 @@ export class AigcService {
       })
     })
 
-    const object = result.object as { overview?: string; key_takeaways?: string[]; tags?: string[] }
+    const object = result.object as Partial<MixTagsOverviewResult>
 
     const overview = object.overview || ''
     const key_takeaways = object.key_takeaways || []
     const tags = (object.tags || []).map(tag => tag.trim())
 
-    console.log(`${result.model} generate overview tags result: ${result.object}`)
+    console.log(`${result.model} generate overview tags result: ${JSON.stringify(result.object)}`)
     console.log(`generate overview tags: ${overview}`)
     console.log(`generate overview tags: ${tags}`)
 
-    return { tags, overview: JSON.stringify({ overview, key_takeaways }) }
+    return { tags, overview, key_takeaways }
   }
 
   // chat with bookmark

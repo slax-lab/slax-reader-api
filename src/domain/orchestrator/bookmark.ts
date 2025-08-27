@@ -1,9 +1,10 @@
 import { inject, injectable } from '../../decorators/di'
 import { ContextManager } from '../../utils/context'
-import { BookmarkNotFoundError } from '../../const/err'
+import { BookmarkNotFoundError, BookmarkOverviewContentError } from '../../const/err'
 import { BookmarkService } from '../bookmark'
 import { TagService } from '../tag'
 import { MarkService } from '../mark'
+import { MixTagsOverviewResult } from '../aigc'
 
 @injectable()
 export class BookmarkOrchestrator {
@@ -33,6 +34,7 @@ export class BookmarkOrchestrator {
       this.tagService.getBookmarkTags(ctx, ctx.getUserId(), bmId)
     ])
     const { id, content_key, content_md_key, private_user, ...bookmarkWithoutId } = res.bookmark
+    const { overview, key_takeaways } = this.parseOverviewRes(overviewResult.status === 'fulfilled' ? (overviewResult.value ?? null) : null)
 
     return {
       ...bookmarkWithoutId,
@@ -42,8 +44,8 @@ export class BookmarkOrchestrator {
       alias_title: res.alias_title,
       tags: tagsResult.status === 'fulfilled' ? tagsResult.value : [],
       marks: marksResult.status === 'fulfilled' ? marksResult.value : [],
-      overview:
-        overviewResult.status === 'fulfilled' ? (overviewResult.value?.content?.length ? JSON.parse(overviewResult.value.content) : overviewResult.value?.overview) : undefined
+      overview,
+      key_takeaways
     }
   }
 
@@ -64,6 +66,8 @@ export class BookmarkOrchestrator {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id, content_key, content_md_key, private_user, ...bookmarkWithoutId } = res.bookmark
+    const { overview, key_takeaways } = this.parseOverviewRes(overviewResult.status === 'fulfilled' ? (overviewResult.value ?? null) : null)
+
     return {
       ...bookmarkWithoutId,
       bookmark_id: ctx.hashIds.encodeId(res.bookmark.id),
@@ -76,13 +80,32 @@ export class BookmarkOrchestrator {
       tags: tagsResult.status === 'fulfilled' ? tagsResult.value : [],
       user_id: ctx.hashIds.encodeId(userId),
       type: res.type === 1 ? 'shortcut' : 'article',
-      overview:
-        overviewResult.status === 'fulfilled' ? (overviewResult.value?.content?.length ? JSON.parse(overviewResult.value.content) : overviewResult.value?.overview) : undefined
+      overview,
+      key_takeaways
     }
   }
 
   // 书签加星标
   public async bookmarkStar(ctx: ContextManager, bmId: number, status: 'star' | 'unstar') {
     return await this.bookmarkService.updateBookmarkStarStatus(ctx.getUserId(), bmId, status === 'star')
+  }
+
+  parseOverviewRes(overviewRes: { overview: string; content: string } | null) {
+    let overview = ''
+    let key_takeaways: string[] = []
+
+    if (overviewRes?.content && overviewRes.content.length > 0) {
+      try {
+        const overviewContent = JSON.parse(overviewRes.content) as Omit<MixTagsOverviewResult, 'tags'>
+        overview = overviewContent.overview
+        key_takeaways = overviewContent.key_takeaways
+      } catch (e) {
+        console.error('Failed to parse overview content:', e)
+      }
+    } else if (overviewRes?.overview) {
+      overview = overviewRes.overview
+    }
+
+    return { overview, key_takeaways }
   }
 }
