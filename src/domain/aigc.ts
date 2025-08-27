@@ -381,7 +381,7 @@ export class AigcService {
       { models: ['gcp-gemini-2.5-flash', 'gpt-4o-mini'] }
     )
 
-    const object = result.object as { overview?: string; key_takeaways?: string[]; tags?: string[] }
+    const object = result.object as Partial<MixTagsOverviewResult>
 
     const overview = object.overview || ''
     const key_takeaways = object.key_takeaways || []
