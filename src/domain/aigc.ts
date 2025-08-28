@@ -224,20 +224,20 @@ export class AigcService {
         }),
         execute: this.chatToolSeach.bind(this, ctx.env)
       }),
-      searchBookmark: tool({
-        description: 'Search for user bookmarks in database',
-        parameters: z.object({
-          q: z.string().describe('Search query')
-        }),
-        execute: this.chatToolSearchBookmark.bind(this, ctx)
-      }),
-      getBookmarkDetail: tool({
-        description: 'Get bookmark detail by bookmark id',
-        parameters: z.object({
-          bookmark_id: z.number().describe('Bookmark ID')
-        }),
-        execute: this.chatToolDetailBookmark.bind(this, ctx)
-      }),
+      // searchBookmark: tool({
+      //   description: 'Search for user bookmarks in database',
+      //   parameters: z.object({
+      //     q: z.string().describe('Search query')
+      //   }),
+      //   execute: this.chatToolSearchBookmark.bind(this, ctx)
+      // }),
+      // getBookmarkDetail: tool({
+      //   description: 'Get bookmark detail by bookmark id',
+      //   parameters: z.object({
+      //     bookmark_id: z.number().describe('Bookmark ID')
+      //   }),
+      //   execute: this.chatToolDetailBookmark.bind(this, ctx)
+      // }),
       browser: tool({
         description: 'Browse a web page by url',
         parameters: z.object({
