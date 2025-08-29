@@ -126,7 +126,7 @@ export class AigcService {
       const result = await fetcher.headless(args.url, 'Asia/Hong_Kong')
       const content = await ContentParser.parse({ url: new URL(args.url), content: result.content, title: args.title })
 
-      this.writeProgress('tool', 'browser', args.title, toolStatus.SUCCESSFULLY)
+      await this.writeProgress('tool', 'browser', args.title, toolStatus.SUCCESSFULLY)
       return content.textContent
     }
 

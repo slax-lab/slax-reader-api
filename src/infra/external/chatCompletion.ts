@@ -52,7 +52,8 @@ export class ChatCompletion<T extends Record<string, LanguageModel> = Record<str
       model: providerInstance,
       messages,
       temperature: options.temperature ?? 0.6,
-      maxTokens: options.maxTokens ?? 4096
+      maxTokens: options.maxTokens ?? 16384,
+      maxSteps: 10
     }
 
     // object generation
