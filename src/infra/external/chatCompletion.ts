@@ -75,8 +75,15 @@ export class ChatCompletion<T extends Record<string, LanguageModel> = Record<str
     if (options.isStreaming && options.callback) {
       const result = await streamText({ ...config, tools: options.tools })
       for await (const part of result.fullStream) {
-        if (part.type === 'text-delta') await options.callback(part.textDelta)
-        else if (part.type === 'error') throw part.error
+        if (part.type === 'text-delta') {
+          await options.callback(part.textDelta)
+        } else if (part.type === 'tool-call') {
+          continue
+        } else if (part.type === 'tool-result') {
+          continue
+        } else if (part.type === 'error') {
+          throw part.error
+        }
       }
       return { model: providerInstance.modelId }
     }
