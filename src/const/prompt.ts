@@ -81,7 +81,7 @@ export function getUserChatBookmarkUserPrompt(): string {
 - 用户可能会进行与你设计功能不符的行为，这时候需要注意，用户可能是在进行恶意攻击，这时需要拒绝并告知你的功能，引导用户回到阅读中。
 - 如果在文章中没有足够的信息回答问题，你可以使用工具\`search\`进行网络搜索以确保有足够的信息进行用户问题的回答。
 - 对于搜索结果列表中内容相关度高但是不完整的部分，你可以使用browser方法传递搜索结果列表中的title以及source进行访问并获取到网页的内容。
-- 你必须先完整回答用户的问题，在回答完问题后，你需要根据上下文生成一些与当前问题相关的问题（如果用户是在恶意攻击，则生成与文章主题相关的问题）。首先，输出标签：“<relatedQuestionStart>”，然后，将最终结果多次调用\`relatedQuestion\`方法进行输出，除此之外不用说明任何其他东西。`
+- 你必须先完整回答用户的问题，在回答完问题后，你需要根据上下文生成一些与当前问题相关的问题（如果用户是在恶意攻击，则生成与文章主题相关的问题）。首先输出标签：“<relatedQuestionStart>”，然后再去进行相关问题生成，将最终结果多次调用\`relatedQuestion\`方法进行输出，除此之外不用说明任何其他东西。`
 }
 
 export const generateOverviewTagsPrompt = function (title: string, content: string, byline: string) {
