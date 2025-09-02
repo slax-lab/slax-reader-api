@@ -46,6 +46,14 @@ export type MixTagsOverviewResult = {
   key_takeaways: string[]
 }
 
+export type OverviewObjectStreamResult = {
+  tags: string[]
+  overview: {
+    gist: string
+    key_takeaways: string[]
+  }
+}
+
 @injectable()
 export class AigcService {
   private chunks: Uint8Array[] = []
@@ -373,16 +381,18 @@ export class AigcService {
       models: ['gcp-gemini-2.5-flash', 'gpt-4o-mini'],
       isStreaming: false,
       schema: z.object({
-        overview: z.string(),
-        key_takeaways: z.array(z.string()),
+        overview: z.object({
+          gist: z.string(),
+          key_takeaways: z.array(z.string())
+        }),
         tags: z.array(z.string())
       })
     })
 
-    const object = result.object as Partial<MixTagsOverviewResult>
+    const object = result.object as Partial<OverviewObjectStreamResult>
 
-    const overview = object.overview || ''
-    const key_takeaways = object.key_takeaways || []
+    const overview = object.overview?.gist || ''
+    const key_takeaways = object.overview?.key_takeaways || []
     const tags = (object.tags || []).map(tag => tag.trim())
 
     console.log(`${result.model} generate overview tags result: ${JSON.stringify(result.object)}`)
