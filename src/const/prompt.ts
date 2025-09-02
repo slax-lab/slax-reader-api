@@ -112,16 +112,22 @@ ${tags.join(',')}
 ## 你需要输出overview
 - 概述文章的核心主题和主要内容，overview的内容包括
     - 寥寥几句的主旨（The Gist，需要带有主观的看法）
+    - 字数控制在200字
+    - 结尾不需要句号
+
 ## 你需要输出key_takeaways
 - 3~5 条核心要点（key_takeaways)，每条字数控制在40个字以内
+- 结尾不需要句号
 
 ## 输出语言
   - 输出overview, key_takeaways时，你能且只能使用指定的语言：${userLang} (zh=中文, en=英文, 等其他语言代码)
 
 ## 输出的格式如下，注意为JSON格式
 {
-  overview: 输出的overview内容,
-  key_takeaways: 3~5 条核心要点,
+  overview: {
+    gist: 输出的overview内容,
+    key_takeaways: 3~5 条核心要点,
+  },
   tags: [标签1, 标签2, 标签3, 标签4, ...]
 }
 `
