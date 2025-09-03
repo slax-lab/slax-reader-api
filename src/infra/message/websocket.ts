@@ -47,6 +47,7 @@ export class SlaxWebSocketServer extends DurableObject {
         this.sessions.set(meta.uuid, ws)
       }
     })
+    this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'))
   }
 
   async fetch(request: Request) {
