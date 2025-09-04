@@ -37,6 +37,11 @@ SLAX_READER_BOT_ID = "${SLAX_READER_BOT_ID}"
 SLAX_READER_BOT_API_ROOT = "${SLAX_READER_BOT_API_ROOT}"
 FRONT_END_URL = "${FRONT_END_URL}"
 
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "${HYPERDRIVE_ID}"
+localConnectionString = "${LOCAL_CONNECTION_STRING}"
+
 [ai]
 binding = "AI"
 

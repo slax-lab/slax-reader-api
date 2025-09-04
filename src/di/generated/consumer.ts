@@ -1,4 +1,4 @@
-import { container } from '../../decorators/di'
+import { Container } from '../../decorators/di'
 import { ContextManager } from '../../utils/context'
 import { BookmarkConsumer } from '../../handler/queue/bookmarkConsumer'
 
@@ -25,7 +25,7 @@ const handleBatchMessages = async (exec: ExecutionContext, env: Env, messages: r
   })
 }
 
-export const handleMessage = async (batch: MessageBatch, env: Env, exec: ExecutionContext) => {
+export const handleMessage = async (container: Container, batch: MessageBatch, env: Env, exec: ExecutionContext) => {
   switch (batch.queue) {
     case 'slax-reader-parser-twitter': {
       const consumer = container.resolve(BookmarkConsumer)

@@ -354,7 +354,7 @@ export class AigcService {
       { role: 'user', content: `title: ${bmTitle}\n content: ${bmContent.slice(0, 200)}` }
     ]
 
-    const result = await this.aigc().generate(messages, { models: ['gcp-gemini-2.5-flash', 'gpt-4o-mini'], isStreaming: false })
+    const result = await this.aigc().generate(messages, { models: ['gpt-4o-mini'], isStreaming: false })
 
     const tags = result.text.split('\n').filter(tag => tag.length >= 1)
 
@@ -378,7 +378,7 @@ export class AigcService {
     ]
 
     const result = await this.aigc().generate(messages, {
-      models: ['gcp-gemini-2.5-flash', 'gpt-4o-mini'],
+      models: ['gpt-4o-mini'],
       isStreaming: false,
       schema: z.object({
         overview: z.object({

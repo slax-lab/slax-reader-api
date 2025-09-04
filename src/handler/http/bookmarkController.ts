@@ -57,6 +57,7 @@ export class BookmarkController {
     if (typeof res === 'number') {
       return Successed({ bmId: ctx.hashIds.encodeId(res) })
     } else if (typeof res === 'object') {
+      console.log('res', res)
       ctx.execution.waitUntil(this.urlParserHandler.processParseMessage(ctx, res))
       return Successed({ bmId: ctx.hashIds.encodeId(res.info.bookmarkId) })
     }

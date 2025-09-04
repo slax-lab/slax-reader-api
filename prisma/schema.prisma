@@ -1,4 +1,4 @@
-generator client {
+generator d1_client {
   provider        = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
 }

@@ -194,7 +194,7 @@ function generateOutput(routes: RouteInfo[], controllerImports: Map<string, stri
 import { auth } from '../../middleware/auth'
 import { cors } from '../../middleware/cors'
 import { ContextManager } from '../../utils/context'
-import { container } from '../../decorators/di'
+import { Container } from '../../decorators/di'
 import { NotFound, Successed } from '../../utils/responseUtils'
 ${Array.from(controllerImports.entries())
   .map(entry => {
@@ -205,6 +205,7 @@ ${Array.from(controllerImports.entries())
   .join('\n')}
 
 
+export function getRouter(container: Container) {
 const router = Router()
 
 router.all('*', cors)
@@ -223,7 +224,8 @@ ${routes
 router.get('/ping', () => Successed('pong'))
 router.all('*', () => NotFound('Resource not found'))
 
-export { router }
+  return router
+}
 `
 
   const outputDir: string = pathUtils.dirname(outputFile)

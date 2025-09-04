@@ -106,7 +106,7 @@ function cronGenEvalExpression(expression: any, sourceFile: any): string {
 }
 
 function cronGenCreateOutput(tasks: CronGenTask[], imports: Map<string, string>, outputPath: string, rootDir: string): void {
-  const cronGenOutput: string = `import { container } from '../../decorators/di'
+  const cronGenOutput: string = `import { Container } from '../../decorators/di'
 import { ContextManager } from '../../utils/context'
 ${Array.from(imports.entries())
   .map(entry => {
@@ -116,7 +116,7 @@ ${Array.from(imports.entries())
   })
   .join('\n')}
 
-export const handleCronjob = async (event: any, env: Env, exec: ExecutionContext) => {
+export const handleCronjob = async (container: Container, event: any, env: Env, exec: ExecutionContext) => {
   ${tasks
     .map(
       (task: CronGenTask) => `const ${task.methodName} = async () => {

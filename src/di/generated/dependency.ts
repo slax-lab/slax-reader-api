@@ -1,4 +1,4 @@
-import { container } from '../../decorators/di'
+import { container, Container } from '../../decorators/di'
 import { lazy } from '../../decorators/lazy'
 import {
   PRISIMA_CLIENT,
@@ -10,7 +10,8 @@ import {
   MIDDLEWARES,
   CONTROLLERS,
   ROUTER,
-  CHAT_COMPLETION
+  CHAT_COMPLETION,
+  PRISIMA_HYPERDRIVE_CLIENT
 } from '../../const/symbol'
 import { BookmarkRepo } from '../../infra/repository/dbBookmark'
 import { BookmarkSearchRepo } from '../../infra/repository/dbBookmarkSearch'
@@ -184,7 +185,7 @@ container.register(BucketClient, {
 })
 
 container.register(BookmarkRepo, {
-  useFactory: container => new BookmarkRepo(lazy(() => container.resolve(PRISIMA_CLIENT)))
+  useFactory: container => new BookmarkRepo(lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT)))
 })
 
 container.register(BookmarkSearchRepo, {
@@ -192,15 +193,15 @@ container.register(BookmarkSearchRepo, {
 })
 
 container.register(MarkRepo, {
-  useFactory: container => new MarkRepo(lazy(() => container.resolve(PRISIMA_CLIENT)))
+  useFactory: container => new MarkRepo(lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT)))
 })
 
 container.register(ReportRepo, {
-  useFactory: container => new ReportRepo(lazy(() => container.resolve(PRISIMA_CLIENT)))
+  useFactory: container => new ReportRepo(lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT)))
 })
 
 container.register(UserRepo, {
-  useFactory: container => new UserRepo(lazy(() => container.resolve(PRISIMA_CLIENT)))
+  useFactory: container => new UserRepo(lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT)))
 })
 
 container.register(VectorizeRepo, {
@@ -259,8 +260,8 @@ container.register(DatabaseRegistry, {
   useFactory: container => new DatabaseRegistry()
 })
 
-export function initializeInfrastructure(env: Env) {
-  container.resolve(DatabaseRegistry).register(env)
+export function initializeInfrastructure(env: Env, targetContainer: Container) {
+  container.resolve(DatabaseRegistry).register(env, targetContainer)
 }
 
 export function initializeCore() {

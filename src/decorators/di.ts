@@ -58,6 +58,14 @@ export class Container {
   isRegistered(token: any): boolean {
     return this.instances.has(token) || this.providers.has(token) || (this.parent ? this.parent.isRegistered(token) : false)
   }
+
+  clone(): Container {
+    const newContainer = new Container()
+    this.providers.forEach((provider, token) => {
+      newContainer.providers.set(token, provider)
+    })
+    return newContainer
+  }
 }
 
 export const container = new Container()

@@ -180,3 +180,6 @@ dev.toml
 
 .DS_Store
 worker-configuration.d.ts
+
+postgres_data
+pgadmin_data
