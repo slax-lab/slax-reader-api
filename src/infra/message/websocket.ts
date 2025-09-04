@@ -2,8 +2,9 @@ import { DurableObject } from 'cloudflare:workers'
 import { container } from '../../decorators/di'
 import { UserRepo } from '../repository/dbUser'
 import { lazy } from '../../decorators/lazy'
-import { PrismaClient } from '@prisma/client'
-import { PrismaD1 } from '@prisma/adapter-d1'
+import { PrismaClient as HyperdrivePrismaClient } from '@prisma/hyperdrive-client'
+import { Pool } from 'pg'
+import { PrismaPg } from '@prisma/adapter-pg'
 
 interface SocketSerializeMetaInfo {
   uuid: string
@@ -30,7 +31,6 @@ export class SlaxWebSocketServer extends DurableObject {
   ) {
     super(state, env)
 
-    container.registerInstance(UserRepo, new UserRepo(lazy(() => new PrismaClient({ adapter: new PrismaD1(env.DB) }))))
     state.getWebSockets().forEach(ws => {
       const meta = ws.deserializeAttachment() as SocketSerializeMetaInfo
       if (!meta) {
@@ -113,10 +113,7 @@ export class SlaxWebSocketServer extends DurableObject {
     })
   }
 
-  async webSocketMessage(ws: WebSocket, message: string) {
-    console.log('webSocketMessage', message)
-    ws.send(`[Durable Object] message: ${message}, connections: ${this.ctx.getWebSockets().length}`)
-  }
+  async webSocketMessage(ws: WebSocket, message: string) {}
 
   async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) {
     try {
@@ -153,6 +150,9 @@ export class SlaxWebSocketServer extends DurableObject {
       }
     } else {
       this.sessions.delete(meta?.uuid)
+      // HOOK: 修改为直接请求HTTP接口来完成
+      const prismaPg = new HyperdrivePrismaClient({ adapter: new PrismaPg(new Pool({ connectionString: this.env.HYPERDRIVE.connectionString, max: 1, maxUses: 1 })) })
+      container.registerInstance(UserRepo, new UserRepo(lazy(() => prismaPg)))
       await container.resolve<UserRepo>(UserRepo).removeUserPushDevice(meta?.deviceId)
     }
   }
