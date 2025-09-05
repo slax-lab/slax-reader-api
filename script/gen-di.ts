@@ -396,7 +396,7 @@ class DIGenerator {
   }
 
   private generateOutput() {
-    const coreImports = [`import { container } from '../../decorators/di'`, `import { lazy } from '../../decorators/lazy'`]
+    const coreImports = [`import { container, Container } from '../../decorators/di'`, `import { lazy } from '../../decorators/lazy'`]
 
     const symbolModuleImports = Array.from(this.symbolImports).map(path => {
       if (this.symbolUsages.has(path)) {
@@ -417,7 +417,7 @@ class DIGenerator {
 
     const registryInitializations = Array.from(this.serviceInfoMap.entries())
       .filter(([_, info]) => info.isRegistry)
-      .map(([registry, _]) => `  container.resolve(${registry}).register(env);`)
+      .map(([registry, _]) => `  container.resolve(${registry}).register(env, targetContainer);`)
       .join('\n')
 
     const output = `
@@ -425,7 +425,7 @@ ${importStatements}
 
 ${Array.from(this.registrations).join('\n\n')}
 
-export function initializeInfrastructure(env: Env) {
+export function initializeInfrastructure(env: Env, targetContainer: Container) {
 ${registryInitializations}
 }
 

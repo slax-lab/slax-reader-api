@@ -393,7 +393,7 @@ export class BookmarkService {
         bmRepo.deleteUserBookmark(bmId, userId),
         searchRepo.deleteUserBookmark(userId, bmId),
         this.markRepo.deleteByBookmarkId(bmInfo.id),
-        bmRepo.createBookmarkChangeLog(userId, bmInfo.bookmark?.target_url, bmId, 'delete', deleteDate)
+        bmRepo.createBookmarkChangeLog(userId, bmInfo.bookmark?.target_url ?? '', bmId, 'delete', deleteDate)
       ])
 
       ctx.execution.waitUntil(
@@ -401,7 +401,7 @@ export class BookmarkService {
           user_id: userId,
           bookmark_id: new Hashid(ctx.env, userId).encodeId(bmId),
           created_at: deleteDate,
-          target_url: bmInfo.bookmark?.target_url,
+          target_url: bmInfo.bookmark?.target_url ?? '',
           action: 'delete'
         })
       )
@@ -505,7 +505,7 @@ export class BookmarkService {
         return {
           ...bookmarkWithout,
           alias_title,
-          id: ctx.hashIds.encodeId(bookmark.id),
+          id: ctx.hashIds.encodeId(bookmark!.id),
           archived: archive_status === 1 ? 'archive' : archive_status === 2 ? 'later' : 'inbox',
           starred: is_starred ? 'star' : 'unstar',
           trashed_at: !!deleted_at ? deleted_at : undefined,

@@ -1,0 +1,324 @@
+generator hyperdrive_client {
+    provider        = "prisma-client-js"
+    previewFeatures = ["queryCompiler", "driverAdapters"]
+    output          = "../node_modules/@prisma/hyperdrive-client"
+}
+
+datasource hyperdrive {
+    provider     = "postgresql"
+    relationMode = "prisma"
+    url          = env("HYPERDRIVE_DATABASE_URL")
+}
+
+model s_user {
+    id            Int       @id @default(autoincrement())
+    email         String    @unique
+    name          String    @default("")
+    picture       String    @default("")
+    given_name    String    @default("")
+    family_name   String    @default("")
+    lang          String    @default("")
+    ai_lang       String    @default("")
+    country       String    @default("")
+    city          String    @default("")
+    region        String    @default("")
+    latitude      Float     @default(0)
+    longitude     Float     @default(0)
+    timezone      String    @default("")
+    account       String    @default("")
+    last_login_at DateTime
+    last_login_ip String    @default("")
+    last_read_at  DateTime?
+    invite_code   String    @default("")
+    created_at    DateTime
+
+    @@index([account])
+    @@index([invite_code])
+}
+
+model s_user_notification {
+    id      Int @id @default(autoincrement())
+    user_id Int @default(0)
+
+    // type: comment | reply | subscribe / cancel_subscribe | follow / cancel_follow
+    type String @default("")
+
+    // source: share | profile (预留)
+    source String @default("")
+
+    // xxx 评论了你 | xxx 回复了你 | xxx 关注了你 | xxx 订阅了你
+    title String @default("")
+
+    // 对应title，供列表直接使用
+    body String @default("")
+
+    // JSON结构，针对不同场景供给解析
+    // comment_id 用于点击后跳转到指定位置标记用
+    // comment: { "share_code": "xxx", "content": "xxx", "comment_id": xxx }
+    // reply: { "share_code": "xxx", "content": "xxx", "parent_content": "xxx", "comment_id": xxx  }
+    details String @default("")
+
+    is_read Boolean @default(false)
+
+    created_at DateTime @default(now())
+
+    @@index([user_id, created_at])
+}
+
+model s_bookmark {
+    id                 Int      @id @default(autoincrement())
+    title              String   @default("")
+    host_url           String   @default("")
+    target_url         String   @default("")
+    site_name          String   @default("")
+    content_icon       String   @default("")
+    content_cover      String   @default("")
+    content_key        String   @default("")
+    content_md_key     String   @default("")
+    content_word_count Int      @default(0)
+    description        String   @default("")
+    byline             String   @default("")
+    private_user       Int      @default(0)
+    status             String   @default("pending")
+    created_at         DateTime
+    updated_at         DateTime
+    published_at       DateTime
+
+    user_bookmark       s_user_bookmark[]
+    s_user_bookmark_tag s_user_bookmark_tag[]
+
+    @@unique([target_url, private_user])
+}
+
+model s_user_bookmark {
+    id             Int       @id @default(autoincrement())
+    user_id        Int       @default(0)
+    bookmark_id    Int       @default(0)
+    is_read        Boolean   @default(false)
+    archive_status Int       @default(0)
+    is_starred     Boolean   @default(false)
+    created_at     DateTime  @default(now())
+    updated_at     DateTime
+    alias_title    String    @default("")
+    // 0- 文章 1- URL快捷方式
+    type           Int       @default(0)
+    deleted_at     DateTime?
+
+    bookmark            s_bookmark?           @relation(fields: [bookmark_id], references: [id])
+    s_user_bookmark_tag s_user_bookmark_tag[]
+
+    @@unique([user_id, bookmark_id])
+    @@index([user_id, deleted_at, archive_status, updated_at])
+    @@index([user_id, deleted_at, is_starred, updated_at])
+}
+
+model s_user_bookmark_tag {
+    id          Int      @id @default(autoincrement())
+    user_id     Int      @default(0)
+    bookmark_id Int      @default(0)
+    tag_name    String   @default("")
+    tag_id      Int      @default(0)
+    created_at  DateTime @default(now())
+    is_deleted  Boolean  @default(false)
+
+    bookmark      s_bookmark?      @relation(fields: [bookmark_id], references: [id])
+    user_bookmark s_user_bookmark? @relation(fields: [user_id, bookmark_id], references: [user_id, bookmark_id])
+
+    @@unique([bookmark_id, user_id, tag_id])
+    @@index([tag_id, user_id, is_deleted])
+    @@index([bookmark_id, user_id, is_deleted])
+}
+
+model s_user_delete_bookmark {
+    id          Int       @id @default(autoincrement())
+    user_id     Int       @default(0)
+    bookmark_id Int       @default(0)
+    deleted_at  DateTime?
+
+    @@unique([user_id, bookmark_id])
+}
+
+model s_user_tag {
+    id         Int      @id @default(autoincrement())
+    user_id    Int      @default(0)
+    tag_name   String   @default("")
+    display    Boolean  @default(true)
+    created_at DateTime @default(now())
+
+    @@unique([user_id, tag_name])
+}
+
+model s_mark_comment {
+    id          Int @id @default(autoincrement())
+    user_id     Int @default(0)
+    bookmark_id Int @default(0)
+    // 1- 划线 2- 评论 3- 评论回复
+    type        Int @default(0)
+
+    // type in [1,2]，Source是path， type in [3]
+    source  String @default("")
+    comment String @default("")
+
+    root_id   Int @default(0)
+    parent_id Int @default(0)
+
+    // 模糊匹配来源
+    approx_source String @default("")
+
+    // 划线/评论的内容
+    content String @default("")
+
+    // 评论来源
+    source_type String @default("")
+    source_id   String @default("")
+
+    is_deleted Boolean  @default(false)
+    created_at DateTime @default(now())
+    updated_at DateTime
+
+    @@index([user_id, created_at, is_deleted])
+    @@index([bookmark_id, root_id, is_deleted])
+    @@index([bookmark_id, type, is_deleted])
+}
+
+model s_queue_parse_info {
+    id           Int      @id @default(autoincrement())
+    target_url   String   @default("")
+    content_key  String   @default("")
+    server_parse Boolean  @default(false)
+    is_privated  Boolean  @default(false)
+    bookmark_id  Int      @default(0)
+    created_at   DateTime
+    updated_at   DateTime
+    status       String   @default("pending")
+}
+
+model s_bookmark_summary {
+    id          Int       @id @default(autoincrement())
+    content     String    @default("")
+    ai_name     String    @default("")
+    ai_model    String    @default("")
+    created_at  DateTime
+    updated_at  DateTime?
+    lang        String    @default("")
+    user_id     Int       @default(0)
+    bookmark_id Int       @default(0)
+
+    @@unique([bookmark_id, lang, user_id])
+}
+
+model s_user_report {
+    id          Int      @id @default(autoincrement())
+    user_id     Int      @default(0)
+    type        String   @default("")
+    content     String   @default("")
+    bookmark_id Int      @default(0)
+    created_at  DateTime @default(now())
+}
+
+model s_platform_bind {
+    id          Int      @id @default(autoincrement())
+    user_id     Int      @default(0)
+    platform    String   @default("")
+    platform_id String   @default("")
+    user_name   String   @default("")
+    created_at  DateTime @default(now())
+
+    @@unique([user_id, platform])
+    @@index([platform, platform_id])
+}
+
+model s_bookmark_share {
+    id            Int      @id @default(autoincrement())
+    share_code    String   @default("")
+    user_id       Int      @default(0)
+    bookmark_id   Int      @default(0)
+    show_line     Boolean  @default(false)
+    show_comment  Boolean  @default(false)
+    show_userinfo Boolean  @default(false)
+    allow_comment Boolean  @default(false)
+    allow_line    Boolean  @default(false)
+    is_enable     Boolean  @default(true)
+    created_at    DateTime @default(now())
+
+    @@unique([share_code])
+    @@unique([bookmark_id, user_id])
+}
+
+model s_bookmark_import {
+    id          Int      @id @default(autoincrement())
+    user_id     Int      @default(0)
+    type        String   @default("")
+    object_key  String   @default("")
+    // 0- 未开始 1- 进行中 2- 失败 3- 完成
+    status      Int      @default(0)
+    // 成功or失败原因
+    reason      String   @default("")
+    // 需要导入的总数
+    total_count Int      @default(0)
+    // 分片处理总数
+    batch_count Int      @default(0)
+    created_at  DateTime @default(now())
+
+    @@index([user_id])
+}
+
+model s_bookmark_fetch_retry {
+    id            Int       @id @default(autoincrement())
+    user_id       Int       @default(0)
+    bookmark_id   Int       @default(0)
+    retry_count   Int       @default(0)
+    created_at    DateTime  @default(now())
+    last_retry_at DateTime?
+    status        String    @default("pending")
+    trace_id      String    @default("")
+
+    @@unique([bookmark_id, user_id])
+    @@index([status])
+}
+
+model s_bookmark_vector_shard {
+    id          Int      @id @default(autoincrement())
+    bookmark_id Int      @default(0)
+    bucket_idx  Int      @default(0)
+    created_at  DateTime @default(now())
+
+    @@unique([bookmark_id])
+}
+
+model s_user_notice_device {
+    id         Int      @id @default(autoincrement())
+    user_id    Int      @default(0)
+    // Push api / Apple Push / Websocket
+    type       String   @default("")
+    // JSON，保存对应的标记位
+    // 例如：Websocket，会保存DO的大洲位置、DO中缓存的session
+    data       String   @default("")
+    created_at DateTime @default(now())
+
+    @@index([user_id, type])
+}
+
+// 负责记录用户缓存收藏的记录
+model s_user_bookmark_change {
+    id          Int      @id @default(autoincrement())
+    user_id     Int      @default(0)
+    target_url  String   @default("")
+    bookmark_id Int      @default(0)
+    action      String   @default("")
+    created_at  DateTime @default(now())
+
+    @@index([user_id, created_at])
+}
+
+model s_user_bookmark_overview {
+    id Int @id @default(autoincrement())
+
+    user_id     Int      @default(0)
+    bookmark_id Int      @default(0)
+    overview    String   @default("")
+    content     String   @default("") // 新增 JSON 字段
+    created_at  DateTime @default(now())
+
+    @@index([bookmark_id, user_id])
+}

@@ -1,9 +1,10 @@
 import { Prisma, PrismaClient } from '@prisma/client'
 import { MultiLangError } from '../../utils/multiLangError'
 import { BookmarkNotFoundError, CreateBookmarkShareUniqueFail, DeleteBookmarkFailError } from '../../const/err'
-import { inject, injectable, singleton } from '../../decorators/di'
-import { PRISIMA_CLIENT } from '../../const/symbol'
+import { inject, injectable } from '../../decorators/di'
+import { PRISIMA_CLIENT, PRISIMA_HYPERDRIVE_CLIENT } from '../../const/symbol'
 import type { LazyInstance } from '../../decorators/lazy'
+import { PrismaClient as HyperdrivePrismaClient } from '@prisma/hyperdrive-client'
 
 export enum queueStatus {
   PENDING = 'pending',
@@ -104,7 +105,10 @@ export interface bookmarkActionChangePO {
 
 @injectable()
 export class BookmarkRepo {
-  constructor(@inject(PRISIMA_CLIENT) private prisma: LazyInstance<PrismaClient>) {}
+  constructor(
+    @inject(PRISIMA_CLIENT) private prisma: LazyInstance<PrismaClient>,
+    @inject(PRISIMA_HYPERDRIVE_CLIENT) private prismaHyperdrive: LazyInstance<HyperdrivePrismaClient>
+  ) {}
 
   public async deleteUserBookmark(bmId: number, userId: number): Promise<MultiLangError | null> {
     try {

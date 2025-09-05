@@ -1,8 +1,9 @@
-import { PrismaClient } from '@prisma/client'
 import { ErrorParam, UnknownBindUserError, UserNotFoundError } from '../../const/err'
 import { inject, singleton } from '../../decorators/di'
-import { PRISIMA_CLIENT } from '../../const/symbol'
+import { PRISIMA_CLIENT, PRISIMA_HYPERDRIVE_CLIENT } from '../../const/symbol'
 import type { LazyInstance } from '../../decorators/lazy'
+import { PrismaClient as HyperdrivePrismaClient } from '@prisma/hyperdrive-client'
+import { PrismaClient } from '@prisma/client'
 
 export interface userInfoPO {
   id?: number
@@ -64,7 +65,10 @@ export interface userNoticePO {
 
 @singleton()
 export class UserRepo {
-  constructor(@inject(PRISIMA_CLIENT) private prisma: LazyInstance<PrismaClient>) {}
+  constructor(
+    @inject(PRISIMA_CLIENT) private prisma: LazyInstance<PrismaClient>,
+    @inject(PRISIMA_HYPERDRIVE_CLIENT) private prismaHyperdrive: LazyInstance<HyperdrivePrismaClient>
+  ) {}
 
   public async getInfoByEmail(email: string): Promise<userInfoPO | null> {
     if (!email) return null
@@ -205,10 +209,6 @@ export class UserRepo {
     return await this.prisma().slax_user_notification.create({
       data: po
     })
-  }
-
-  public async batchSaveNotificationData(data: userNoticePO[]) {
-    await this.prisma().slax_user_notification.createMany({ data })
   }
 
   public async updateUserReadAt(userId: number) {

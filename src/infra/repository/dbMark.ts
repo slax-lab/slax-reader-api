@@ -1,8 +1,9 @@
-import { PrismaClient } from '@prisma/client'
 import { markSelectContent } from '../../domain/mark'
-import { inject, injectable, singleton } from '../../decorators/di'
-import { PRISIMA_CLIENT } from '../../const/symbol'
+import { inject, injectable } from '../../decorators/di'
+import { PRISIMA_CLIENT, PRISIMA_HYPERDRIVE_CLIENT } from '../../const/symbol'
 import type { LazyInstance } from '../../decorators/lazy'
+import { PrismaClient as HyperdrivePrismaClient } from '@prisma/hyperdrive-client'
+import { PrismaClient } from '@prisma/client'
 
 export enum markType {
   LINE = 1,
@@ -79,7 +80,10 @@ export interface markDetailPO {
 
 @injectable()
 export class MarkRepo {
-  constructor(@inject(PRISIMA_CLIENT) private prisma: LazyInstance<PrismaClient>) {}
+  constructor(
+    @inject(PRISIMA_CLIENT) private prisma: LazyInstance<PrismaClient>,
+    @inject(PRISIMA_HYPERDRIVE_CLIENT) private prismaHyperdrive: LazyInstance<HyperdrivePrismaClient>
+  ) {}
 
   async create(data: markPO): Promise<markPOWithId> {
     return await this.prisma().slax_mark_comment.create({

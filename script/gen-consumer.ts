@@ -108,7 +108,7 @@ function processFiles(filePath: string, tasks: QueueTask[], imports: Map<string,
 }
 
 function generateOutputFile(tasks: QueueTask[], imports: Map<string, string>, outputPath: string): void {
-  const output: string = `import { container } from '../../decorators/di'
+  const output: string = `import { Container } from '../../decorators/di'
 import { ContextManager } from '../../utils/context'
 ${Array.from(imports.entries())
   .map(entry => `import { ${entry[0]} } from '../../handler/queue/${entry[1]}'`)
@@ -137,7 +137,7 @@ const handleBatchMessages = async (exec: ExecutionContext, env: Env, messages: r
   })
 }
 
-export const handleMessage = async (batch: MessageBatch, env: Env, exec: ExecutionContext) => {
+export const handleMessage = async (container: Container, batch: MessageBatch, env: Env, exec: ExecutionContext) => {
   switch (batch.queue) {
     ${tasks
       .map(

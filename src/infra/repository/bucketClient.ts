@@ -1,10 +1,9 @@
-import { R2Bucket } from '@cloudflare/workers-types'
 import { hashSHA256 } from '../../utils/strings'
-import { injectable, singleton } from '../../decorators/di'
+import { injectable } from '../../decorators/di'
 
 @injectable()
 export class BucketClient {
-  public R2Bucket: R2Bucket
+  public R2Bucket: globalThis.R2Bucket
 
   constructor(private env: Env) {
     this.R2Bucket = env.OSS

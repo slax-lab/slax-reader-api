@@ -1,8 +1,8 @@
-import { container } from '../../decorators/di'
+import { Container } from '../../decorators/di'
 import { ContextManager } from '../../utils/context'
 import { BookmarkJob } from '../../handler/cron/bookmarkJob'
 
-export const handleCronjob = async (event: any, env: Env, exec: ExecutionContext) => {
+export const handleCronjob = async (container: Container, event: any, env: Env, exec: ExecutionContext) => {
   const handleBookmarkFetchRetry = async () => {
     const controller = container.resolve(BookmarkJob)
     exec.waitUntil(controller.handleBookmarkFetchRetry(new ContextManager(exec, env)))

@@ -6,17 +6,20 @@ import { ServerError } from './const/err'
 import { ContextManager } from './utils/context'
 import { SlaxWebSocketServer } from './infra/message/websocket'
 import { initializeInfrastructure, initializeCore } from './di/generated/dependency'
+import { container } from './decorators/di'
 import { handleMessage } from './di/generated/consumer'
 import { handleCronjob } from './di/generated/cronjob'
-import { router } from './di/generated/readerRouter'
+import { getRouter } from './di/generated/readerRouter'
 import { SlaxMcpServer } from './domain/orchestrator/mcp'
 
 initializeCore()
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    initializeInfrastructure(env)
-    return router
+    const currentContainer = container.clone()
+    initializeInfrastructure(env, currentContainer)
+
+    return getRouter(currentContainer)
       .fetch(request, new ContextManager(ctx, env))
       .catch(err => {
         if (err instanceof MultiLangError) return Failed(err)
@@ -31,15 +34,15 @@ export default {
   },
 
   async queue(batch: MessageBatch, env: Env, ctx: ExecutionContext) {
-    initializeInfrastructure(env)
-    return await handleMessage(batch, env, ctx)
+    const currentContainer = container.clone()
+    initializeInfrastructure(env, currentContainer)
+    return await handleMessage(currentContainer, batch, env, ctx)
   },
 
-  async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext) {},
-
   async scheduled(event: Event, env: Env, ctx: ExecutionContext) {
-    initializeInfrastructure(env)
-    return await handleCronjob(event, env, ctx)
+    const currentContainer = container.clone()
+    initializeInfrastructure(env, currentContainer)
+    return await handleCronjob(currentContainer, event, env, ctx)
   }
 }
 
