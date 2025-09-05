@@ -11,6 +11,7 @@ import { ImageController } from '../../handler/http/imageController'
 import { MarkController } from '../../handler/http/markController'
 import { McpServerController } from '../../handler/http/mcpController'
 import { ShareController } from '../../handler/http/shareController'
+import { SyncController } from '../../handler/http/syncController'
 import { TagController } from '../../handler/http/tagController'
 import { UserController } from '../../handler/http/userController'
 
@@ -167,6 +168,14 @@ export function getRouter(container: Container) {
   router.get('/v1/share/mark_list', async (req: Request, ctx: ContextManager) => {
     const controller = container.resolve(ShareController)
     return await controller.getMarkList(ctx, req)
+  })
+  router.post('/v1/sync/sign', async (req: Request, ctx: ContextManager) => {
+    const controller = container.resolve(SyncController)
+    return await controller.handleSignRequest(ctx, req)
+  })
+  router.post('/v1/sync/upload', async (req: Request, ctx: ContextManager) => {
+    const controller = container.resolve(SyncController)
+    return await controller.handleSyncSaveRequest(ctx, req)
   })
   router.get('/v1/tag/list', async (req: Request, ctx: ContextManager) => {
     const controller = container.resolve(TagController)

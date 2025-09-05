@@ -48,6 +48,7 @@ import { ImageController } from '../../handler/http/imageController'
 import { MarkController } from '../../handler/http/markController'
 import { McpServerController } from '../../handler/http/mcpController'
 import { ShareController } from '../../handler/http/shareController'
+import { SyncController } from '../../handler/http/syncController'
 import { TagController } from '../../handler/http/tagController'
 import { UserController } from '../../handler/http/userController'
 import { DatabaseRegistry } from '../data'
@@ -185,7 +186,11 @@ container.register(BucketClient, {
 })
 
 container.register(BookmarkRepo, {
-  useFactory: container => new BookmarkRepo(lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT)))
+  useFactory: container =>
+    new BookmarkRepo(
+      lazy(() => container.resolve(PRISIMA_CLIENT)),
+      lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT))
+    )
 })
 
 container.register(BookmarkSearchRepo, {
@@ -193,15 +198,27 @@ container.register(BookmarkSearchRepo, {
 })
 
 container.register(MarkRepo, {
-  useFactory: container => new MarkRepo(lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT)))
+  useFactory: container =>
+    new MarkRepo(
+      lazy(() => container.resolve(PRISIMA_CLIENT)),
+      lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT))
+    )
 })
 
 container.register(ReportRepo, {
-  useFactory: container => new ReportRepo(lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT)))
+  useFactory: container =>
+    new ReportRepo(
+      lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT)),
+      lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT))
+    )
 })
 
 container.register(UserRepo, {
-  useFactory: container => new UserRepo(lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT)))
+  useFactory: container =>
+    new UserRepo(
+      lazy(() => container.resolve(PRISIMA_CLIENT)),
+      lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT))
+    )
 })
 
 container.register(VectorizeRepo, {
@@ -246,6 +263,10 @@ container.register(McpServerController, {
 
 container.register(ShareController, {
   useFactory: container => new ShareController(container.resolve(ShareService), container.resolve(ShareOrchestrator))
+})
+
+container.register(SyncController, {
+  useFactory: () => new SyncController()
 })
 
 container.register(TagController, {

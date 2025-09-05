@@ -40,3 +40,22 @@ export function selectDORegion(req: Request): DurableObjectLocationHint {
       return 'enam'
   }
 }
+
+export function getLocationPowerSyncRegion(req: Request): 'singapore' | 'us-west' {
+  const continent = String(req.cf?.continent || '')
+
+  switch (continent) {
+    case 'AS': // Asia -> Singapore
+    case 'OC': // Oceania -> Singapore
+    case 'EU': // Europe -> Singapore
+    case 'AF': // Africa -> Singapore
+      return 'singapore'
+
+    case 'NA': // North America -> US West
+    case 'SA': // South America -> US West
+      return 'us-west'
+
+    default:
+      return 'singapore' // Default Singapore
+  }
+}
