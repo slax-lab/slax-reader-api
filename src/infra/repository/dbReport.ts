@@ -1,5 +1,5 @@
 import { inject, injectable } from '../../decorators/di'
-import { PRISIMA_HYPERDRIVE_CLIENT } from '../../const/symbol'
+import { PRISIMA_CLIENT, PRISIMA_HYPERDRIVE_CLIENT } from '../../const/symbol'
 import type { LazyInstance } from '../../decorators/lazy'
 import { PrismaClient as HyperdrivePrismaClient } from '@prisma/hyperdrive-client'
 import { PrismaClient } from '@prisma/client'
@@ -23,7 +23,7 @@ export enum reportType {
 @injectable()
 export class ReportRepo {
   constructor(
-    @inject(PRISIMA_HYPERDRIVE_CLIENT) private prisma: LazyInstance<PrismaClient>,
+    @inject(PRISIMA_CLIENT) private prisma: LazyInstance<PrismaClient>,
     @inject(PRISIMA_HYPERDRIVE_CLIENT) private prismaHyperdrive: LazyInstance<HyperdrivePrismaClient>
   ) {}
 
