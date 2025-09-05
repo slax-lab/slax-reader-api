@@ -35,7 +35,7 @@ export enum bookmarkFetchRetryStatus {
 export interface bookmarkPO {
   bookmark_id?: number
   title: string
-  aliaslax_title?: string
+  alias_title?: string
   host_url: string
   target_url: string
   content_icon: string
@@ -267,7 +267,7 @@ export class BookmarkRepo {
       const archiveStatus = filter === 'archive' ? 1 : filter === 'later' ? 2 : 0
       where.archive_status = archiveStatus
     } else if (filter === 'starred') {
-      where.islax_starred = true
+      where.is_starred = true
     } else if (filter === 'trashed') {
       where.deleted_at = { not: null }
       orderBy = { deleted_at: 'desc' }
@@ -478,7 +478,7 @@ export class BookmarkRepo {
       SELECT EXISTS (
         SELECT 1 
         FROM slax_user_bookmark_tag 
-        WHERE user_id = ${userId} AND tag_id = ${tagId} AND islax_deleted = false
+        WHERE user_id = ${userId} AND tag_id = ${tagId} AND is_deleted = false
       ) as "exists"`
     return result.exists
   }
