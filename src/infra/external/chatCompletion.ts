@@ -20,6 +20,7 @@ export interface ChatOptions<T extends Record<string, LanguageModel> = Record<st
   tools?: Record<string, any>
   models?: ModelSelector<T>[]
   schema?: z.Schema<any>
+  headers?: Record<string, string>
   callback?: StreamTextCallbackHandle | StreamObjectCallbackHandle
 }
 
@@ -46,6 +47,7 @@ export class ChatCompletion<T extends Record<string, LanguageModel> = Record<str
       callback?: StreamTextCallbackHandle | StreamObjectCallbackHandle
       temperature?: number
       maxTokens?: number
+      headers?: Record<string, string>
     }
   ) {
     const config = {
@@ -53,7 +55,8 @@ export class ChatCompletion<T extends Record<string, LanguageModel> = Record<str
       messages,
       temperature: options.temperature ?? 0.6,
       maxTokens: options.maxTokens ?? 16384,
-      maxSteps: 10
+      maxSteps: 10,
+      headers: options.headers || {}
     }
 
     // object generation
@@ -93,18 +96,24 @@ export class ChatCompletion<T extends Record<string, LanguageModel> = Record<str
   }
 
   // generate text
-  generate(messages: CoreMessage[], options: { isStreaming: false; tools?: Record<string, any>; models?: ModelSelector<T>[] }): Promise<GenerateTextResult>
+  generate(
+    messages: CoreMessage[],
+    options: { isStreaming: false; tools?: Record<string, any>; models?: ModelSelector<T>[]; headers?: Record<string, string> }
+  ): Promise<GenerateTextResult>
   // generate object
-  generate<S>(messages: CoreMessage[], options: { isStreaming: false; schema: z.Schema<S>; models?: ModelSelector<T>[] }): Promise<{ object: S; model: string }>
+  generate<S>(
+    messages: CoreMessage[],
+    options: { isStreaming: false; schema: z.Schema<S>; models?: ModelSelector<T>[]; headers?: Record<string, string> }
+  ): Promise<{ object: S; model: string }>
   // generate text stream
   generate(
     messages: CoreMessage[],
-    options: { isStreaming: true; tools?: Record<string, any>; models?: ModelSelector<T>[]; callback: StreamTextCallbackHandle }
+    options: { isStreaming: true; tools?: Record<string, any>; models?: ModelSelector<T>[]; headers?: Record<string, string>; callback: StreamTextCallbackHandle }
   ): Promise<GenerateResult>
   // generate object stream
   generate<S>(
     messages: CoreMessage[],
-    options: { isStreaming: true; schema: z.Schema<S>; models?: ModelSelector<T>[]; callback: StreamObjectCallbackHandle<S> }
+    options: { isStreaming: true; schema: z.Schema<S>; models?: ModelSelector<T>[]; headers?: Record<string, string>; callback: StreamObjectCallbackHandle<S> }
   ): Promise<GenerateResult>
 
   // base function
