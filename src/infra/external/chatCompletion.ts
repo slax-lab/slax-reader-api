@@ -24,6 +24,7 @@ export interface ChatOptions<T extends Record<string, LanguageModel> = Record<st
 }
 
 export class ChatCompletion<T extends Record<string, LanguageModel> = Record<string, LanguageModel>> {
+  private static GEMINI_PROXY_SOURCE = 'unnoo-zhishixingqiu'
   private modelRegistry: T
   private providers: { modelId: string; model: LanguageModel }[]
 
@@ -53,7 +54,10 @@ export class ChatCompletion<T extends Record<string, LanguageModel> = Record<str
       messages,
       temperature: options.temperature ?? 0.6,
       maxTokens: options.maxTokens ?? 16384,
-      maxSteps: 10
+      maxSteps: 10,
+      headers: {
+        source: ChatCompletion.GEMINI_PROXY_SOURCE
+      }
     }
 
     // object generation

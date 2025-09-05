@@ -115,7 +115,6 @@ export class SlaxWebSocketServer extends DurableObject {
 
   async webSocketMessage(ws: WebSocket, message: string) {
     console.log('webSocketMessage', message)
-    ws.send(`[Durable Object] message: ${message}, connections: ${this.ctx.getWebSockets().length}`)
   }
 
   async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) {
