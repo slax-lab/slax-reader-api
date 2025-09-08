@@ -91,7 +91,7 @@ export class SlaxWebSocketServer extends DurableObject {
       return false
     }
     try {
-      ws.send(`${JSON.stringify({ type: 'reminder', unreadCount })}`)
+      ws.send(`${JSON.stringify({ type: 'reminder', unreadCount: parseInt(unreadCount.toString()) })}`)
       return true
     } catch (e) {
       console.log('sendReminder error', e)
