@@ -322,7 +322,7 @@ export class AigcService {
     const model = this.aigc().hasOrDefaultModel(ctx.get('ai_chat_model'))
 
     const callback = async (chunk: string | MultiLangError) => {
-      if (chunk instanceof MultiLangError) return this.writeChunk([{ role: 'assistant', content: chunk.message }])
+      if (chunk instanceof MultiLangError) return this.wr.write(this.ted.encode(chunk.message))
 
       if (chunk.endsWith('\n') && buffer.length > 0) {
         buffer = buffer.concat(chunk)
