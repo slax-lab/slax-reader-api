@@ -10,7 +10,7 @@ datasource hyperdrive {
     url          = env("HYPERDRIVE_DATABASE_URL")
 }
 
-model s_user {
+model sr_user {
     id            Int       @id @default(autoincrement())
     email         String    @unique
     name          String    @default("")
@@ -36,7 +36,7 @@ model s_user {
     @@index([invite_code])
 }
 
-model s_user_notification {
+model sr_user_notification {
     id      Int @id @default(autoincrement())
     user_id Int @default(0)
 
@@ -65,7 +65,7 @@ model s_user_notification {
     @@index([user_id, created_at])
 }
 
-model s_bookmark {
+model sr_bookmark {
     id                 Int      @id @default(autoincrement())
     title              String   @default("")
     host_url           String   @default("")
@@ -84,13 +84,13 @@ model s_bookmark {
     updated_at         DateTime
     published_at       DateTime
 
-    user_bookmark       s_user_bookmark[]
-    s_user_bookmark_tag s_user_bookmark_tag[]
+    user_bookmark        sr_user_bookmark[]
+    sr_user_bookmark_tag sr_user_bookmark_tag[]
 
     @@unique([target_url, private_user])
 }
 
-model s_user_bookmark {
+model sr_user_bookmark {
     id             Int       @id @default(autoincrement())
     user_id        Int       @default(0)
     bookmark_id    Int       @default(0)
@@ -104,15 +104,15 @@ model s_user_bookmark {
     type           Int       @default(0)
     deleted_at     DateTime?
 
-    bookmark            s_bookmark?           @relation(fields: [bookmark_id], references: [id])
-    s_user_bookmark_tag s_user_bookmark_tag[]
+    bookmark             sr_bookmark?           @relation(fields: [bookmark_id], references: [id])
+    sr_user_bookmark_tag sr_user_bookmark_tag[]
 
     @@unique([user_id, bookmark_id])
     @@index([user_id, deleted_at, archive_status, updated_at])
     @@index([user_id, deleted_at, is_starred, updated_at])
 }
 
-model s_user_bookmark_tag {
+model sr_user_bookmark_tag {
     id          Int      @id @default(autoincrement())
     user_id     Int      @default(0)
     bookmark_id Int      @default(0)
@@ -121,15 +121,15 @@ model s_user_bookmark_tag {
     created_at  DateTime @default(now())
     is_deleted  Boolean  @default(false)
 
-    bookmark      s_bookmark?      @relation(fields: [bookmark_id], references: [id])
-    user_bookmark s_user_bookmark? @relation(fields: [user_id, bookmark_id], references: [user_id, bookmark_id])
+    bookmark      sr_bookmark?      @relation(fields: [bookmark_id], references: [id])
+    user_bookmark sr_user_bookmark? @relation(fields: [user_id, bookmark_id], references: [user_id, bookmark_id])
 
     @@unique([bookmark_id, user_id, tag_id])
     @@index([tag_id, user_id, is_deleted])
     @@index([bookmark_id, user_id, is_deleted])
 }
 
-model s_user_delete_bookmark {
+model sr_user_delete_bookmark {
     id          Int       @id @default(autoincrement())
     user_id     Int       @default(0)
     bookmark_id Int       @default(0)
@@ -138,7 +138,7 @@ model s_user_delete_bookmark {
     @@unique([user_id, bookmark_id])
 }
 
-model s_user_tag {
+model sr_user_tag {
     id         Int      @id @default(autoincrement())
     user_id    Int      @default(0)
     tag_name   String   @default("")
@@ -148,7 +148,7 @@ model s_user_tag {
     @@unique([user_id, tag_name])
 }
 
-model s_mark_comment {
+model sr_mark_comment {
     id          Int @id @default(autoincrement())
     user_id     Int @default(0)
     bookmark_id Int @default(0)
@@ -181,7 +181,7 @@ model s_mark_comment {
     @@index([bookmark_id, type, is_deleted])
 }
 
-model s_queue_parse_info {
+model sr_queue_parse_info {
     id           Int      @id @default(autoincrement())
     target_url   String   @default("")
     content_key  String   @default("")
@@ -193,7 +193,7 @@ model s_queue_parse_info {
     status       String   @default("pending")
 }
 
-model s_bookmark_summary {
+model sr_bookmark_summary {
     id          Int       @id @default(autoincrement())
     content     String    @default("")
     ai_name     String    @default("")
@@ -207,7 +207,7 @@ model s_bookmark_summary {
     @@unique([bookmark_id, lang, user_id])
 }
 
-model s_user_report {
+model sr_user_report {
     id          Int      @id @default(autoincrement())
     user_id     Int      @default(0)
     type        String   @default("")
@@ -216,7 +216,7 @@ model s_user_report {
     created_at  DateTime @default(now())
 }
 
-model s_platform_bind {
+model sr_platform_bind {
     id          Int      @id @default(autoincrement())
     user_id     Int      @default(0)
     platform    String   @default("")
@@ -228,7 +228,7 @@ model s_platform_bind {
     @@index([platform, platform_id])
 }
 
-model s_bookmark_share {
+model sr_bookmark_share {
     id            Int      @id @default(autoincrement())
     share_code    String   @default("")
     user_id       Int      @default(0)
@@ -245,7 +245,7 @@ model s_bookmark_share {
     @@unique([bookmark_id, user_id])
 }
 
-model s_bookmark_import {
+model sr_bookmark_import {
     id          Int      @id @default(autoincrement())
     user_id     Int      @default(0)
     type        String   @default("")
@@ -263,7 +263,7 @@ model s_bookmark_import {
     @@index([user_id])
 }
 
-model s_bookmark_fetch_retry {
+model sr_bookmark_fetch_retry {
     id            Int       @id @default(autoincrement())
     user_id       Int       @default(0)
     bookmark_id   Int       @default(0)
@@ -277,7 +277,7 @@ model s_bookmark_fetch_retry {
     @@index([status])
 }
 
-model s_bookmark_vector_shard {
+model sr_bookmark_vector_shard {
     id          Int      @id @default(autoincrement())
     bookmark_id Int      @default(0)
     bucket_idx  Int      @default(0)
@@ -286,7 +286,7 @@ model s_bookmark_vector_shard {
     @@unique([bookmark_id])
 }
 
-model s_user_notice_device {
+model sr_user_notice_device {
     id         Int      @id @default(autoincrement())
     user_id    Int      @default(0)
     // Push api / Apple Push / Websocket
@@ -300,7 +300,7 @@ model s_user_notice_device {
 }
 
 // 负责记录用户缓存收藏的记录
-model s_user_bookmark_change {
+model sr_user_bookmark_change {
     id          Int      @id @default(autoincrement())
     user_id     Int      @default(0)
     target_url  String   @default("")
@@ -311,7 +311,7 @@ model s_user_bookmark_change {
     @@index([user_id, created_at])
 }
 
-model s_user_bookmark_overview {
+model sr_user_bookmark_overview {
     id Int @id @default(autoincrement())
 
     user_id     Int      @default(0)

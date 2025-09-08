@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE "public"."s_user" (
+CREATE TABLE "public"."sr_user" (
     "id" SERIAL NOT NULL,
     "email" TEXT NOT NULL,
     "name" TEXT NOT NULL DEFAULT '',
@@ -21,11 +21,11 @@ CREATE TABLE "public"."s_user" (
     "invite_code" TEXT NOT NULL DEFAULT '',
     "created_at" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "s_user_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_user_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_user_notification" (
+CREATE TABLE "public"."sr_user_notification" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL DEFAULT 0,
     "type" TEXT NOT NULL DEFAULT '',
@@ -36,11 +36,11 @@ CREATE TABLE "public"."s_user_notification" (
     "is_read" BOOLEAN NOT NULL DEFAULT false,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "s_user_notification_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_user_notification_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_bookmark" (
+CREATE TABLE "public"."sr_bookmark" (
     "id" SERIAL NOT NULL,
     "title" TEXT NOT NULL DEFAULT '',
     "host_url" TEXT NOT NULL DEFAULT '',
@@ -59,11 +59,11 @@ CREATE TABLE "public"."s_bookmark" (
     "updated_at" TIMESTAMP(3) NOT NULL,
     "published_at" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "s_bookmark_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_bookmark_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_user_bookmark" (
+CREATE TABLE "public"."sr_user_bookmark" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL DEFAULT 0,
     "bookmark_id" INTEGER NOT NULL DEFAULT 0,
@@ -76,11 +76,11 @@ CREATE TABLE "public"."s_user_bookmark" (
     "type" INTEGER NOT NULL DEFAULT 0,
     "deleted_at" TIMESTAMP(3),
 
-    CONSTRAINT "s_user_bookmark_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_user_bookmark_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_user_bookmark_tag" (
+CREATE TABLE "public"."sr_user_bookmark_tag" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL DEFAULT 0,
     "bookmark_id" INTEGER NOT NULL DEFAULT 0,
@@ -89,32 +89,32 @@ CREATE TABLE "public"."s_user_bookmark_tag" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "is_deleted" BOOLEAN NOT NULL DEFAULT false,
 
-    CONSTRAINT "s_user_bookmark_tag_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_user_bookmark_tag_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_user_delete_bookmark" (
+CREATE TABLE "public"."sr_user_delete_bookmark" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL DEFAULT 0,
     "bookmark_id" INTEGER NOT NULL DEFAULT 0,
     "deleted_at" TIMESTAMP(3),
 
-    CONSTRAINT "s_user_delete_bookmark_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_user_delete_bookmark_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_user_tag" (
+CREATE TABLE "public"."sr_user_tag" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL DEFAULT 0,
     "tag_name" TEXT NOT NULL DEFAULT '',
     "display" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "s_user_tag_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_user_tag_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_mark_comment" (
+CREATE TABLE "public"."sr_mark_comment" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL DEFAULT 0,
     "bookmark_id" INTEGER NOT NULL DEFAULT 0,
@@ -131,11 +131,11 @@ CREATE TABLE "public"."s_mark_comment" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "s_mark_comment_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_mark_comment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_queue_parse_info" (
+CREATE TABLE "public"."sr_queue_parse_info" (
     "id" SERIAL NOT NULL,
     "target_url" TEXT NOT NULL DEFAULT '',
     "content_key" TEXT NOT NULL DEFAULT '',
@@ -146,11 +146,11 @@ CREATE TABLE "public"."s_queue_parse_info" (
     "updated_at" TIMESTAMP(3) NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'pending',
 
-    CONSTRAINT "s_queue_parse_info_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_queue_parse_info_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_bookmark_summary" (
+CREATE TABLE "public"."sr_bookmark_summary" (
     "id" SERIAL NOT NULL,
     "content" TEXT NOT NULL DEFAULT '',
     "ai_name" TEXT NOT NULL DEFAULT '',
@@ -161,11 +161,11 @@ CREATE TABLE "public"."s_bookmark_summary" (
     "user_id" INTEGER NOT NULL DEFAULT 0,
     "bookmark_id" INTEGER NOT NULL DEFAULT 0,
 
-    CONSTRAINT "s_bookmark_summary_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_bookmark_summary_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_user_report" (
+CREATE TABLE "public"."sr_user_report" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL DEFAULT 0,
     "type" TEXT NOT NULL DEFAULT '',
@@ -173,11 +173,11 @@ CREATE TABLE "public"."s_user_report" (
     "bookmark_id" INTEGER NOT NULL DEFAULT 0,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "s_user_report_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_user_report_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_platform_bind" (
+CREATE TABLE "public"."sr_platform_bind" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL DEFAULT 0,
     "platform" TEXT NOT NULL DEFAULT '',
@@ -185,11 +185,11 @@ CREATE TABLE "public"."s_platform_bind" (
     "user_name" TEXT NOT NULL DEFAULT '',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "s_platform_bind_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_platform_bind_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_bookmark_share" (
+CREATE TABLE "public"."sr_bookmark_share" (
     "id" SERIAL NOT NULL,
     "share_code" TEXT NOT NULL DEFAULT '',
     "user_id" INTEGER NOT NULL DEFAULT 0,
@@ -202,11 +202,11 @@ CREATE TABLE "public"."s_bookmark_share" (
     "is_enable" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "s_bookmark_share_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_bookmark_share_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_bookmark_import" (
+CREATE TABLE "public"."sr_bookmark_import" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL DEFAULT 0,
     "type" TEXT NOT NULL DEFAULT '',
@@ -217,11 +217,11 @@ CREATE TABLE "public"."s_bookmark_import" (
     "batch_count" INTEGER NOT NULL DEFAULT 0,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "s_bookmark_import_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_bookmark_import_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_bookmark_fetch_retry" (
+CREATE TABLE "public"."sr_bookmark_fetch_retry" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL DEFAULT 0,
     "bookmark_id" INTEGER NOT NULL DEFAULT 0,
@@ -231,32 +231,32 @@ CREATE TABLE "public"."s_bookmark_fetch_retry" (
     "status" TEXT NOT NULL DEFAULT 'pending',
     "trace_id" TEXT NOT NULL DEFAULT '',
 
-    CONSTRAINT "s_bookmark_fetch_retry_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_bookmark_fetch_retry_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_bookmark_vector_shard" (
+CREATE TABLE "public"."sr_bookmark_vector_shard" (
     "id" SERIAL NOT NULL,
     "bookmark_id" INTEGER NOT NULL DEFAULT 0,
     "bucket_idx" INTEGER NOT NULL DEFAULT 0,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "s_bookmark_vector_shard_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_bookmark_vector_shard_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_user_notice_device" (
+CREATE TABLE "public"."sr_user_notice_device" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL DEFAULT 0,
     "type" TEXT NOT NULL DEFAULT '',
     "data" TEXT NOT NULL DEFAULT '',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "s_user_notice_device_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_user_notice_device_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_user_bookmark_change" (
+CREATE TABLE "public"."sr_user_bookmark_change" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL DEFAULT 0,
     "target_url" TEXT NOT NULL DEFAULT '',
@@ -264,11 +264,11 @@ CREATE TABLE "public"."s_user_bookmark_change" (
     "action" TEXT NOT NULL DEFAULT '',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "s_user_bookmark_change_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_user_bookmark_change_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "public"."s_user_bookmark_overview" (
+CREATE TABLE "public"."sr_user_bookmark_overview" (
     "id" SERIAL NOT NULL,
     "user_id" INTEGER NOT NULL DEFAULT 0,
     "bookmark_id" INTEGER NOT NULL DEFAULT 0,
@@ -276,89 +276,89 @@ CREATE TABLE "public"."s_user_bookmark_overview" (
     "content" TEXT NOT NULL DEFAULT '',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "s_user_bookmark_overview_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "sr_user_bookmark_overview_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "s_user_email_key" ON "public"."s_user"("email");
+CREATE UNIQUE INDEX "sr_user_email_key" ON "public"."sr_user"("email");
 
 -- CreateIndex
-CREATE INDEX "s_user_account_idx" ON "public"."s_user"("account");
+CREATE INDEX "sr_user_account_idx" ON "public"."sr_user"("account");
 
 -- CreateIndex
-CREATE INDEX "s_user_invite_code_idx" ON "public"."s_user"("invite_code");
+CREATE INDEX "sr_user_invite_code_idx" ON "public"."sr_user"("invite_code");
 
 -- CreateIndex
-CREATE INDEX "s_user_notification_user_id_created_at_idx" ON "public"."s_user_notification"("user_id", "created_at");
+CREATE INDEX "sr_user_notification_user_id_created_at_idx" ON "public"."sr_user_notification"("user_id", "created_at");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "s_bookmark_target_url_private_user_key" ON "public"."s_bookmark"("target_url", "private_user");
+CREATE UNIQUE INDEX "sr_bookmark_target_url_private_user_key" ON "public"."sr_bookmark"("target_url", "private_user");
 
 -- CreateIndex
-CREATE INDEX "s_user_bookmark_user_id_deleted_at_archive_status_updated_a_idx" ON "public"."s_user_bookmark"("user_id", "deleted_at", "archive_status", "updated_at");
+CREATE INDEX "sr_user_bookmark_user_id_deleted_at_archive_status_updated__idx" ON "public"."sr_user_bookmark"("user_id", "deleted_at", "archive_status", "updated_at");
 
 -- CreateIndex
-CREATE INDEX "s_user_bookmark_user_id_deleted_at_is_starred_updated_at_idx" ON "public"."s_user_bookmark"("user_id", "deleted_at", "is_starred", "updated_at");
+CREATE INDEX "sr_user_bookmark_user_id_deleted_at_is_starred_updated_at_idx" ON "public"."sr_user_bookmark"("user_id", "deleted_at", "is_starred", "updated_at");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "s_user_bookmark_user_id_bookmark_id_key" ON "public"."s_user_bookmark"("user_id", "bookmark_id");
+CREATE UNIQUE INDEX "sr_user_bookmark_user_id_bookmark_id_key" ON "public"."sr_user_bookmark"("user_id", "bookmark_id");
 
 -- CreateIndex
-CREATE INDEX "s_user_bookmark_tag_tag_id_user_id_is_deleted_idx" ON "public"."s_user_bookmark_tag"("tag_id", "user_id", "is_deleted");
+CREATE INDEX "sr_user_bookmark_tag_tag_id_user_id_is_deleted_idx" ON "public"."sr_user_bookmark_tag"("tag_id", "user_id", "is_deleted");
 
 -- CreateIndex
-CREATE INDEX "s_user_bookmark_tag_bookmark_id_user_id_is_deleted_idx" ON "public"."s_user_bookmark_tag"("bookmark_id", "user_id", "is_deleted");
+CREATE INDEX "sr_user_bookmark_tag_bookmark_id_user_id_is_deleted_idx" ON "public"."sr_user_bookmark_tag"("bookmark_id", "user_id", "is_deleted");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "s_user_bookmark_tag_bookmark_id_user_id_tag_id_key" ON "public"."s_user_bookmark_tag"("bookmark_id", "user_id", "tag_id");
+CREATE UNIQUE INDEX "sr_user_bookmark_tag_bookmark_id_user_id_tag_id_key" ON "public"."sr_user_bookmark_tag"("bookmark_id", "user_id", "tag_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "s_user_delete_bookmark_user_id_bookmark_id_key" ON "public"."s_user_delete_bookmark"("user_id", "bookmark_id");
+CREATE UNIQUE INDEX "sr_user_delete_bookmark_user_id_bookmark_id_key" ON "public"."sr_user_delete_bookmark"("user_id", "bookmark_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "s_user_tag_user_id_tag_name_key" ON "public"."s_user_tag"("user_id", "tag_name");
+CREATE UNIQUE INDEX "sr_user_tag_user_id_tag_name_key" ON "public"."sr_user_tag"("user_id", "tag_name");
 
 -- CreateIndex
-CREATE INDEX "s_mark_comment_user_id_created_at_is_deleted_idx" ON "public"."s_mark_comment"("user_id", "created_at", "is_deleted");
+CREATE INDEX "sr_mark_comment_user_id_created_at_is_deleted_idx" ON "public"."sr_mark_comment"("user_id", "created_at", "is_deleted");
 
 -- CreateIndex
-CREATE INDEX "s_mark_comment_bookmark_id_root_id_is_deleted_idx" ON "public"."s_mark_comment"("bookmark_id", "root_id", "is_deleted");
+CREATE INDEX "sr_mark_comment_bookmark_id_root_id_is_deleted_idx" ON "public"."sr_mark_comment"("bookmark_id", "root_id", "is_deleted");
 
 -- CreateIndex
-CREATE INDEX "s_mark_comment_bookmark_id_type_is_deleted_idx" ON "public"."s_mark_comment"("bookmark_id", "type", "is_deleted");
+CREATE INDEX "sr_mark_comment_bookmark_id_type_is_deleted_idx" ON "public"."sr_mark_comment"("bookmark_id", "type", "is_deleted");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "s_bookmark_summary_bookmark_id_lang_user_id_key" ON "public"."s_bookmark_summary"("bookmark_id", "lang", "user_id");
+CREATE UNIQUE INDEX "sr_bookmark_summary_bookmark_id_lang_user_id_key" ON "public"."sr_bookmark_summary"("bookmark_id", "lang", "user_id");
 
 -- CreateIndex
-CREATE INDEX "s_platform_bind_platform_platform_id_idx" ON "public"."s_platform_bind"("platform", "platform_id");
+CREATE INDEX "sr_platform_bind_platform_platform_id_idx" ON "public"."sr_platform_bind"("platform", "platform_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "s_platform_bind_user_id_platform_key" ON "public"."s_platform_bind"("user_id", "platform");
+CREATE UNIQUE INDEX "sr_platform_bind_user_id_platform_key" ON "public"."sr_platform_bind"("user_id", "platform");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "s_bookmark_share_share_code_key" ON "public"."s_bookmark_share"("share_code");
+CREATE UNIQUE INDEX "sr_bookmark_share_share_code_key" ON "public"."sr_bookmark_share"("share_code");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "s_bookmark_share_bookmark_id_user_id_key" ON "public"."s_bookmark_share"("bookmark_id", "user_id");
+CREATE UNIQUE INDEX "sr_bookmark_share_bookmark_id_user_id_key" ON "public"."sr_bookmark_share"("bookmark_id", "user_id");
 
 -- CreateIndex
-CREATE INDEX "s_bookmark_import_user_id_idx" ON "public"."s_bookmark_import"("user_id");
+CREATE INDEX "sr_bookmark_import_user_id_idx" ON "public"."sr_bookmark_import"("user_id");
 
 -- CreateIndex
-CREATE INDEX "s_bookmark_fetch_retry_status_idx" ON "public"."s_bookmark_fetch_retry"("status");
+CREATE INDEX "sr_bookmark_fetch_retry_status_idx" ON "public"."sr_bookmark_fetch_retry"("status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "s_bookmark_fetch_retry_bookmark_id_user_id_key" ON "public"."s_bookmark_fetch_retry"("bookmark_id", "user_id");
+CREATE UNIQUE INDEX "sr_bookmark_fetch_retry_bookmark_id_user_id_key" ON "public"."sr_bookmark_fetch_retry"("bookmark_id", "user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "s_bookmark_vector_shard_bookmark_id_key" ON "public"."s_bookmark_vector_shard"("bookmark_id");
+CREATE UNIQUE INDEX "sr_bookmark_vector_shard_bookmark_id_key" ON "public"."sr_bookmark_vector_shard"("bookmark_id");
 
 -- CreateIndex
-CREATE INDEX "s_user_notice_device_user_id_type_idx" ON "public"."s_user_notice_device"("user_id", "type");
+CREATE INDEX "sr_user_notice_device_user_id_type_idx" ON "public"."sr_user_notice_device"("user_id", "type");
 
 -- CreateIndex
-CREATE INDEX "s_user_bookmark_change_user_id_created_at_idx" ON "public"."s_user_bookmark_change"("user_id", "created_at");
+CREATE INDEX "sr_user_bookmark_change_user_id_created_at_idx" ON "public"."sr_user_bookmark_change"("user_id", "created_at");
 
 -- CreateIndex
-CREATE INDEX "s_user_bookmark_overview_bookmark_id_user_id_idx" ON "public"."s_user_bookmark_overview"("bookmark_id", "user_id");
+CREATE INDEX "sr_user_bookmark_overview_bookmark_id_user_id_idx" ON "public"."sr_user_bookmark_overview"("bookmark_id", "user_id");

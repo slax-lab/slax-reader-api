@@ -67,12 +67,12 @@ export interface userNoticePO {
 export class UserRepo {
   constructor(
     @inject(PRISIMA_CLIENT) private prisma: LazyInstance<PrismaClient>,
-    @inject(PRISIMA_HYPERDRIVE_CLIENT) private prismaHyperdrive: LazyInstance<HyperdrivePrismaClient>
+    @inject(PRISIMA_HYPERDRIVE_CLIENT) private prismaPg: LazyInstance<HyperdrivePrismaClient>
   ) {}
 
   public async getInfoByEmail(email: string): Promise<userInfoPO | null> {
     if (!email) return null
-    let res = await this.prisma().slax_user.findFirst({ where: { email: email } })
+    let res = await this.prismaPg().sr_user.findFirst({ where: { email: email } })
     if (!res) return null
     return res as userInfoPO
   }
@@ -84,12 +84,12 @@ export class UserRepo {
 
   async getUserInfoList(userIds: number[]) {
     if (!userIds || userIds.length === 0) return []
-    return await this.prisma().slax_user.findMany({ where: { id: { in: userIds } } })
+    return await this.prismaPg().sr_user.findMany({ where: { id: { in: userIds } } })
   }
 
   async getInfo(condition: any): Promise<userInfoPO> {
     if (!condition) throw ErrorParam()
-    let res = await this.prisma().slax_user.findFirst({ where: condition })
+    let res = await this.prismaPg().sr_user.findFirst({ where: condition })
     if (!res) throw UserNotFoundError()
     return res as userInfoPO
   }
@@ -99,7 +99,7 @@ export class UserRepo {
 
     // lang只在注册的时候处理
     const { lang, ...restUserInfo } = info
-    return (await this.prisma().slax_user.upsert({
+    return (await this.prismaPg().sr_user.upsert({
       create: { ...info, created_at: new Date(), last_login_at: new Date() },
       update: { ...restUserInfo, last_login_at: new Date() },
       where: {
@@ -110,7 +110,7 @@ export class UserRepo {
 
   public async updateUserName(userId: number, account: string): Promise<userInfoPO> {
     if (!userId || !account) throw ErrorParam()
-    const res = await this.prisma().slax_user.update({
+    const res = await this.prismaPg().sr_user.update({
       data: { account },
       where: { id: userId }
     })
@@ -120,7 +120,7 @@ export class UserRepo {
 
   public async updateUserLang(userId: number, lang: string): Promise<userInfoPO> {
     if (!userId || !lang) throw ErrorParam()
-    const res = await this.prisma().slax_user.update({
+    const res = await this.prismaPg().sr_user.update({
       data: { lang },
       where: { id: userId }
     })
@@ -130,7 +130,7 @@ export class UserRepo {
 
   public async updateUserAiLang(userId: number, lang: string): Promise<userInfoPO> {
     if (!userId || !lang) throw ErrorParam()
-    const res = await this.prisma().slax_user.update({
+    const res = await this.prismaPg().sr_user.update({
       data: { ai_lang: lang },
       where: { id: userId }
     })
@@ -139,7 +139,7 @@ export class UserRepo {
   }
 
   public async getUserByPlatform(platform: string, platformId: string): Promise<platformBind> {
-    const bind = await this.prisma().slax_platform_bind.findFirst({ where: { platform: platform, platform_id: platformId } })
+    const bind = await this.prismaPg().sr_platform_bind.findFirst({ where: { platform: platform, platform_id: platformId } })
     if (!bind) throw UnknownBindUserError()
     return {
       user_id: bind.user_id,
@@ -152,7 +152,7 @@ export class UserRepo {
 
   public async userBindPlatform(userId: number, platform: platformBindType, platformId: string, username: string): Promise<null> {
     if (!userId || !platform || !platformId) throw ErrorParam()
-    await this.prisma().slax_platform_bind.upsert({
+    await this.prismaPg().sr_platform_bind.upsert({
       create: { user_id: userId, platform: platform, platform_id: platformId, user_name: username, created_at: new Date() },
       update: { user_id: userId, platform: platform, platform_id: platformId, user_name: username },
       where: {
@@ -163,29 +163,29 @@ export class UserRepo {
   }
 
   public async getUserBindPlatform(userId: number) {
-    return await this.prisma().slax_platform_bind.findMany({ where: { user_id: userId } })
+    return await this.prismaPg().sr_platform_bind.findMany({ where: { user_id: userId } })
   }
 
   public async unbindPlatform(userId: number, platform: platformBindType) {
-    return await this.prisma().slax_platform_bind.deleteMany({ where: { user_id: userId, platform: platform } })
+    return await this.prismaPg().sr_platform_bind.deleteMany({ where: { user_id: userId, platform: platform } })
   }
 
   public async updateInviteCode(userId: number, inviteCode: string) {
-    return await this.prisma().slax_user.update({ data: { invite_code: inviteCode }, where: { id: userId } })
+    return await this.prismaPg().sr_user.update({ data: { invite_code: inviteCode }, where: { id: userId } })
   }
 
   public async addUserPushDevice(userId: number, type: noticeType, data: string) {
-    return await this.prisma().slax_user_notice_device.create({
+    return await this.prismaPg().sr_user_notice_device.create({
       data: { user_id: userId, type: type.toString(), data }
     })
   }
 
   public async getUserOnlineDevice(userId: number) {
-    return await this.prisma().slax_user_notice_device.findMany({ where: { user_id: userId } })
+    return await this.prismaPg().sr_user_notice_device.findMany({ where: { user_id: userId } })
   }
 
   public async removeUserPushDevice(id: number) {
-    return await this.prisma().slax_user_notice_device.delete({ where: { id } })
+    return await this.prismaPg().sr_user_notice_device.delete({ where: { id } })
   }
 
   public async getUserUnreadCount(userId: number) {
@@ -193,11 +193,11 @@ export class UserRepo {
       {
         notification_count: number
       }[]
-    >`SELECT (SELECT count(1) FROM slax_user_notification WHERE user_id = u.id AND (u.last_read_at IS NULL OR created_at > u.last_read_at) AND is_read = false) as notification_count FROM slax_user u WHERE id = ${userId};`
+    >`SELECT (SELECT count(1) FROM sr_user_notification WHERE user_id = u.id AND (u.last_read_at IS NULL OR created_at > u.last_read_at) AND is_read = false) as notification_count FROM sr_user u WHERE id = ${userId};`
   }
 
   public async getUserNotificationList(userId: number, page: number, pageSize: number) {
-    return await this.prisma().slax_user_notification.findMany({
+    return await this.prismaPg().sr_user_notification.findMany({
       where: { user_id: userId },
       orderBy: { created_at: 'desc' },
       skip: (page - 1) * pageSize,
@@ -206,16 +206,16 @@ export class UserRepo {
   }
 
   public async addUserNotice(po: userNoticePO): Promise<userNoticePO> {
-    return await this.prisma().slax_user_notification.create({
+    return await this.prismaPg().sr_user_notification.create({
       data: po
     })
   }
 
   public async updateUserReadAt(userId: number) {
-    return await this.prisma().slax_user.update({ data: { last_read_at: new Date() }, where: { id: userId } })
+    return await this.prismaPg().sr_user.update({ data: { last_read_at: new Date() }, where: { id: userId } })
   }
 
   public async updateUserNotificationRead(userId: number, id: number) {
-    return await this.prisma().slax_user_notification.update({ data: { is_read: true }, where: { id, user_id: userId } })
+    return await this.prismaPg().sr_user_notification.update({ data: { is_read: true }, where: { id, user_id: userId } })
   }
 }

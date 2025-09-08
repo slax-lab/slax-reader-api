@@ -107,12 +107,12 @@ export interface bookmarkActionChangePO {
 export class BookmarkRepo {
   constructor(
     @inject(PRISIMA_CLIENT) private prisma: LazyInstance<PrismaClient>,
-    @inject(PRISIMA_HYPERDRIVE_CLIENT) private prismaHyperdrive: LazyInstance<HyperdrivePrismaClient>
+    @inject(PRISIMA_HYPERDRIVE_CLIENT) private prismaPg: LazyInstance<HyperdrivePrismaClient>
   ) {}
 
   public async deleteUserBookmark(bmId: number, userId: number): Promise<MultiLangError | null> {
     try {
-      await this.prisma().slax_user_delete_bookmark.delete({ where: { user_id_bookmark_id: { user_id: Number(userId), bookmark_id: Number(bmId) } } })
+      await this.prismaPg().sr_user_delete_bookmark.delete({ where: { user_id_bookmark_id: { user_id: Number(userId), bookmark_id: Number(bmId) } } })
     } catch (e) {
       const err = e as { code: string; message: string; name: string }
       if (err.code !== 'P2025') {
@@ -124,8 +124,8 @@ export class BookmarkRepo {
     }
 
     try {
-      await this.prisma().slax_user_bookmark_tag.deleteMany({ where: { bookmark_id: Number(bmId), user_id: Number(userId) } })
-      await this.prisma().slax_user_bookmark.delete({ where: { user_id_bookmark_id: { bookmark_id: Number(bmId), user_id: Number(userId) } } })
+      await this.prismaPg().sr_user_bookmark_tag.deleteMany({ where: { bookmark_id: Number(bmId), user_id: Number(userId) } })
+      await this.prismaPg().sr_user_bookmark.delete({ where: { user_id_bookmark_id: { bookmark_id: Number(bmId), user_id: Number(userId) } } })
       return null
     } catch (err) {
       console.log(`delete user bookmark failed: ${err}, userId: ${userId}, bookmarkId: ${bmId} `)
@@ -139,7 +139,7 @@ export class BookmarkRepo {
     const deleteTasks = []
     if (isDeleted) {
       deleteTasks.push(
-        this.prisma().slax_user_delete_bookmark.create({
+        this.prismaPg().sr_user_delete_bookmark.create({
           data: {
             user_id: userId,
             bookmark_id: bmId,
@@ -148,18 +148,18 @@ export class BookmarkRepo {
         })
       )
     } else {
-      deleteTasks.push(this.prisma().slax_user_delete_bookmark.delete({ where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } } }))
+      deleteTasks.push(this.prismaPg().sr_user_delete_bookmark.delete({ where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } } }))
     }
 
     deleteTasks.push(
-      this.prisma().slax_user_bookmark.update({
+      this.prismaPg().sr_user_bookmark.update({
         where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
         data: { deleted_at: isDeleted ? date : null, updated_at: date }
       })
     )
 
     deleteTasks.push(
-      this.prisma().slax_user_bookmark_tag.updateMany({
+      this.prismaPg().sr_user_bookmark_tag.updateMany({
         where: { bookmark_id: bmId, user_id: userId },
         data: { is_deleted: isDeleted }
       })
@@ -170,10 +170,10 @@ export class BookmarkRepo {
 
   public async deleteBookmarkTry(bmId: number, userId: number): Promise<bookmarkPO | null> {
     try {
-      const bookmark = await this.prisma().slax_bookmark.findUnique({ where: { id: bmId } })
+      const bookmark = await this.prismaPg().sr_bookmark.findUnique({ where: { id: bmId } })
       if (!bookmark || bookmark.private_user !== userId) return null
 
-      await this.prisma().$executeRaw`DELETE FROM slax_bookmark WHERE id = ${bmId}`
+      await this.prismaPg().$executeRaw`DELETE FROM sr_bookmark WHERE id = ${bmId}`
 
       return { bookmark_id: bookmark.id, ...bookmark }
     } catch (e) {
@@ -184,7 +184,7 @@ export class BookmarkRepo {
 
   public async getBookmarkById(bmId: number) {
     try {
-      return await this.prisma().slax_bookmark.findFirst({ where: { id: bmId } })
+      return await this.prismaPg().sr_bookmark.findFirst({ where: { id: bmId } })
     } catch (err) {
       console.log(`get bookmark by id failed: ${err}`)
       throw BookmarkNotFoundError()
@@ -192,7 +192,7 @@ export class BookmarkRepo {
   }
 
   public async getBookmark(targetUrl: string, privateUser: number): Promise<bookmarkPO | null> {
-    const res = await this.prisma().slax_bookmark.findFirst({
+    const res = await this.prismaPg().sr_bookmark.findFirst({
       where: {
         target_url: targetUrl,
         private_user: privateUser
@@ -203,20 +203,20 @@ export class BookmarkRepo {
   }
 
   public async getUserBookmark(bmId: number, userId: number) {
-    return await this.prisma().slax_user_bookmark.findFirst({ where: { bookmark_id: bmId, user_id: userId } })
+    return await this.prismaPg().sr_user_bookmark.findFirst({ where: { bookmark_id: bmId, user_id: userId } })
   }
 
   public async getUserBookmarkById(id: number) {
-    return await this.prisma().slax_user_bookmark.findFirst({ where: { id } })
+    return await this.prismaPg().sr_user_bookmark.findFirst({ where: { id } })
   }
 
   public async getUserBookmarkByUserBmId(userBmId: number) {
-    return await this.prisma().slax_user_bookmark.findFirst({ where: { id: userBmId }, include: { bookmark: true } })
+    return await this.prismaPg().sr_user_bookmark.findFirst({ where: { id: userBmId }, include: { bookmark: true } })
   }
 
   public async getUserBookmarkWithDetail(bmId: number, userId: number) {
     try {
-      return await this.prisma().slax_user_bookmark.findFirst({
+      return await this.prismaPg().sr_user_bookmark.findFirst({
         where: { bookmark_id: bmId, user_id: userId },
         include: { bookmark: true }
       })
@@ -227,7 +227,7 @@ export class BookmarkRepo {
   }
 
   public async createBookmark(info: bookmarkPO, status: string) {
-    return await this.prisma().slax_bookmark.upsert({
+    return await this.prismaPg().sr_bookmark.upsert({
       where: { target_url_private_user: { target_url: info.target_url, private_user: info.private_user || 0 } },
       create: { ...info, created_at: new Date(), updated_at: new Date(), published_at: new Date(), status },
       update: { ...info, updated_at: new Date() }
@@ -235,7 +235,7 @@ export class BookmarkRepo {
   }
 
   public async createBookmarkRelation(userId: number, bmId: number, type: number, isArchive: boolean) {
-    return await this.prisma().slax_user_bookmark.upsert({
+    return await this.prismaPg().sr_user_bookmark.upsert({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
       create: { user_id: userId, bookmark_id: bmId, created_at: new Date(), updated_at: new Date(), type, archive_status: isArchive ? 1 : 0 },
       update: { updated_at: new Date() }
@@ -243,11 +243,11 @@ export class BookmarkRepo {
   }
 
   public async listAllUserBookmarks(userId: number) {
-    return await this.prisma().slax_user_bookmark.findMany({ where: { user_id: userId, deleted_at: null } })
+    return await this.prismaPg().sr_user_bookmark.findMany({ where: { user_id: userId, deleted_at: null } })
   }
 
   public async listUserStarBookmarksByTargetUser(userId: number, offset: number, limit: number, subscribeEndTime: Date) {
-    return await this.prisma().slax_user_bookmark.findMany({
+    return await this.prismaPg().sr_user_bookmark.findMany({
       where: { user_id: userId, deleted_at: null, is_starred: true, updated_at: { lte: subscribeEndTime } },
       skip: offset,
       take: limit,
@@ -273,7 +273,7 @@ export class BookmarkRepo {
       orderBy = { deleted_at: 'desc' }
     }
 
-    return await this.prisma().slax_user_bookmark.findMany({
+    return await this.prismaPg().sr_user_bookmark.findMany({
       where,
       skip: offset,
       take: limit,
@@ -285,7 +285,7 @@ export class BookmarkRepo {
   }
 
   public async listUserBookmarksByTagId(userId: number, tagId: number, offset: number, limit: number) {
-    return await this.prisma().slax_user_bookmark_tag.findMany({
+    return await this.prismaPg().sr_user_bookmark_tag.findMany({
       where: {
         user_id: userId,
         tag_id: tagId,
@@ -301,12 +301,12 @@ export class BookmarkRepo {
   }
 
   public async updateBookmark(bmId: number, info: bookmarkParsePO) {
-    return await this.prisma().slax_bookmark.update({ where: { id: bmId }, data: { updated_at: new Date(), ...info } })
+    return await this.prismaPg().sr_bookmark.update({ where: { id: bmId }, data: { updated_at: new Date(), ...info } })
   }
 
   public async upsertBookmarkSummary(info: bookmarkSummaryPO) {
     const { bookmark_id, lang, user_id, ...infoWithoutIds } = info
-    return await this.prisma().slax_bookmark_summary.upsert({
+    return await this.prismaPg().sr_bookmark_summary.upsert({
       where: { bookmark_id_lang_user_id: { bookmark_id: bookmark_id, lang: lang, user_id: user_id } },
       create: { ...info, created_at: new Date() },
       update: { ...infoWithoutIds, updated_at: new Date() }
@@ -314,52 +314,52 @@ export class BookmarkRepo {
   }
 
   public async deleteBookmarkSummary(bmId: number, userId: number) {
-    return await this.prisma().slax_bookmark_summary.deleteMany({ where: { bookmark_id: bmId, user_id: userId } })
+    return await this.prismaPg().sr_bookmark_summary.deleteMany({ where: { bookmark_id: bmId, user_id: userId } })
   }
 
   public async updateBookmarkIsRead(bmId: number, userId: number) {
-    await this.prisma().slax_user_bookmark.update({
+    await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
       data: { is_read: true }
     })
   }
 
   public async updateBookmarkArchiveStatus(bmId: number, userId: number, status: number) {
-    await this.prisma().slax_user_bookmark.update({
+    await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
       data: { archive_status: status }
     })
   }
 
   public async updateBookmarkStarStatus(bmId: number, userId: number, status: boolean) {
-    return await this.prisma().slax_user_bookmark.update({
+    return await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
       data: { is_starred: status }
     })
   }
 
   public async updateBookmarkStatus(bmId: number, status: queueStatus) {
-    return await this.prisma().slax_bookmark.update({ where: { id: bmId }, data: { status, updated_at: new Date() } })
+    return await this.prismaPg().sr_bookmark.update({ where: { id: bmId }, data: { status, updated_at: new Date() } })
   }
 
   public async updateBookmarkAliasTitle(bmId: number, userId: number, alias_title: string) {
-    return await this.prisma().slax_user_bookmark.update({
+    return await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
       data: { alias_title }
     })
   }
 
   public async updateUserBookmarkBookmarkId(id: number, bookmarkId: number) {
-    return await this.prisma().slax_user_bookmark.update({ where: { id }, data: { bookmark_id: bookmarkId, updated_at: new Date() } })
+    return await this.prismaPg().sr_user_bookmark.update({ where: { id }, data: { bookmark_id: bookmarkId, updated_at: new Date() } })
   }
 
   public async getBookmarkShareByBookmarkId(bmId: number, userId: number) {
-    return await this.prisma().slax_bookmark_share.findFirst({ where: { bookmark_id: bmId, user_id: userId } })
+    return await this.prismaPg().sr_bookmark_share.findFirst({ where: { bookmark_id: bmId, user_id: userId } })
   }
 
   public async deleteBookmarkShare(bmId: number, userId: number) {
     try {
-      await this.prisma().slax_bookmark_share.delete({ where: { bookmark_id_user_id: { bookmark_id: bmId, user_id: userId } } })
+      await this.prismaPg().sr_bookmark_share.delete({ where: { bookmark_id_user_id: { bookmark_id: bmId, user_id: userId } } })
     } catch (err) {
       const error = err as { code: string; message: string; name: string }
       if (error.code === 'P2025') return null
@@ -369,19 +369,19 @@ export class BookmarkRepo {
   }
 
   public async updateBookmarkShareIsEnable(bmId: number, userId: number, isEnable: boolean) {
-    return await this.prisma().slax_bookmark_share.update({
+    return await this.prismaPg().sr_bookmark_share.update({
       where: { bookmark_id_user_id: { bookmark_id: bmId, user_id: userId } },
       data: { is_enable: isEnable }
     })
   }
 
   public async getBookmarkShareByShareCode(shareCode: string) {
-    return await this.prisma().slax_bookmark_share.findFirst({ where: { share_code: shareCode } })
+    return await this.prismaPg().sr_bookmark_share.findFirst({ where: { share_code: shareCode } })
   }
 
   public async createBookmarkShare(shareCode: string, userId: number, bmId: number, showCommentLine: boolean, showUserinfo: boolean, allowAction: boolean) {
     try {
-      return await this.prisma().slax_bookmark_share.create({
+      return await this.prismaPg().sr_bookmark_share.create({
         data: {
           share_code: shareCode,
           user_id: userId,
@@ -401,7 +401,7 @@ export class BookmarkRepo {
   }
 
   public async updateBookmarkShare(bmId: number, userId: number, showCommentLine: boolean, showUserinfo: boolean, allowAction: boolean) {
-    return await this.prisma().slax_bookmark_share.update({
+    return await this.prismaPg().sr_bookmark_share.update({
       where: {
         bookmark_id_user_id: {
           bookmark_id: bmId,
@@ -421,7 +421,7 @@ export class BookmarkRepo {
 
   public async createUserTag(userId: number, tag: string) {
     if (!tag) return
-    return this.prisma().slax_user_tag.upsert({
+    return this.prismaPg().sr_user_tag.upsert({
       where: {
         user_id_tag_name: {
           user_id: userId,
@@ -442,7 +442,7 @@ export class BookmarkRepo {
 
   public async createUserTags(userId: number, tags: string[]) {
     if (!tags.length) return
-    return this.prisma().slax_user_tag.createManyAndReturn({
+    return this.prismaPg().sr_user_tag.createManyAndReturn({
       data: tags.map(tag => ({
         user_id: userId,
         tag_name: tag,
@@ -453,14 +453,14 @@ export class BookmarkRepo {
   }
 
   public async updateUserTagDisplay(userId: number, tagId: number, display: boolean) {
-    return await this.prisma().slax_user_tag.update({
+    return await this.prismaPg().sr_user_tag.update({
       where: { id: tagId, user_id: userId },
       data: { display: true }
     })
   }
 
   public async createBookmarkTag(bmId: number, userId: number, tagId: number, tagName: string) {
-    return await this.prisma().slax_user_bookmark_tag.upsert({
+    return await this.prismaPg().sr_user_bookmark_tag.upsert({
       where: { bookmark_id_user_id_tag_id: { bookmark_id: bmId, user_id: userId, tag_id: tagId } },
       create: { user_id: userId, bookmark_id: bmId, tag_id: tagId, tag_name: tagName, created_at: new Date() },
       update: {}
@@ -468,47 +468,47 @@ export class BookmarkRepo {
   }
 
   public async deleteBookmarkTag(bookmarkId: number, userId: number, tagId: number) {
-    return await this.prisma().slax_user_bookmark_tag.delete({
+    return await this.prismaPg().sr_user_bookmark_tag.delete({
       where: { bookmark_id_user_id_tag_id: { bookmark_id: bookmarkId, user_id: userId, tag_id: tagId } }
     })
   }
 
   public async countBookmarksByTag(userId: number, tagId: number) {
-    const [result] = await this.prisma().$queryRaw<[{ exists: boolean }]>`
+    const [result] = await this.prismaPg().$queryRaw<[{ exists: boolean }]>`
       SELECT EXISTS (
         SELECT 1 
-        FROM slax_user_bookmark_tag 
+        FROM sr_user_bookmark_tag 
         WHERE user_id = ${userId} AND tag_id = ${tagId} AND is_deleted = false
       ) as "exists"`
     return result.exists
   }
 
   public async deleteUserTag(userId: number, tagId: number) {
-    return await this.prisma().slax_user_tag.update({ where: { id: tagId, user_id: userId }, data: { display: false } })
+    return await this.prismaPg().sr_user_tag.update({ where: { id: tagId, user_id: userId }, data: { display: false } })
   }
 
   public async getBookmarkTags(userId: number, bookmarkId: number) {
-    return await this.prisma().slax_user_bookmark_tag.findMany({ where: { bookmark_id: bookmarkId, user_id: userId } })
+    return await this.prismaPg().sr_user_bookmark_tag.findMany({ where: { bookmark_id: bookmarkId, user_id: userId } })
   }
 
   public async getUserTags(userId: number) {
-    return await this.prisma().slax_user_tag.findMany({ where: { user_id: userId } })
+    return await this.prismaPg().sr_user_tag.findMany({ where: { user_id: userId } })
   }
 
   public async getUserTagById(userId: number, tagId: number) {
-    return await this.prisma().slax_user_tag.findFirst({ where: { id: tagId, user_id: userId } })
+    return await this.prismaPg().sr_user_tag.findFirst({ where: { id: tagId, user_id: userId } })
   }
 
   public async updateUserTag(userId: number, tagId: number, tagName: string) {
-    return await this.prisma().slax_user_tag.update({ where: { id: tagId, user_id: userId }, data: { tag_name: tagName } })
+    return await this.prismaPg().sr_user_tag.update({ where: { id: tagId, user_id: userId }, data: { tag_name: tagName } })
   }
 
   public async updateBookmarkTag(userId: number, tagId: number, tagName: string) {
-    await this.prisma().slax_user_bookmark_tag.updateMany({ where: { tag_id: tagId, user_id: userId }, data: { tag_name: tagName } })
+    await this.prismaPg().sr_user_bookmark_tag.updateMany({ where: { tag_id: tagId, user_id: userId }, data: { tag_name: tagName } })
   }
 
   public async createBookmarkOverview(userId: number, bookmarkId: number, overview: string, content: string) {
-    return await this.prisma().slax_user_bookmark_overview.create({
+    return await this.prismaPg().sr_user_bookmark_overview.create({
       data: {
         user_id: userId,
         bookmark_id: bookmarkId,
@@ -520,7 +520,7 @@ export class BookmarkRepo {
   }
 
   public async getUserBookmarkOverview(userId: number, bookmarkId: number) {
-    return await this.prisma().slax_user_bookmark_overview.findFirst({
+    return await this.prismaPg().sr_user_bookmark_overview.findFirst({
       where: {
         user_id: userId,
         bookmark_id: bookmarkId
@@ -532,7 +532,7 @@ export class BookmarkRepo {
   }
 
   public async createBookmarkImportTask(userId: number, type: string, objectKey: string, totalCount: number, batchCount: number) {
-    return await this.prisma().slax_bookmark_import.create({
+    return await this.prismaPg().sr_bookmark_import.create({
       data: {
         user_id: userId,
         type,
@@ -547,26 +547,26 @@ export class BookmarkRepo {
   }
 
   public async appendImportTaskErrLog(importId: number, errLog: string) {
-    this.prisma().$executeRaw`UPDATE slax_bookmark_import SET reason = CONCAT(reason, '\n', ${errLog}) WHERE id = ${importId}`
+    this.prismaPg().$executeRaw`UPDATE sr_bookmark_import SET reason = CONCAT(reason, '\n', ${errLog}) WHERE id = ${importId}`
   }
 
   public async getUserImportTask(userId: number) {
-    return await this.prisma().slax_bookmark_import.findMany({ where: { user_id: userId } })
+    return await this.prismaPg().sr_bookmark_import.findMany({ where: { user_id: userId } })
   }
 
   public async getUnfinishedImportTask() {
-    return await this.prisma().slax_bookmark_import.findMany({ where: { status: 1 } })
+    return await this.prismaPg().sr_bookmark_import.findMany({ where: { status: 1 } })
   }
 
   public async updateBookmarkImportTask(importId: number, status: number, reason: string) {
-    return await this.prisma().slax_bookmark_import.update({
+    return await this.prismaPg().sr_bookmark_import.update({
       where: { id: importId },
       data: { status, reason }
     })
   }
 
   public async getUserImportTaskByType(userId: number, type: string) {
-    return await this.prisma().slax_bookmark_import.findMany({
+    return await this.prismaPg().sr_bookmark_import.findMany({
       where: {
         user_id: userId,
         type,
@@ -578,23 +578,23 @@ export class BookmarkRepo {
   }
 
   public async getExpiredTrashedBookmark() {
-    return await this.prisma().slax_user_delete_bookmark.findMany({
+    return await this.prismaPg().sr_user_delete_bookmark.findMany({
       where: { deleted_at: { lte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } }
     })
   }
 
   public async batchGetBookmarkComment(commentIds: number[]) {
-    return await this.prisma().slax_mark_comment.findMany({ where: { id: { in: commentIds } } })
+    return await this.prismaPg().sr_mark_comment.findMany({ where: { id: { in: commentIds } } })
   }
 
   public async batchGetBookmarkTitle(bookmarkIdList: number[]): Promise<bookmarkTitlePO[]> {
-    return await this.prisma().$queryRaw<bookmarkTitlePO[]>`SELECT title, u.id as user_bookmark_id FROM slax_bookmark b 
-      INNER JOIN slax_user_bookmark u on b.id = u.bookmark_id
+    return await this.prismaPg().$queryRaw<bookmarkTitlePO[]>`SELECT title, u.id as user_bookmark_id FROM sr_bookmark b 
+      INNER JOIN sr_user_bookmark u on b.id = u.bookmark_id
       WHERE u.id in (${Prisma.join(bookmarkIdList)})`
   }
 
   public async getUserBookmarkSummary(bookmarkId: number, userId: number, lang: string) {
-    return await this.prisma().slax_bookmark_summary.findFirst({
+    return await this.prismaPg().sr_bookmark_summary.findFirst({
       where: {
         bookmark_id: bookmarkId,
         user_id: userId,
@@ -604,15 +604,15 @@ export class BookmarkRepo {
   }
 
   public async getBookmarkSummariesRaw(bookmarkId: number, lang: string, userId: number, limit: number) {
-    return await this.prisma().$queryRaw<bookmarkSummaryPO[]>`
-      SELECT * FROM (SELECT * FROM slax_bookmark_summary WHERE user_id = ${userId} AND bookmark_id = ${bookmarkId} AND lang = ${lang} LIMIT ${limit})
+    return await this.prismaPg().$queryRaw<bookmarkSummaryPO[]>`
+      SELECT * FROM (SELECT * FROM sr_bookmark_summary WHERE user_id = ${userId} AND bookmark_id = ${bookmarkId} AND lang = ${lang} LIMIT ${limit})
       UNION ALL
-      SELECT * FROM (SELECT * FROM slax_bookmark_summary WHERE bookmark_id = ${bookmarkId} AND lang = ${lang} LIMIT ${limit})
+      SELECT * FROM (SELECT * FROM sr_bookmark_summary WHERE bookmark_id = ${bookmarkId} AND lang = ${lang} LIMIT ${limit})
     `
   }
 
   public async createBookmarkFetchRetry(bookmarkId: number, userId: number, retryCount?: number) {
-    return await this.prisma().slax_bookmark_fetch_retry.upsert({
+    return await this.prismaPg().sr_bookmark_fetch_retry.upsert({
       where: { bookmark_id_user_id: { bookmark_id: bookmarkId, user_id: userId } },
       create: { retry_count: retryCount || 0, bookmark_id: bookmarkId, user_id: userId },
       update: {}
@@ -620,22 +620,22 @@ export class BookmarkRepo {
   }
 
   public async getFilterBookmarkFetchRetries(options: { status: bookmarkFetchRetryStatus }) {
-    const res = await this.prisma().$queryRaw<{ bookmark_id: number; retry_counts: string; user_ids: string; created_at: string }[]>`
-    SELECT  bookmark_id, group_concat(retry_count) as retry_counts, group_concat(user_id) as user_ids, created_at FROM slax_bookmark_fetch_retry 
+    const res = await this.prismaPg().$queryRaw<{ bookmark_id: number; retry_counts: string; user_ids: string; created_at: string }[]>`
+    SELECT  bookmark_id, group_concat(retry_count) as retry_counts, group_concat(user_id) as user_ids, created_at FROM sr_bookmark_fetch_retry 
       WHERE status = ${options.status}
       GROUP BY bookmark_id`
     return res || []
   }
 
   public async updateBookmarkFetchRetry(bookmarkId: number, options: { retry_count?: number; last_retry_at?: Date; status?: bookmarkFetchRetryStatus; trace_id?: string }) {
-    return await this.prisma().slax_bookmark_fetch_retry.updateMany({
+    return await this.prismaPg().sr_bookmark_fetch_retry.updateMany({
       where: { bookmark_id: bookmarkId },
       data: { ...options }
     })
   }
 
   public async upsertVectorShard(bookmarkId: number, shardIdx: number) {
-    return await this.prisma().slax_bookmark_vector_shard.upsert({
+    return await this.prismaPg().sr_bookmark_vector_shard.upsert({
       where: { bookmark_id: bookmarkId },
       create: { bookmark_id: bookmarkId, bucket_idx: shardIdx, created_at: new Date() },
       update: { created_at: new Date() }
@@ -643,15 +643,15 @@ export class BookmarkRepo {
   }
 
   public async getVectorShard(bookmarkId: number) {
-    return await this.prisma().slax_bookmark_vector_shard.findFirst({ where: { bookmark_id: bookmarkId } })
+    return await this.prismaPg().sr_bookmark_vector_shard.findFirst({ where: { bookmark_id: bookmarkId } })
   }
 
   public async getBookmarkVectorShard(userId: number) {
     if (userId < 1) return []
 
     try {
-      return await this.prisma().$queryRaw<bookmarkShardPO[]>`SELECT id, vs.bookmark_id, vs.bucket_idx, vs.created_at FROM slax_bookmark_vector_shard vs
-      INNER JOIN (SELECT bookmark_id FROM slax_user_bookmark WHERE user_id = ${userId}) ub on vs.bookmark_id = ub.bookmark_id`
+      return await this.prismaPg().$queryRaw<bookmarkShardPO[]>`SELECT id, vs.bookmark_id, vs.bucket_idx, vs.created_at FROM sr_bookmark_vector_shard vs
+      INNER JOIN (SELECT bookmark_id FROM sr_user_bookmark WHERE user_id = ${userId}) ub on vs.bookmark_id = ub.bookmark_id`
     } catch (e) {
       console.log(e, 'getBookmarkVectorShard error')
       return []
@@ -659,7 +659,7 @@ export class BookmarkRepo {
   }
 
   public async getUserBookmarkIds(userId: number) {
-    return await this.prisma().slax_user_bookmark.findMany({ where: { user_id: userId }, select: { bookmark_id: true } })
+    return await this.prismaPg().sr_user_bookmark.findMany({ where: { user_id: userId }, select: { bookmark_id: true } })
   }
 
   public async getAllBookmarkChanges(userId: number) {
@@ -680,7 +680,7 @@ export class BookmarkRepo {
 
   public async createBookmarkChangeLog(userId: number, url: string, bookmarkId: number, action: 'add' | 'delete' | 'update', time: Date) {
     try {
-      return await this.prisma().slax_user_bookmark_change.create({
+      return await this.prismaPg().sr_user_bookmark_change.create({
         data: {
           user_id: userId,
           target_url: url,
@@ -713,8 +713,8 @@ export class BookmarkRepo {
 
   // 批量upsert
   public async upsertBookmarkTags(bmId: number, userId: number, tags: { id: number; tag_name: string }[]) {
-    return await this.prisma().$executeRaw`
-      INSERT INTO slax_user_bookmark_tag(user_id, bookmark_id ,tag_id, tag_name, created_at)
+    return await this.prismaPg().$executeRaw`
+      INSERT INTO sr_user_bookmark_tag(user_id, bookmark_id ,tag_id, tag_name, created_at)
       VALUES ${Prisma.join(tags.map(tag => Prisma.sql`(${userId}, ${bmId}, ${tag.id}, ${tag.tag_name}, ${new Date().toISOString()})`))}
       ON CONFLICT(user_id, bookmark_id ,tag_id) DO NOTHING;
     `
@@ -722,8 +722,8 @@ export class BookmarkRepo {
 
   // 批量插入且更新display接口
   public async updateUserTagsDisplay(userId: number, names: string[]) {
-    return await this.prisma().$queryRaw<{ id: number; tag_name: string }[]>`
-      INSERT INTO slax_user_tag(user_id, tag_name, display) 
+    return await this.prismaPg().$queryRaw<{ id: number; tag_name: string }[]>`
+      INSERT INTO sr_user_tag(user_id, tag_name, display) 
       VALUES ${Prisma.join(names.map(name => Prisma.sql`(${userId}, ${name}, true)`))} 
       ON CONFLICT(user_id, tag_name) 
       DO UPDATE SET display = true, created_at = ${new Date().toISOString()}
