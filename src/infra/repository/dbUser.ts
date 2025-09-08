@@ -189,7 +189,7 @@ export class UserRepo {
   }
 
   public async getUserUnreadCount(userId: number) {
-    return await this.prisma().$queryRaw<
+    return await this.prismaPg().$queryRaw<
       {
         notification_count: number
       }[]

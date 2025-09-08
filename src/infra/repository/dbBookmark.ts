@@ -588,9 +588,11 @@ export class BookmarkRepo {
   }
 
   public async batchGetBookmarkTitle(bookmarkIdList: number[]): Promise<bookmarkTitlePO[]> {
-    return await this.prismaPg().$queryRaw<bookmarkTitlePO[]>`SELECT title, u.id as user_bookmark_id FROM sr_bookmark b 
-      INNER JOIN sr_user_bookmark u on b.id = u.bookmark_id
-      WHERE u.id in (${Prisma.join(bookmarkIdList)})`
+    return await this.prismaPg().$queryRaw<bookmarkTitlePO[]>(Prisma.sql`
+      SELECT title, u.id as user_bookmark_id 
+      FROM sr_bookmark b 
+      INNER JOIN sr_user_bookmark u ON b.id = u.bookmark_id
+      WHERE u.id IN (${Prisma.join(bookmarkIdList)})`)
   }
 
   public async getUserBookmarkSummary(bookmarkId: number, userId: number, lang: string) {
