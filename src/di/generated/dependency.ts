@@ -208,7 +208,7 @@ container.register(MarkRepo, {
 container.register(ReportRepo, {
   useFactory: container =>
     new ReportRepo(
-      lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT)),
+      lazy(() => container.resolve(PRISIMA_CLIENT)),
       lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT))
     )
 })
