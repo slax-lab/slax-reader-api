@@ -680,7 +680,7 @@ export class BookmarkRepo {
 
   public async createBookmarkChangeLog(userId: number, url: string, bookmarkId: number, action: 'add' | 'delete' | 'update', time: Date) {
     try {
-      return await this.prismaPg().sr_user_bookmark_change.create({
+      return await this.prisma().slax_user_bookmark_change.create({
         data: {
           user_id: userId,
           target_url: url,
