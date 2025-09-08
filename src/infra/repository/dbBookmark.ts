@@ -621,7 +621,7 @@ export class BookmarkRepo {
 
   public async getFilterBookmarkFetchRetries(options: { status: bookmarkFetchRetryStatus }) {
     const res = await this.prismaPg().$queryRaw<{ bookmark_id: number; retry_counts: string; user_ids: string; created_at: string }[]>`
-    SELECT  bookmark_id, group_concat(retry_count) as retry_counts, group_concat(user_id) as user_ids, created_at FROM sr_bookmark_fetch_retry 
+    SELECT  bookmark_id, string_agg(retry_count::text, ',') as retry_counts, string_agg(user_id::text, ',') as user_ids, created_at FROM sr_bookmark_fetch_retry 
       WHERE status = ${options.status}
       GROUP BY bookmark_id`
     return res || []
