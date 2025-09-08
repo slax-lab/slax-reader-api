@@ -547,7 +547,7 @@ export class BookmarkRepo {
   }
 
   public async appendImportTaskErrLog(importId: number, errLog: string) {
-    this.prismaPg().$executeRaw`UPDATE sr_bookmark_import SET reason = CONCAT(reason, '\n', ${errLog}) WHERE id = ${importId}`
+    this.prismaPg().$executeRaw`UPDATE sr_bookmark_import SET reason = reason || '\n' || ${errLog} WHERE id = ${importId}`
   }
 
   public async getUserImportTask(userId: number) {
