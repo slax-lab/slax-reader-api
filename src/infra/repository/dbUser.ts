@@ -175,17 +175,17 @@ export class UserRepo {
   }
 
   public async addUserPushDevice(userId: number, type: noticeType, data: string) {
-    return await this.prismaPg().sr_user_notice_device.create({
+    return await this.prisma().slax_user_notice_device.create({
       data: { user_id: userId, type: type.toString(), data }
     })
   }
 
   public async getUserOnlineDevice(userId: number) {
-    return await this.prismaPg().sr_user_notice_device.findMany({ where: { user_id: userId } })
+    return await this.prisma().slax_user_notice_device.findMany({ where: { user_id: userId } })
   }
 
   public async removeUserPushDevice(id: number) {
-    return await this.prismaPg().sr_user_notice_device.delete({ where: { id } })
+    return await this.prisma().slax_user_notice_device.delete({ where: { id } })
   }
 
   public async getUserUnreadCount(userId: number) {
