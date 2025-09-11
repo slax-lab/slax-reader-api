@@ -27,6 +27,8 @@ export interface userInfoPO {
   invite_code?: string
 
   last_read_at?: Date
+
+  uuid: string
 }
 
 export enum platformBindType {
