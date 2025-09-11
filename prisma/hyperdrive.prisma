@@ -11,7 +11,9 @@ datasource hyperdrive {
 }
 
 model sr_user {
-    id            Int       @id @default(autoincrement())
+    id   Int    @id @default(autoincrement())
+    uuid String @unique @default(dbgenerated("gen_random_uuid()"))
+
     email         String    @unique
     name          String    @default("")
     picture       String    @default("")
@@ -37,7 +39,9 @@ model sr_user {
 }
 
 model sr_user_notification {
-    id      Int @id @default(autoincrement())
+    id   Int    @id @default(autoincrement())
+    uuid String @unique @default(dbgenerated("gen_random_uuid()"))
+
     user_id Int @default(0)
 
     // type: comment | reply | subscribe / cancel_subscribe | follow / cancel_follow
@@ -66,7 +70,9 @@ model sr_user_notification {
 }
 
 model sr_bookmark {
-    id                 Int      @id @default(autoincrement())
+    id   Int    @id @default(autoincrement())
+    uuid String @unique @default(dbgenerated("gen_random_uuid()"))
+
     title              String   @default("")
     host_url           String   @default("")
     target_url         String   @default("")
@@ -91,7 +97,9 @@ model sr_bookmark {
 }
 
 model sr_user_bookmark {
-    id             Int       @id @default(autoincrement())
+    id   Int    @id @default(autoincrement())
+    uuid String @unique @default(dbgenerated("gen_random_uuid()"))
+
     user_id        Int       @default(0)
     bookmark_id    Int       @default(0)
     is_read        Boolean   @default(false)
@@ -104,6 +112,8 @@ model sr_user_bookmark {
     type           Int       @default(0)
     deleted_at     DateTime?
 
+    metadata Json @default("{}")
+
     bookmark             sr_bookmark?           @relation(fields: [bookmark_id], references: [id])
     sr_user_bookmark_tag sr_user_bookmark_tag[]
 
@@ -113,7 +123,9 @@ model sr_user_bookmark {
 }
 
 model sr_user_bookmark_tag {
-    id          Int      @id @default(autoincrement())
+    id   Int    @id @default(autoincrement())
+    uuid String @unique @default(dbgenerated("gen_random_uuid()"))
+
     user_id     Int      @default(0)
     bookmark_id Int      @default(0)
     tag_name    String   @default("")
@@ -130,7 +142,9 @@ model sr_user_bookmark_tag {
 }
 
 model sr_user_delete_bookmark {
-    id          Int       @id @default(autoincrement())
+    id   Int    @id @default(autoincrement())
+    uuid String @unique @default(dbgenerated("gen_random_uuid()"))
+
     user_id     Int       @default(0)
     bookmark_id Int       @default(0)
     deleted_at  DateTime?
@@ -139,7 +153,9 @@ model sr_user_delete_bookmark {
 }
 
 model sr_user_tag {
-    id         Int      @id @default(autoincrement())
+    id   Int    @id @default(autoincrement())
+    uuid String @unique @default(dbgenerated("gen_random_uuid()"))
+
     user_id    Int      @default(0)
     tag_name   String   @default("")
     display    Boolean  @default(true)
@@ -149,7 +165,9 @@ model sr_user_tag {
 }
 
 model sr_bookmark_comment {
-    id          Int @id @default(autoincrement())
+    id   Int    @id @default(autoincrement())
+    uuid String @unique @default(dbgenerated("gen_random_uuid()"))
+
     user_id     Int @default(0)
     bookmark_id Int @default(0)
     // 1- 划线 2- 评论 3- 评论回复
@@ -176,25 +194,17 @@ model sr_bookmark_comment {
     created_at DateTime @default(now())
     updated_at DateTime
 
+    metadata Json @default("{}")
+
     @@index([user_id, created_at, is_deleted])
     @@index([bookmark_id, root_id, is_deleted])
     @@index([bookmark_id, type, is_deleted])
 }
 
-model sr_queue_parse_info {
-    id           Int      @id @default(autoincrement())
-    target_url   String   @default("")
-    content_key  String   @default("")
-    server_parse Boolean  @default(false)
-    is_privated  Boolean  @default(false)
-    bookmark_id  Int      @default(0)
-    created_at   DateTime
-    updated_at   DateTime
-    status       String   @default("pending")
-}
-
 model sr_bookmark_summary {
-    id          Int       @id @default(autoincrement())
+    id   Int    @id @default(autoincrement())
+    uuid String @unique @default(dbgenerated("gen_random_uuid()"))
+
     content     String    @default("")
     ai_name     String    @default("")
     ai_model    String    @default("")
@@ -217,7 +227,9 @@ model sr_user_report {
 }
 
 model sr_platform_bind {
-    id          Int      @id @default(autoincrement())
+    id   Int    @id @default(autoincrement())
+    uuid String @unique @default(dbgenerated("gen_random_uuid()"))
+
     user_id     Int      @default(0)
     platform    String   @default("")
     platform_id String   @default("")
@@ -229,7 +241,9 @@ model sr_platform_bind {
 }
 
 model sr_bookmark_share {
-    id            Int      @id @default(autoincrement())
+    id   Int    @id @default(autoincrement())
+    uuid String @unique @default(dbgenerated("gen_random_uuid()"))
+
     share_code    String   @default("")
     user_id       Int      @default(0)
     bookmark_id   Int      @default(0)
@@ -286,33 +300,9 @@ model sr_bookmark_vector_shard {
     @@unique([bookmark_id])
 }
 
-model sr_user_notice_device {
-    id         Int      @id @default(autoincrement())
-    user_id    Int      @default(0)
-    // Push api / Apple Push / Websocket
-    type       String   @default("")
-    // JSON，保存对应的标记位
-    // 例如：Websocket，会保存DO的大洲位置、DO中缓存的session
-    data       String   @default("")
-    created_at DateTime @default(now())
-
-    @@index([user_id, type])
-}
-
-// 负责记录用户缓存收藏的记录
-model sr_user_bookmark_change {
-    id          Int      @id @default(autoincrement())
-    user_id     Int      @default(0)
-    target_url  String   @default("")
-    bookmark_id Int      @default(0)
-    action      String   @default("")
-    created_at  DateTime @default(now())
-
-    @@index([user_id, created_at])
-}
-
 model sr_user_bookmark_overview {
-    id Int @id @default(autoincrement())
+    id   Int    @id @default(autoincrement())
+    uuid String @unique @default(dbgenerated("gen_random_uuid()"))
 
     user_id     Int      @default(0)
     bookmark_id Int      @default(0)
