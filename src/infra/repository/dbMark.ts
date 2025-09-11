@@ -86,7 +86,7 @@ export class MarkRepo {
   ) {}
 
   async create(data: markPO): Promise<markPOWithId> {
-    return await this.prismaPg().sr_mark_comment.create({
+    return await this.prismaPg().sr_bookmark_comment.create({
       data: {
         user_id: data.user_id,
         bookmark_id: data.user_bookmark_id,
@@ -108,7 +108,7 @@ export class MarkRepo {
 
   async list(userBmId: number) {
     return (
-      await this.prismaPg().sr_mark_comment.findMany({
+      await this.prismaPg().sr_bookmark_comment.findMany({
         where: {
           bookmark_id: userBmId
         }
@@ -132,7 +132,7 @@ export class MarkRepo {
   }
 
   async get(id: number): Promise<markDetailPO | null> {
-    const res = await this.prismaPg().sr_mark_comment.findFirst({ where: { id } })
+    const res = await this.prismaPg().sr_bookmark_comment.findFirst({ where: { id } })
     if (!res) return null
     return {
       id: res.id,
@@ -150,15 +150,15 @@ export class MarkRepo {
   }
 
   async del(id: number) {
-    return await this.prismaPg().sr_mark_comment.delete({ where: { id } })
+    return await this.prismaPg().sr_bookmark_comment.delete({ where: { id } })
   }
 
   async deleteByRootId(bookmarkId: number, rootId: number) {
-    return await this.prismaPg().sr_mark_comment.deleteMany({ where: { bookmark_id: bookmarkId, root_id: rootId } })
+    return await this.prismaPg().sr_bookmark_comment.deleteMany({ where: { bookmark_id: bookmarkId, root_id: rootId } })
   }
 
   async existsCommentMarkChild(bookmarkId: number, rootId: number) {
-    return await this.prismaPg().sr_mark_comment.count({
+    return await this.prismaPg().sr_bookmark_comment.count({
       where: {
         bookmark_id: bookmarkId,
         root_id: rootId,
@@ -171,19 +171,19 @@ export class MarkRepo {
   }
 
   async updateCommentMarkDeleted(id: number) {
-    return await this.prismaPg().sr_mark_comment.update({ where: { id }, data: { is_deleted: true, updated_at: new Date() } })
+    return await this.prismaPg().sr_bookmark_comment.update({ where: { id }, data: { is_deleted: true, updated_at: new Date() } })
   }
 
   async updateCommentRootId(id: number, rootId: number) {
-    return await this.prismaPg().sr_mark_comment.update({ where: { id }, data: { root_id: rootId, updated_at: new Date() } })
+    return await this.prismaPg().sr_bookmark_comment.update({ where: { id }, data: { root_id: rootId, updated_at: new Date() } })
   }
 
   async deleteByBookmarkId(bookmarkId: number) {
-    return await this.prismaPg().sr_mark_comment.deleteMany({ where: { bookmark_id: bookmarkId } })
+    return await this.prismaPg().sr_bookmark_comment.deleteMany({ where: { bookmark_id: bookmarkId } })
   }
 
   async listUserMark(userId: number, page: number, size: number) {
-    return await this.prismaPg().sr_mark_comment.findMany({
+    return await this.prismaPg().sr_bookmark_comment.findMany({
       where: { user_id: userId, is_deleted: false },
       orderBy: { created_at: 'desc' },
       skip: (page - 1) * size,

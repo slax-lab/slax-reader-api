@@ -148,7 +148,7 @@ model sr_user_tag {
     @@unique([user_id, tag_name])
 }
 
-model sr_mark_comment {
+model sr_bookmark_comment {
     id          Int @id @default(autoincrement())
     user_id     Int @default(0)
     bookmark_id Int @default(0)
