@@ -317,13 +317,6 @@ export class BookmarkRepo {
     return await this.prismaPg().sr_bookmark_summary.deleteMany({ where: { bookmark_id: bmId, user_id: userId } })
   }
 
-  public async updateBookmarkIsRead(bmId: number, userId: number) {
-    await this.prismaPg().sr_user_bookmark.update({
-      where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
-      data: { is_read: true }
-    })
-  }
-
   public async updateBookmarkArchiveStatus(bmId: number, userId: number, status: number) {
     await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },

@@ -28,17 +28,19 @@ import { UrlParserHandler } from '../../domain/orchestrator/urlParser'
 import { NotificationService } from '../../domain/notification'
 import { ShareService } from '../../domain/share'
 import { UserService } from '../../domain/user'
+import { DBSyncBatchOperation } from '../../infra/repository/dbSyncBatch'
+import { QueueClient } from '../../infra/queue/queueClient'
 import { AigcService } from '../../domain/aigc'
 import { TelegramBotService } from '../../domain/telegram'
 import { SearchService } from '../../domain/search'
 import { BookmarkOrchestrator } from '../../domain/orchestrator/bookmark'
 import { MarkOrchestrator } from '../../domain/orchestrator/mark'
 import { ShareOrchestrator } from '../../domain/orchestrator/share'
+import { SyncOrchestrator } from '../../domain/orchestrator/sync'
 import { ImportOrchestrator } from '../../domain/orchestrator/import'
 import { EmailService } from '../../domain/email'
 import { BookmarkJob } from '../../handler/cron/bookmarkJob'
 import { BookmarkConsumer } from '../../handler/queue/bookmarkConsumer'
-import { QueueClient } from '../../infra/queue/queueClient'
 import { BucketClient } from '../../infra/repository/bucketClient'
 import { KVClient } from '../../infra/repository/KVClient'
 import { AigcController } from '../../handler/http/aigcController'
@@ -152,6 +154,10 @@ container.register(ShareOrchestrator, {
     )
 })
 
+container.register(SyncOrchestrator, {
+  useFactory: container => new SyncOrchestrator(container.resolve(UserService), container.resolve(DBSyncBatchOperation), container.resolve(QueueClient))
+})
+
 container.register(UrlParserHandler, {
   useFactory: container =>
     new UrlParserHandler(
@@ -213,6 +219,10 @@ container.register(ReportRepo, {
     )
 })
 
+container.register(DBSyncBatchOperation, {
+  useFactory: container => new DBSyncBatchOperation(lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT)))
+})
+
 container.register(UserRepo, {
   useFactory: container =>
     new UserRepo(
@@ -266,7 +276,7 @@ container.register(ShareController, {
 })
 
 container.register(SyncController, {
-  useFactory: () => new SyncController()
+  useFactory: container => new SyncController(container.resolve(SyncOrchestrator))
 })
 
 container.register(TagController, {

@@ -68,7 +68,9 @@ export enum ErrorName {
   NOT_HAVE_STRIPE_ACCOUNT_ERROR = 'NOT_HAVE_STRIPE_ACCOUNT_ERROR',
   BOOKMARK_CHANGES_SYNC_TOO_OLD = 'BOOKMARK_CHANGES_SYNC_TOO_OLD',
   IMPORT_OTHER_TIMEOUT = 'IMPORT_OTHER_TIMEOUT',
-  BOOKMARK_OVERVIEW_CONTENT_ERROR = 'BOOKMARK_OVERVIEW_CONTENT_ERROR'
+  BOOKMARK_OVERVIEW_CONTENT_ERROR = 'BOOKMARK_OVERVIEW_CONTENT_ERROR',
+  SYNC_TABLE_RULE_ERROR = 'SYNC_TABLE_RULE_ERROR',
+  SYNC_TABLE_TAG_NAME_ERROR = 'SYNC_TABLE_TAG_NAME_ERROR'
 }
 
 const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = {
@@ -112,7 +114,9 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.SHARE_COLLECTION_CANT_UPDATE_FREE]: '分享的collection不能免费转付费',
     [ErrorName.NOT_HAVE_STRIPE_ACCOUNT_ERROR]: '没有stripe账户',
     [ErrorName.BOOKMARK_CHANGES_SYNC_TOO_OLD]: '书签更改同步过旧',
-    [ErrorName.BOOKMARK_OVERVIEW_CONTENT_ERROR]: '书签概览内容错误'
+    [ErrorName.BOOKMARK_OVERVIEW_CONTENT_ERROR]: '书签概览内容错误',
+    [ErrorName.SYNC_TABLE_RULE_ERROR]: '同步表规则错误',
+    [ErrorName.SYNC_TABLE_TAG_NAME_ERROR]: '同步表标签名称错误'
   },
   en: {
     [ErrorName.NOT_FOUND]: 'Resource not found',
@@ -174,7 +178,9 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.SHARE_COLLECTION_CANT_UPDATE_FREE]: 'Share collection cant update to free',
     [ErrorName.NOT_HAVE_STRIPE_ACCOUNT_ERROR]: 'No stripe account',
     [ErrorName.BOOKMARK_CHANGES_SYNC_TOO_OLD]: 'Bookmark changes sync too old',
-    [ErrorName.BOOKMARK_OVERVIEW_CONTENT_ERROR]: 'Bookmark overview content error'
+    [ErrorName.BOOKMARK_OVERVIEW_CONTENT_ERROR]: 'Bookmark overview content error',
+    [ErrorName.SYNC_TABLE_RULE_ERROR]: 'Sync table rule error',
+    [ErrorName.SYNC_TABLE_TAG_NAME_ERROR]: 'Sync table tag name error'
   },
   es: {
     [ErrorName.NOT_FOUND]: 'Recurso no encontrado',
@@ -270,3 +276,5 @@ export const NotHaveStripeAccountError = (): MultiLangError => NewError(ErrorNam
 export const BookmarkChangesSyncTooOldError = (): MultiLangError => NewError(ErrorName.BOOKMARK_CHANGES_SYNC_TOO_OLD, 501)
 export const ImportOtherTimeoutError = (): MultiLangError => NewError(ErrorName.IMPORT_OTHER_TIMEOUT, 500)
 export const BookmarkOverviewContentError = (): MultiLangError => NewError(ErrorName.BOOKMARK_OVERVIEW_CONTENT_ERROR, 500)
+export const SyncTableRuleError = (): MultiLangError => NewError(ErrorName.SYNC_TABLE_RULE_ERROR, 400)
+export const SyncTableTagNameError = (): MultiLangError => NewError(ErrorName.SYNC_TABLE_TAG_NAME_ERROR, 400)

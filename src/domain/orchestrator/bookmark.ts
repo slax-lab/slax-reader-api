@@ -16,7 +16,7 @@ export class BookmarkOrchestrator {
 
   public async getBookmarkMarkList(ctx: ContextManager, userId: number, bmId: number) {
     const res = await this.bookmarkService.getUserBookmarkWithDetail(userId, bmId)
-    if (!res) throw BookmarkNotFoundError()
+    if (!res || !res.bookmark) throw BookmarkNotFoundError()
     if (res.bookmark.private_user > 0 && res.bookmark.private_user !== userId) throw BookmarkNotFoundError()
 
     const marksResult = await this.markService.getBookmarkMarkList(ctx, res.id, true)
@@ -25,7 +25,7 @@ export class BookmarkOrchestrator {
 
   public async getBookmarkBriefInfo(ctx: ContextManager, bmId: number) {
     const res = await this.bookmarkService.getUserBookmarkWithDetail(ctx.getUserId(), bmId)
-    if (!res) throw BookmarkNotFoundError()
+    if (!res || !res.bookmark) throw BookmarkNotFoundError()
     if (res.bookmark.private_user > 0 && res.bookmark.private_user !== ctx.getUserId()) throw BookmarkNotFoundError()
 
     const [marksResult, overviewResult, tagsResult] = await Promise.allSettled([
@@ -54,7 +54,7 @@ export class BookmarkOrchestrator {
     const userId = ctx.getUserId()
 
     const res = await this.bookmarkService.getUserBookmarkWithDetail(userId, bmId)
-    if (!res) throw BookmarkNotFoundError()
+    if (!res || !res.bookmark) throw BookmarkNotFoundError()
     if (res.bookmark.private_user > 0 && res.bookmark.private_user !== userId) throw BookmarkNotFoundError()
 
     const [contentResult, marksResult, tagsResult, overviewResult] = await Promise.allSettled([
