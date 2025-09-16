@@ -169,11 +169,11 @@ export function getRouter(container: Container) {
     const controller = container.resolve(ShareController)
     return await controller.getMarkList(ctx, req)
   })
-  router.post('/v1/sync/sign', async (req: Request, ctx: ContextManager) => {
+  router.post('/v1/sync/token', async (req: Request, ctx: ContextManager) => {
     const controller = container.resolve(SyncController)
     return await controller.handleSignRequest(ctx, req)
   })
-  router.post('/v1/sync/upload', async (req: Request, ctx: ContextManager) => {
+  router.post('/v1/sync/changes', async (req: Request, ctx: ContextManager) => {
     const controller = container.resolve(SyncController)
     return await controller.handleSyncSaveRequest(ctx, req)
   })

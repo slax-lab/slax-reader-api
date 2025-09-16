@@ -36,7 +36,7 @@ export class DatabaseRegistry {
       uncached: false
     })
     targetContainer.register(PRISIMA_HYPERDRIVE_CLIENT, {
-      useFactory: () => new HyperdrivePrismaClient({ adapter: new PrismaPg(new Pool({ connectionString: env.HYPERDRIVE.connectionString, max: 1, maxUses: 1 })) }),
+      useFactory: () => new HyperdrivePrismaClient({ log: ['query'], adapter: new PrismaPg(new Pool({ connectionString: env.HYPERDRIVE.connectionString, max: 1, maxUses: 1 })) }),
       uncached: false
     })
     targetContainer.register(VECTORIZE_CLIENTS, {

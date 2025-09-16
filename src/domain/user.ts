@@ -53,6 +53,7 @@ export interface userInfo {
   avatar: string
   name: string
   id: number
+  uuid: string
 
   platform: userBindPlatformItem[]
 }
@@ -252,6 +253,7 @@ export class UserService {
     const [user, bindList] = await Promise.all([this.userRepo.getInfoByUserId(ctx.getUserId()), this.userRepo.getUserBindPlatform(ctx.getUserId())])
 
     return {
+      uuid: user.uuid,
       name: user.name,
       account: user.account,
       email: user.email,
