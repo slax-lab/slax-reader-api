@@ -226,8 +226,6 @@ export class SyncOrchestrator {
     const newTags = tags.filter(tag => !preTags.includes(tag))
     const deletedTags = preTags.filter(tag => !tags.includes(tag))
 
-    console.log('newTags', newTags)
-    console.log('deletedTags', deletedTags)
     if (newTags.length > 0 || deletedTags.length > 0) {
       operations.push({
         type: 'update_tags',
