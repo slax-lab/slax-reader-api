@@ -481,7 +481,7 @@ export class BookmarkRepo {
   }
 
   public async getBookmarkTags(userId: number, bookmarkId: number) {
-    return await this.prismaPg().sr_user_bookmark_tag.findMany({ where: { bookmark_id: bookmarkId, user_id: userId } })
+    return await this.prismaPg().sr_user_bookmark_tag.findMany({ where: { bookmark_id: bookmarkId, user_id: userId, is_deleted: false } })
   }
 
   public async getUserTags(userId: number) {
