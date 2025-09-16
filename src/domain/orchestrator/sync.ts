@@ -152,7 +152,7 @@ export class SyncOrchestrator {
   }
 
   /** user bookmark change */
-  private processUserBookmarkChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
+  public processUserBookmarkChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
     // soft delete bookmark
     if (change.data.hasOwnProperty('deleted_at')) {
       operations.push({
@@ -220,7 +220,7 @@ export class SyncOrchestrator {
   }
 
   /** update tags */
-  private processTagsChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
+  public processTagsChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
     const tags = JSON.parse(change.data['metadata.tags'].replaceAll('\\\\', '')) as string[]
     const preTags = change.preData?.['metadata.tags'] ? (JSON.parse(change.preData['metadata.tags'].replaceAll('\\\\', '')) as string[]) : []
     const newTags = tags.filter(tag => !preTags.includes(tag))
@@ -240,7 +240,7 @@ export class SyncOrchestrator {
   }
 
   /** update share status */
-  private processShareChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
+  public processShareChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
     const share = JSON.parse(change.data['metadata.share.is_enable'].replaceAll('\\\\', ''))
 
     if (share.is_enable !== undefined) {
@@ -256,7 +256,7 @@ export class SyncOrchestrator {
   }
 
   /** create user tag */
-  private processUserTagChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
+  public processUserTagChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
     const tagName = change.data['tag_name']
     if (!tagName) throw SyncTableTagNameError()
 
@@ -271,7 +271,7 @@ export class SyncOrchestrator {
   }
 
   /** send retry parse event to queue */
-  private async sendRetryParseEvent(ctx: ContextManager, newBookmark: { bookmarkId: number; targetUrl: string; userId: number }) {
+  public async sendRetryParseEvent(ctx: ContextManager, newBookmark: { bookmarkId: number; targetUrl: string; userId: number }) {
     try {
       const police = new URLPolicie(ctx.env, newBookmark.targetUrl)
       let pType = police.getParserType()

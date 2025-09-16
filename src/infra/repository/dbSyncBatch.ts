@@ -9,7 +9,7 @@ export type executeFunction = (tx: prismaTx, operation: OrderedSyncOperation) =>
 
 @injectable()
 export class DBSyncBatchOperation {
-  constructor(@inject(PRISIMA_HYPERDRIVE_CLIENT) private prismaHyperdrive: LazyInstance<HyperdrivePrismaClient>) {}
+  constructor(@inject(PRISIMA_HYPERDRIVE_CLIENT) public prismaHyperdrive: LazyInstance<HyperdrivePrismaClient>) {}
 
   /** execute */
   public async executeOrderedOperations(operations: OrderedSyncOperation[]): Promise<{ bookmarkId: number; targetUrl: string; userId: number }[]> {
@@ -36,7 +36,7 @@ export class DBSyncBatchOperation {
   }
 
   /** create tag */
-  private async executeCreateTag(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
+  public async executeCreateTag(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
     if (operation.type !== 'create_tag') return
 
     const { tagName } = operation.data as CreateTagData
@@ -58,7 +58,7 @@ export class DBSyncBatchOperation {
   }
 
   /** create bookmark */
-  private async executeCreateBookmark(tx: prismaTx, operation: OrderedSyncOperation): Promise<{ bookmarkId: number; targetUrl: string; userId: number } | null> {
+  public async executeCreateBookmark(tx: prismaTx, operation: OrderedSyncOperation): Promise<{ bookmarkId: number; targetUrl: string; userId: number } | null> {
     if (operation.type !== 'create_bookmark') return null
 
     const { targetUrl, title, thumbnail, description, isArchive, isNewBookmark } = operation.data as CreateBookmarkData
@@ -114,7 +114,7 @@ export class DBSyncBatchOperation {
   }
 
   /** update bookmark */
-  private async executeUpdateBookmark(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
+  public async executeUpdateBookmark(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
     if (operation.type !== 'update_bookmark') return
 
     const updateData = { ...(operation.data as UpdateBookmarkData), updated_at: new Date() }
@@ -126,7 +126,7 @@ export class DBSyncBatchOperation {
   }
 
   /** update bookmark tags */
-  private async executeUpdateTags(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
+  public async executeUpdateTags(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
     if (operation.type !== 'update_tags') return
 
     const { tagsToAdd, tagsToDelete } = operation.data as UpdateTagsData
@@ -178,7 +178,7 @@ export class DBSyncBatchOperation {
   }
 
   /** 关闭分享状态，因为开启需要去抢占分享码，故拆分 */
-  private async executeUpdateShare(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
+  public async executeUpdateShare(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
     if (operation.type !== 'update_share') return
 
     const { isEnable } = operation.data as UpdateShareData
@@ -195,7 +195,7 @@ export class DBSyncBatchOperation {
   }
 
   /** soft delete bookmark */
-  private async executeDeleteBookmark(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
+  public async executeDeleteBookmark(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
     if (operation.type !== 'delete_bookmark') return
 
     await tx.sr_user_bookmark.update({
