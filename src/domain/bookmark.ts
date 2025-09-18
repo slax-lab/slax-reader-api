@@ -848,7 +848,7 @@ export class BookmarkService {
           headers
         })
       )
-      .catch(async e => {
+      .catch(async (e: any) => {
         pushToken = ''
         console.log('fetch error', e)
         return new Response(null, { status: 500 })

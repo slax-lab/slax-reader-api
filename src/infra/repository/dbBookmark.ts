@@ -501,14 +501,16 @@ export class BookmarkRepo {
   }
 
   public async createBookmarkOverview(userId: number, bookmarkId: number, overview: string, content: string) {
-    return await this.prismaPg().sr_user_bookmark_overview.create({
-      data: {
+    return await this.prismaPg().sr_user_bookmark_overview.upsert({
+      where: { bookmark_id_user_id: { bookmark_id: bookmarkId, user_id: userId } },
+      create: {
         user_id: userId,
         bookmark_id: bookmarkId,
         overview: overview,
         content: content,
         created_at: new Date()
-      }
+      },
+      update: {}
     })
   }
 
