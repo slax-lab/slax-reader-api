@@ -708,20 +708,25 @@ export class BookmarkRepo {
 
   // 批量upsert
   public async upsertBookmarkTags(bmId: number, userId: number, tags: { id: number; tag_name: string }[]) {
+    const tagIds = tags.map(t => t.id)
+    const tagNames = tags.map(t => t.tag_name)
+
     return await this.prismaPg().$executeRaw`
-      INSERT INTO sr_user_bookmark_tag(user_id, bookmark_id ,tag_id, tag_name, created_at)
-      VALUES ${Prisma.join(tags.map(tag => Prisma.sql`(${userId}, ${bmId}, ${tag.id}, ${tag.tag_name}, ${new Date().toISOString()})`))}
-      ON CONFLICT(user_id, bookmark_id ,tag_id) DO NOTHING;
+      INSERT INTO sr_user_bookmark_tag(user_id, bookmark_id, tag_id, tag_name, created_at)
+      SELECT ${userId}, ${bmId}, tag_id, tag_name, NOW()
+      FROM UNNEST(${tagIds}::int[], ${tagNames}::text[]) AS t(tag_id, tag_name)
+      ON CONFLICT(user_id, bookmark_id, tag_id) DO NOTHING;
     `
   }
 
   // 批量插入且更新display接口
   public async updateUserTagsDisplay(userId: number, names: string[]) {
     return await this.prismaPg().$queryRaw<{ id: number; tag_name: string }[]>`
-      INSERT INTO sr_user_tag(user_id, tag_name, display) 
-      VALUES ${Prisma.join(names.map(name => Prisma.sql`(${userId}, ${name}, true)`))} 
+      INSERT INTO sr_user_tag(user_id, tag_name, display)
+      SELECT ${userId}, tag_name, true
+      FROM UNNEST(${names}::text[]) AS tag_name
       ON CONFLICT(user_id, tag_name) 
-      DO UPDATE SET display = true, created_at = ${new Date().toISOString()}
+      DO UPDATE SET display = true
       RETURNING id, tag_name;
     `
   }
