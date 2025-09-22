@@ -30,8 +30,7 @@ export class NotificationMessage {
 
   // 使用DO对象发送红点数量提醒
   public async sendReminderWithDO(userId: number, token: string, dObj: DurableObjectStub<SlaxWebSocketServer>) {
-    const res = await this.userRepo.getUserUnreadCount(userId)
-    const unreadCount = res?.[0]?.notification_count || 0
+    const unreadCount = await this.userRepo.getUserUnreadCount(userId)
     return await dObj.sendReminder(token, unreadCount)
   }
 
@@ -84,8 +83,7 @@ export class NotificationMessage {
     // 获取全部的在线设备列表
     const devices = await this.userRepo.getUserOnlineDevice(payload.user_id)
     console.log('device.length', devices.length)
-    const res = await this.userRepo.getUserUnreadCount(payload.user_id)
-    const unreadCount = res?.[0]?.notification_count || 0
+    const unreadCount = await this.userRepo.getUserUnreadCount(payload.user_id)
     const pushPromise = []
     for (const item of devices) {
       try {
@@ -116,7 +114,7 @@ export class NotificationMessage {
     const [devices, unreadCount] = await Promise.all([this.userRepo.getUserOnlineDevice(ctx.getUserId()), this.userRepo.getUserUnreadCount(ctx.getUserId())])
     for (const item of devices) {
       if (item.type === noticeType.WEBSOCKET) {
-        pushPromise.push(this.sendReminders(ctx.env, { id: item.id, data: item.data, unreadCount: unreadCount[0].notification_count }))
+        pushPromise.push(this.sendReminders(ctx.env, { id: item.id, data: item.data, unreadCount: unreadCount }))
       }
     }
     await Promise.all(pushPromise)

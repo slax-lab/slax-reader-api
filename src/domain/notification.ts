@@ -43,8 +43,7 @@ export class NotificationService {
 
   // 获取未读消息数量
   public async getUserUnreadCount(userId: number) {
-    const res = await this.userRepo.getUserUnreadCount(userId)
-    return Number(res[0].notification_count)
+    return await this.userRepo.getUserUnreadCount(userId)
   }
 
   // 增加在线设备

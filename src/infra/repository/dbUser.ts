@@ -191,11 +191,12 @@ export class UserRepo {
   }
 
   public async getUserUnreadCount(userId: number) {
-    return await this.prismaPg().$queryRaw<
+    const res = await this.prismaPg().$queryRaw<
       {
         notification_count: number
       }[]
     >`SELECT (SELECT count(1) FROM sr_user_notification WHERE user_id = u.id AND (u.last_read_at IS NULL OR created_at > u.last_read_at) AND is_read = false) as notification_count FROM sr_user u WHERE id = ${userId};`
+    return Number(res[0].notification_count || 0)
   }
 
   public async getUserNotificationList(userId: number, page: number, pageSize: number) {

@@ -158,7 +158,7 @@ export class MarkRepo {
   }
 
   async existsCommentMarkChild(bookmarkId: number, rootId: number) {
-    return await this.prismaPg().sr_bookmark_comment.count({
+    const res = await this.prismaPg().sr_bookmark_comment.count({
       where: {
         bookmark_id: bookmarkId,
         root_id: rootId,
@@ -168,6 +168,7 @@ export class MarkRepo {
       // 如果只有一条记录，则说明没有其他子评论，故只拿2条即可
       take: 2
     })
+    return Number(res || 0)
   }
 
   async updateCommentMarkDeleted(id: number) {
