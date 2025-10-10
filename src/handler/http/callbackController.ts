@@ -51,15 +51,21 @@ export class CallbackController {
       const action = ctx.callbackQuery?.data
       if (!action || !ctx.chatId || !ctx.msgId) return ctx.answerCallbackQuery()
 
-      const [command, page, tagId] = action.split('-')
+      const parts = action.split('-')
+      const command = parts[0]
+
       if (command === 'bookmark_list') {
-        const tagId = parseInt(command[1])
+        // callback data 格式: bookmark_list-{tagId}
+        const tagId = parseInt(parts[1])
         await tgSvc.showPage(ctx, ctx.chatId, ctx.msgId, 1, 10, tagId)
       } else if (command === 'prev' || command === 'next') {
-        const page = parseInt(command[1])
-        const tagId = parseInt(command[2])
+        // callback data 格式: prev-{tagId}-{page} 或 next-{tagId}-{page}
+        const tagId = parseInt(parts[1])
+        const page = parseInt(parts[2])
         await tgSvc.showPage(ctx, ctx.chatId, ctx.msgId, page, 10, tagId)
       }
+
+      await ctx.answerCallbackQuery()
     }
 
     bot.use(tgSvc.checkFromId.bind(tgSvc))
