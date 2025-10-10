@@ -1,6 +1,8 @@
 generator hyperdrive_client {
     provider        = "prisma-client-js"
-    previewFeatures = ["queryCompiler", "driverAdapters"]
+    engineType      = "client"
+    runtime         = "cloudflare"
+    previewFeatures = ["driverAdapters", "views"]
     output          = "../node_modules/@prisma/hyperdrive-client"
 }
 
