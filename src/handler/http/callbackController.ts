@@ -48,24 +48,7 @@ export class CallbackController {
 
     // 处理回调
     const handleCallbackQuery = async (ctx: Context) => {
-      const action = ctx.callbackQuery?.data
-      if (!action || !ctx.chatId || !ctx.msgId) return ctx.answerCallbackQuery()
-
-      const parts = action.split('-')
-      const command = parts[0]
-
-      if (command === 'bookmark_list') {
-        // callback data 格式: bookmark_list-{tagId}
-        const tagId = parseInt(parts[1])
-        await tgSvc.showPage(ctx, ctx.chatId, ctx.msgId, 1, 10, tagId)
-      } else if (command === 'prev' || command === 'next') {
-        // callback data 格式: prev-{tagId}-{page} 或 next-{tagId}-{page}
-        const tagId = parseInt(parts[1])
-        const page = parseInt(parts[2])
-        await tgSvc.showPage(ctx, ctx.chatId, ctx.msgId, page, 10, tagId)
-      }
-
-      await ctx.answerCallbackQuery()
+      await tgSvc.handlePaginationCallback(ctx)
     }
 
     bot.use(tgSvc.checkFromId.bind(tgSvc))

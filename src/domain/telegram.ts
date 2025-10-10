@@ -213,9 +213,12 @@ export class TelegramBotService {
       await this.showPage(ctx, ctx.chatId, ctx.msgId, 1, 10, tagId)
     } else if (['prev', 'next'].includes(command[0])) {
       if (command.length === 2) {
-        await this.showPage(ctx, ctx.chatId, ctx.msgId, parseInt(command[1]), 10, 0)
+        const page = parseInt(command[1])
+        await this.showPage(ctx, ctx.chatId, ctx.msgId, page, 10, 0)
       } else if (command.length === 3) {
-        await this.showPage(ctx, ctx.chatId, ctx.msgId, parseInt(command[2]), 10, parseInt(command[1]))
+        const tagId = parseInt(command[1])
+        const page = parseInt(command[2])
+        await this.showPage(ctx, ctx.chatId, ctx.msgId, page, 10, tagId)
       }
     }
     await ctx.answerCallbackQuery()
