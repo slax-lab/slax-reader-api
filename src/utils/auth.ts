@@ -1,5 +1,6 @@
 import { RegisterUserError, UnverifiedEmailError } from '../const/err'
 import { userLoginReq } from '../domain/user'
+import { AppleAuth } from './authLogin/authApple'
 import { GoogleAuth } from './authLogin/authGoogle'
 
 export interface SlaxAuthResult {
@@ -29,12 +30,48 @@ export class SlaxAuth {
     switch (req.type) {
       case 'google':
         return await this.loginWithGoogle(req)
+      case 'apple':
+        return await this.loginWithApple(req)
     }
     console.log(`auth ${req.type} result failed, unknow type ${req.type}`)
     throw RegisterUserError()
   }
 
-  private async loginWithGoogle(req: userLoginReq): Promise<SlaxAuthResult> {
-    return new GoogleAuth(this.env, req.platform).loginWithGoogle(req.code, req.redirect_uri)
+  public async loginWithGoogle(req: userLoginReq): Promise<SlaxAuthResult> {
+    const googleAuth = new GoogleAuth(this.env, req.platform)
+
+    if (req.platform === 'web') {
+      const tokenInfo = await googleAuth.getToken(req.code, req.redirect_uri)
+      req.code = tokenInfo.id_token
+    }
+
+    return await googleAuth.verifyGoogleToken(req.code)
+  }
+
+  public async loginWithApple(req: userLoginReq): Promise<SlaxAuthResult> {
+    const res = await new AppleAuth(this.env).loginWithApple(req.code, req.redirect_uri)
+
+    if (!res.email_verified) throw UnverifiedEmailError()
+
+    const emailVerified = res.email_verified === 'true' ? 'true' : 'false'
+    const userName = !!req.family_name ? `${req.given_name} ${req.family_name}` : undefined
+    const givenName = req.given_name || undefined
+    const familyName = req.family_name || undefined
+
+    return {
+      iss: res.iss,
+      sub: res.sub,
+      aud: res.aud,
+      iat: res.iat,
+      exp: res.exp,
+      azp: '',
+      email: res.email,
+      email_verified: emailVerified,
+      name: userName,
+      picture: '',
+      given_name: givenName,
+      family_name: familyName,
+      locale: 'en'
+    }
   }
 }

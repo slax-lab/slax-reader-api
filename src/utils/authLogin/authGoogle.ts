@@ -41,16 +41,18 @@ class GoogleAuth {
         this.clientSecret = ''
         break
       case 'android':
-        this.clientId = env.GOOGLE_CLIENT_ID_TEXT
-        this.clientSecret = env.GOOGLE_CLIENT_SECRET_TEXT
+        this.clientId = env.GOOGLE_ANDROID_CLIENT_ID_TEXT
+        this.clientSecret = ''
+        break
       case 'web':
         this.clientId = env.GOOGLE_CLIENT_ID_TEXT
         this.clientSecret = env.GOOGLE_CLIENT_SECRET_TEXT
+        break
       default:
         this.clientId = env.GOOGLE_CLIENT_ID_TEXT
         this.clientSecret = env.GOOGLE_CLIENT_SECRET_TEXT
     }
-    this.authPrefix = env.GOOGLE_AUTH_PREFIX.length > 0 ? env.GOOGLE_AUTH_PREFIX : GoogleAuth.GOOGLE_AUTH_PREFIX
+    this.authPrefix = env.GOOGLE_AUTH_PREFIX ?? GoogleAuth.GOOGLE_AUTH_PREFIX
   }
 
   verifyGoogleToken = async (idToken: string): Promise<tokenInfo> => {
@@ -72,6 +74,7 @@ class GoogleAuth {
     }
 
     if (data.aud !== this.clientId) {
+      console.error(`[GoogleAuth] aud mismatch! Expected clientId: ${this.clientId}, but received aud: ${data.aud}`)
       throw GoogleSSOAudError()
     }
 
@@ -101,14 +104,16 @@ class GoogleAuth {
 
       const result = await res.json<codeInfo>()
       if (!result) {
-        throw GoogleSSOAudError()
+        console.error(`[GoogleAuth] getToken returned empty result`)
+        throw GoogleSSOError()
       }
       if (result.error) {
-        throw GoogleSSOAudError()
+        console.error(`[GoogleAuth] getToken error from Google: ${result.error}, description: ${result.error_description}`)
+        throw GoogleSSOError()
       }
       return result
     } catch (err) {
-      console.error(`getToken error: ${err}`)
+      console.error(`[GoogleAuth] getToken exception: ${err}`)
       throw GoogleSSOError()
     }
   }
