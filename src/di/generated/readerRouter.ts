@@ -121,6 +121,10 @@ export function getRouter(container: Container) {
     const controller = container.resolve(BookmarkController)
     return await controller.handleUserGetBookmarkBriefRequest(ctx, req)
   })
+  router.post('/v1/bookmark/content', async (req: Request, ctx: ContextManager) => {
+    const controller = container.resolve(BookmarkController)
+    return await controller.handleUserBookmarkContent(ctx, req)
+  })
   router.all('/callback/telegram', async (req: Request, ctx: ContextManager) => {
     const controller = container.resolve(CallbackController)
     return await controller.handlerTelegramCallback(ctx, req)

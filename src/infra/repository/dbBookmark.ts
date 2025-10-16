@@ -502,6 +502,7 @@ export class BookmarkRepo {
 
   public async createBookmarkOverview(userId: number, bookmarkId: number, overview: string, content: string) {
     return await this.prismaPg().sr_user_bookmark_overview.upsert({
+      // @ts-ignore
       where: { bookmark_id_user_id: { bookmark_id: bookmarkId, user_id: userId } },
       create: {
         user_id: userId,
@@ -512,6 +513,12 @@ export class BookmarkRepo {
       },
       update: {}
     })
+  }
+
+  public async getBookmarkListByUid(userId: number, uid: string) {
+    return await this.prismaPg().$queryRaw<{ content_key: string; uuid: string }[]>(Prisma.sql`
+     SELECT sb.content_key,sub.uuid  FROM sr_bookmark sb
+     INNER JOIN (SELECT bookmark_id, uuid FROM sr_user_bookmark WHERE user_id = ${userId} AND uuid = ${uid}) sub ON sb.id = sub.bookmark_id;`)
   }
 
   public async getUserBookmarkOverview(userId: number, bookmarkId: number) {
