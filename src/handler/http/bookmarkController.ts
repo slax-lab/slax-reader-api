@@ -374,4 +374,20 @@ export class BookmarkController {
     const res = await this.bookmarkOrchestrator.getBookmarkBriefInfo(ctx, bmId)
     return Successed(res)
   }
+
+  @Post('/content')
+  public async handleUserBookmarkContent(ctx: ContextManager, request: Request) {
+    const req = await RequestUtils.json<{ bookmark_uid: string }>(request)
+    if (!req || !req.bookmark_uid) return Failed(ErrorParam())
+
+    const stream = await this.bookmarkService.getStreamBookmarkContent(ctx, req.bookmark_uid)
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Transfer-Encoding': 'chunked',
+        'Cache-Control': 'no-cache'
+      }
+    })
+  }
 }
