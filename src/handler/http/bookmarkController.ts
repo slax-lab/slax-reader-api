@@ -238,7 +238,7 @@ export class BookmarkController {
     const params = await RequestUtils.query<{ bookmark_id?: number; share_code?: string; cb_id?: number; collection_code?: string }>(request)
     if (!params || (!params.bookmark_id && !params.share_code && !(params.cb_id && params.collection_code))) return Failed(ErrorParam())
 
-    const bmId = await this.bookmarkService.getBookmarkId(ctx, params.bookmark_id, params.share_code, params.cb_id)
+    const bmId = await this.bookmarkService.getBookmarkId(ctx, { bmId: params.bookmark_id, shareCode: params.share_code, cbId: params.cb_id })
     if (!bmId || bmId < 1) return Failed(ErrorParam())
 
     const res = await this.bookmarkService.getBookmarkSummaries(ctx, bmId)

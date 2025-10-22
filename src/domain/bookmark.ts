@@ -595,7 +595,8 @@ export class BookmarkService {
   }
 
   /** 获取书签ID */
-  public async getBookmarkId(ctx: ContextManager, bmId?: number, shareCode?: string, cbId?: number) {
+  public async getBookmarkId(ctx: ContextManager, params: { bmId?: number; shareCode?: string; cbId?: number; bmUId?: string }) {
+    const { bmId, shareCode, cbId, bmUId } = params
     if (bmId) return ctx.hashIds.decodeId(bmId)
 
     if (shareCode) {
@@ -608,6 +609,12 @@ export class BookmarkService {
       if (!ubm) return 0
 
       return ubm?.bookmark_id
+    }
+
+    if (bmUId) {
+      const bm = await this.bookmarkRepo.getUserBookmarkByUId(bmUId, ctx.getUserId())
+      if (!bm) return 0
+      return bm.id
     }
 
     return 0
@@ -856,7 +863,7 @@ export class BookmarkService {
   }
 
   public async getUserBookmarkSummary(ctx: ContextManager, bmId?: number, shareCode?: string, cbId?: number) {
-    const bookmarkId = await this.getBookmarkId(ctx, bmId, shareCode, cbId)
+    const bookmarkId = await this.getBookmarkId(ctx, { bmId, shareCode, cbId })
     if (!bookmarkId || bookmarkId < 1) throw ErrorParam()
 
     return await this.bookmarkRepo.getUserBookmarkSummary(bookmarkId, ctx.getUserId(), ctx.get('ai_lang'))
@@ -893,7 +900,7 @@ export class BookmarkService {
       return { title, content, bmId: 0 }
     }
 
-    const bookmarkId = await this.getBookmarkId(ctx, bmId, shareCode, cbId)
+    const bookmarkId = await this.getBookmarkId(ctx, { bmId, shareCode, cbId })
     if (!bookmarkId || bookmarkId < 1) throw ErrorParam()
 
     const bookmark = await this.getBookmarkById(bookmarkId)
