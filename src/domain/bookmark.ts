@@ -786,6 +786,10 @@ export class BookmarkService {
     return await this.bookmarkRepo.getUserBookmark(bmId, userId)
   }
 
+  public async getUserBookmarkByUUid(uid: string, userId: number) {
+    return await this.bookmarkRepo.getUserBookmarkByUId(uid, userId)
+  }
+
   public async updateBookmark(bmId: number, info: bookmarkParsePO) {
     return await this.bookmarkRepo.updateBookmark(bmId, info)
   }
