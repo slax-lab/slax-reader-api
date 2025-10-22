@@ -71,7 +71,7 @@ export class UserController {
     const req = await RequestUtils.json<{ bookmark_id?: number; share_code?: string; content: string; type: reportType }>(request)
     if (!req) return Failed(ErrorParam())
 
-    const bookmark_id = await this.bookmarkService.getBookmarkId(ctx, req.bookmark_id, req.share_code)
+    const bookmark_id = await this.bookmarkService.getBookmarkId(ctx, { bmId: req.bookmark_id, shareCode: req.share_code })
     if (!bookmark_id || bookmark_id < 1) return Failed(ErrorParam())
 
     const { content, type } = req
