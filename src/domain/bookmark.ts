@@ -614,7 +614,7 @@ export class BookmarkService {
     if (bmUId) {
       const bm = await this.bookmarkRepo.getUserBookmarkByUId(bmUId, ctx.getUserId())
       if (!bm) return 0
-      return bm.id
+      return bm.bookmark_id
     }
 
     return 0
