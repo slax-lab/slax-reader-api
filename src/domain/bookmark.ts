@@ -952,9 +952,6 @@ export class BookmarkService {
   }
 
   public async updateUserBookmarkCreateAt(bmId: number, userId: number, createdAt: Date) {
-    const userBookmark = await this.bookmarkRepo.getUserBookmark(bmId, userId)
-    if (!userBookmark) return
-
-    await this.bookmarkRepo.updateUserBookmarkCreateTime(userBookmark.id, createdAt)
+    await this.bookmarkRepo.updateUserBookmarkCreateTime(bmId, userId, createdAt)
   }
 }
