@@ -950,4 +950,11 @@ export class BookmarkService {
 
     return stream
   }
+
+  public async updateUserBookmarkCreateAt(bmId: number, userId: number, createdAt: Date) {
+    const userBookmark = await this.bookmarkRepo.getUserBookmark(bmId, userId)
+    if (!userBookmark) return
+
+    await this.bookmarkRepo.updateUserBookmarkCreateTime(userBookmark.id, createdAt)
+  }
 }

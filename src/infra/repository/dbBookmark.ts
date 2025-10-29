@@ -350,6 +350,10 @@ export class BookmarkRepo {
     return await this.prismaPg().sr_user_bookmark.update({ where: { id }, data: { bookmark_id: bookmarkId, updated_at: new Date() } })
   }
 
+  public async updateUserBookmarkCreateTime(id: number, createdAt: Date) {
+    return await this.prismaPg().sr_user_bookmark.update({ where: { id }, data: { created_at: createdAt } })
+  }
+
   public async getBookmarkShareByBookmarkId(bmId: number, userId: number) {
     return await this.prismaPg().sr_bookmark_share.findFirst({ where: { bookmark_id: bmId, user_id: userId } })
   }
