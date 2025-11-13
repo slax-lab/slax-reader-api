@@ -13,7 +13,7 @@ export interface SyncChangeItem {
   table: string
   id: string
   op: SyncExecOperation
-  data: Record<string, string>
+  data?: Record<string, string>
   preData?: Record<string, string>
 }
 
@@ -153,6 +153,8 @@ export class SyncOrchestrator {
 
   /** user bookmark change */
   public processUserBookmarkChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
+    if (!change.data) return
+
     // soft delete bookmark
     if (change.data.hasOwnProperty('deleted_at')) {
       operations.push({
@@ -221,6 +223,8 @@ export class SyncOrchestrator {
 
   /** update tags */
   public processTagsChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
+    if (!change.data) return
+
     const tags = JSON.parse(change.data['metadata.tags'].replaceAll('\\\\', '')) as string[]
     const preTags = change.preData?.['metadata.tags'] ? (JSON.parse(change.preData['metadata.tags'].replaceAll('\\\\', '')) as string[]) : []
     const newTags = tags.filter(tag => !preTags.includes(tag))
@@ -241,6 +245,8 @@ export class SyncOrchestrator {
 
   /** update share status */
   public processShareChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
+    if (!change.data) return
+
     const share = JSON.parse(change.data['metadata.share.is_enable'].replaceAll('\\\\', ''))
 
     if (share.is_enable !== undefined) {
@@ -257,6 +263,8 @@ export class SyncOrchestrator {
 
   /** create user tag */
   public processUserTagChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
+    if (!change.data) return
+
     const tagName = change.data['tag_name']
     if (!tagName) throw SyncTableTagNameError()
 
