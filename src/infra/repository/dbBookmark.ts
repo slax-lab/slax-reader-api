@@ -252,11 +252,11 @@ export class BookmarkRepo {
 
   public async listUserStarBookmarksByTargetUser(userId: number, offset: number, limit: number, subscribeEndTime: Date) {
     return await this.prismaPg().sr_user_bookmark.findMany({
-      where: { user_id: userId, deleted_at: null, is_starred: true, updated_at: { lte: subscribeEndTime } },
+      where: { user_id: userId, deleted_at: null, is_starred: true, created_at: { lte: subscribeEndTime } },
       skip: offset,
       take: limit,
       include: { bookmark: true },
-      orderBy: { updated_at: 'desc' }
+      orderBy: { created_at: 'desc' }
     })
   }
 
