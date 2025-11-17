@@ -252,17 +252,17 @@ export class BookmarkRepo {
 
   public async listUserStarBookmarksByTargetUser(userId: number, offset: number, limit: number, subscribeEndTime: Date) {
     return await this.prismaPg().sr_user_bookmark.findMany({
-      where: { user_id: userId, deleted_at: null, is_starred: true, updated_at: { lte: subscribeEndTime } },
+      where: { user_id: userId, deleted_at: null, is_starred: true, created_at: { lte: subscribeEndTime } },
       skip: offset,
       take: limit,
       include: { bookmark: true },
-      orderBy: { updated_at: 'desc' }
+      orderBy: { created_at: 'desc' }
     })
   }
 
   public async listUserBookmarks(userId: number, offset: number, limit: number, filter: string) {
     let where: any = { user_id: userId, deleted_at: null }
-    let orderBy: any = { updated_at: 'desc' }
+    let orderBy: any = { created_at: 'desc' }
 
     if (['read', 'unread'].includes(filter)) {
       where.is_read = filter === 'read'
