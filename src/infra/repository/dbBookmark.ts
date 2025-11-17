@@ -262,7 +262,7 @@ export class BookmarkRepo {
 
   public async listUserBookmarks(userId: number, offset: number, limit: number, filter: string) {
     let where: any = { user_id: userId, deleted_at: null }
-    let orderBy: any = { updated_at: 'desc' }
+    let orderBy: any = { created_at: 'desc' }
 
     if (['read', 'unread'].includes(filter)) {
       where.is_read = filter === 'read'
