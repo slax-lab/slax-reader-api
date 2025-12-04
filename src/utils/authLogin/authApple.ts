@@ -183,9 +183,15 @@ export class AppleAuth {
     try {
       const clientRes = await this.getClientSecret()
 
+      console.log('clientRes:', clientRes)
+
       const tokenResp = await this.getAuthorizationToken(code, clientRes, redirectUri)
 
+      console.log('tokenResp:', tokenResp)
+
       const authResp = await this.verifyIdToken(tokenResp.id_token)
+
+      console.log('authResp:', authResp)
 
       return authResp as AppleIdTokenType
     } catch (err) {
