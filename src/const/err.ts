@@ -117,7 +117,8 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.BOOKMARK_CHANGES_SYNC_TOO_OLD]: '书签更改同步过旧',
     [ErrorName.BOOKMARK_OVERVIEW_CONTENT_ERROR]: '书签概览内容错误',
     [ErrorName.SYNC_TABLE_RULE_ERROR]: '同步表规则错误',
-    [ErrorName.SYNC_TABLE_TAG_NAME_ERROR]: '同步表标签名称错误'
+    [ErrorName.SYNC_TABLE_TAG_NAME_ERROR]: '同步表标签名称错误',
+    [ErrorName.UNVERIFIED_EMAIL]: 'Apple 登录失败，邮箱未验证'
   },
   en: {
     [ErrorName.NOT_FOUND]: 'Resource not found',
@@ -182,7 +183,8 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.BOOKMARK_CHANGES_SYNC_TOO_OLD]: 'Bookmark changes sync too old',
     [ErrorName.BOOKMARK_OVERVIEW_CONTENT_ERROR]: 'Bookmark overview content error',
     [ErrorName.SYNC_TABLE_RULE_ERROR]: 'Sync table rule error',
-    [ErrorName.SYNC_TABLE_TAG_NAME_ERROR]: 'Sync table tag name error'
+    [ErrorName.SYNC_TABLE_TAG_NAME_ERROR]: 'Sync table tag name error',
+    [ErrorName.UNVERIFIED_EMAIL]: 'Apple login failed, email not verified'
   },
   es: {
     [ErrorName.NOT_FOUND]: 'Recurso no encontrado',

@@ -50,7 +50,8 @@ export class SlaxAuth {
 
   public async loginWithApple(req: userLoginReq): Promise<SlaxAuthResult> {
     const res = await new AppleAuth(this.env).loginWithApple(req.code, req.redirect_uri)
-
+    console.log('loginWithApple result:', res)
+    
     if (!res.email_verified) throw UnverifiedEmailError()
 
     const emailVerified = res.email_verified === 'true' ? 'true' : 'false'
