@@ -862,8 +862,8 @@ export class BookmarkService {
       })
   }
 
-  public async getUserBookmarkSummary(ctx: ContextManager, bmId?: number, shareCode?: string, cbId?: number) {
-    const bookmarkId = await this.getBookmarkId(ctx, { bmId, shareCode, cbId })
+  public async getUserBookmarkSummary(ctx: ContextManager, params: { bmId?: number; shareCode?: string; cbId?: number; bmUId?: string }) {
+    const bookmarkId = await this.getBookmarkId(ctx, { bmId: params.bmId, shareCode: params.shareCode, cbId: params.cbId, bmUId: params.bmUId })
     if (!bookmarkId || bookmarkId < 1) throw ErrorParam()
 
     return await this.bookmarkRepo.getUserBookmarkSummary(bookmarkId, ctx.getUserId(), ctx.get('ai_lang'))

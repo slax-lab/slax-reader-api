@@ -53,7 +53,12 @@ export class AigcController {
     ctx.set('continent', request.cf?.continent || '')
 
     if (!req.force && req.bm_id) {
-      const summary = await this.bookmarkService.getUserBookmarkSummary(ctx, req.bm_id, req.share_code, req.cb_id)
+      const summary = await this.bookmarkService.getUserBookmarkSummary(ctx, {
+        bmId: req.bm_id,
+        shareCode: req.share_code,
+        cbId: req.cb_id
+      })
+
       if (summary) {
         await writable.getWriter().write(summary)
         return new Response(readable, {
