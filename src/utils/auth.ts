@@ -55,6 +55,7 @@ export class SlaxAuth {
     const userName = !!req.family_name ? `${req.given_name} ${req.family_name}` : undefined
     const givenName = req.given_name || undefined
     const familyName = req.family_name || undefined
+    const email = `${res.sub}@appleid.apple.com`
 
     return {
       iss: res.iss,
@@ -63,7 +64,7 @@ export class SlaxAuth {
       iat: res.iat,
       exp: res.exp,
       azp: '',
-      email: res.email,
+      email,
       email_verified: 'true',
       name: userName,
       picture: '',
