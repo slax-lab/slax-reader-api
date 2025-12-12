@@ -62,71 +62,6 @@ export class AppleAuth {
       .replace(/(.{64})/g, '$1\n')
   }
 
-  private base64UrlToUint8Array(base64Url: string): Uint8Array {
-    const padding = '='.repeat((4 - (base64Url.length % 4)) % 4)
-    const base64 = (base64Url + padding).replace(/\-/g, '+').replace(/_/g, '/')
-    const rawData = atob(base64)
-    const outputArray = new Uint8Array(rawData.length)
-
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i)
-    }
-    return outputArray
-  }
-
-  private async exportApplePublicKey(data: ApplePublicResp): Promise<ArrayBuffer | JsonWebKey> {
-    const modulus = this.base64UrlToUint8Array(data.keys[0].n)
-    const exponent = this.base64UrlToUint8Array(data.keys[0].e)
-    const publicKey = await crypto.subtle.importKey(
-      'jwk',
-      {
-        kty: 'RSA',
-        n: btoa(String.fromCharCode(...modulus)),
-        e: btoa(String.fromCharCode(...exponent)),
-        alg: 'RS256',
-        ext: true
-      },
-      {
-        name: 'RSASSA-PKCS1-v1_5',
-        hash: { name: 'SHA-256' }
-      },
-      true,
-      ['verify']
-    )
-    return await crypto.subtle.exportKey('jwk', publicKey)
-  }
-
-  private async getApplePublicKeyFromApple(): Promise<ApplePublicResp> {
-    const url = new URL(AppleAuth.ENDPOINT_URL)
-    url.pathname = '/auth/keys'
-
-    const resp = (await fetch(url.toString(), {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })) as Response
-    if (!resp.ok) throw RequestAppleAuthFail()
-
-    const data = await resp.json<ApplePublicResp>()
-    if (!data.keys) throw RequestAppleAuthFail()
-
-    return data
-  }
-
-  private async getApplePublicKey(): Promise<string> {
-    const key = await this.kv.get(AppleAuth.applePublicKey)
-    if (key) return key
-
-    const data = await this.getApplePublicKeyFromApple()
-
-    const keyString = await this.exportApplePublicKey(data)
-    const saveKeyString = JSON.stringify(keyString)
-    await this.kv.put(AppleAuth.applePublicKey, saveKeyString, { expirationTtl: 86400 * 30 })
-
-    return saveKeyString
-  }
-
   //  get client secret
   private async getClientSecret(): Promise<string> {
     const header = { alg: AppleAuth.algorithm, kid: this.keyId }
@@ -179,7 +114,7 @@ export class AppleAuth {
   }
 
   //  Sign in with Apple
-  async loginWithApple(code: string, redirectUri?: string): Promise<AppleIdTokenType> {
+  async loginWithApple(code: string, idToken: string, redirectUri?: string): Promise<AppleIdTokenType> {
     try {
       const clientRes = await this.getClientSecret()
 
@@ -187,7 +122,14 @@ export class AppleAuth {
 
       const authResp = await this.verifyIdToken(tokenResp.id_token)
 
-      return authResp as AppleIdTokenType
+      const userInfo = await this.verifyIdToken(idToken)
+
+      if (userInfo.sub !== authResp.sub) {
+        console.error('loginWithApple sub mismatch:', userInfo.sub, authResp.sub)
+        throw RequestAppleAuthFail()
+      }
+
+      return userInfo
     } catch (err) {
       console.error('loginWithApple error:', err)
       throw RequestAppleAuthFail()

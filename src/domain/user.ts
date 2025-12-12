@@ -89,6 +89,7 @@ export interface userLoginReq {
   family_name?: string
   aff_code?: string
   siteverify_code?: string
+  id_token?: string
 }
 
 export interface userLoginResp {
