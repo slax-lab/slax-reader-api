@@ -200,7 +200,7 @@ model sr_bookmark_comment {
 
     metadata Json @default("{}")
 
-    @@unique([user_bookmark_uuid])
+    @@index([user_bookmark_uuid])
     @@index([user_id, created_at, is_deleted])
     @@index([bookmark_id, root_id, is_deleted])
     @@index([bookmark_id, type, is_deleted])
