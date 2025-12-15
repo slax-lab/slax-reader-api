@@ -214,6 +214,7 @@ export class MarkService {
     // 创建实体
     const res = await this.markRepo.create({
       user_bookmark_id: userBookmark.id,
+      user_bookmark_uuid: userBookmark.uuid,
       user_id: ctx.getUserId(),
       type: data.type,
       source: data.source,

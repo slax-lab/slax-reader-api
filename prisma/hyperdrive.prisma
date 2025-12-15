@@ -170,6 +170,8 @@ model sr_bookmark_comment {
     id   Int    @id @default(autoincrement())
     uuid String @unique @default(dbgenerated("gen_random_uuid()"))
 
+    user_bookmark_uuid String @default("")
+
     user_id     Int @default(0)
     bookmark_id Int @default(0)
     // 1- 划线 2- 评论 3- 评论回复
@@ -198,6 +200,7 @@ model sr_bookmark_comment {
 
     metadata Json @default("{}")
 
+    @@unique([user_bookmark_uuid])
     @@index([user_id, created_at, is_deleted])
     @@index([bookmark_id, root_id, is_deleted])
     @@index([bookmark_id, type, is_deleted])

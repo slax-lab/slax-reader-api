@@ -23,7 +23,8 @@ export interface markXPathItem {
 export interface markPO {
   id?: number
   user_id?: number
-  user_bookmark_id?: number
+  user_bookmark_id: number
+  user_bookmark_uuid: string
   // 1- 划线 2- 评论 3- 回复评论
   type: markType
   source: markXPathItem[] | number
@@ -90,6 +91,7 @@ export class MarkRepo {
       data: {
         user_id: data.user_id,
         bookmark_id: data.user_bookmark_id,
+        user_bookmark_uuid: data.user_bookmark_uuid || '',
         type: data.type,
         source: JSON.stringify(data.source),
         comment: data.comment,
