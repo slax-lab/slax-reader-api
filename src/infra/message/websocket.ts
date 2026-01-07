@@ -31,22 +31,25 @@ export class SlaxWebSocketServer extends DurableObject {
   ) {
     super(state, env)
 
-    state.getWebSockets().forEach(ws => {
-      const meta = ws.deserializeAttachment() as SocketSerializeMetaInfo
-      if (!meta) {
-        return
-      }
+    const sockets = state.getWebSockets()
+    if (!!sockets && sockets.length > 0) {
+      sockets.forEach(ws => {
+        if (!ws) return
+        const meta = ws.deserializeAttachment() as SocketSerializeMetaInfo
+        if (!meta) return
 
-      if (meta.connectType === 'extensions') {
-        if (!this.extensionSession.has(meta.userId.toString())) {
-          this.extensionSession.set(meta.userId.toString(), new Set())
+        if (meta.connectType === 'extensions') {
+          if (!this.extensionSession.has(meta.userId.toString())) {
+            this.extensionSession.set(meta.userId.toString(), new Set())
+          }
+
+          this.extensionSession.get(meta.userId.toString())?.add(ws)
+        } else {
+          this.sessions.set(meta.uuid, ws)
         }
+      })
+    }
 
-        this.extensionSession.get(meta.userId.toString())?.add(ws)
-      } else {
-        this.sessions.set(meta.uuid, ws)
-      }
-    })
     this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'))
   }
 
@@ -85,6 +88,10 @@ export class SlaxWebSocketServer extends DurableObject {
   }
 
   async sendReminder(token: string, unreadCount: number) {
+    if (!this.sessions || this.sessions == null || this.sessions.size === 0) {
+      console.log('no websocket sessions')
+      return false
+    }
     const ws = this.sessions.get(token)
     if (!ws) {
       console.log('websocket not found', token)
@@ -100,17 +107,21 @@ export class SlaxWebSocketServer extends DurableObject {
   }
 
   async sendBookmarkChange(changelog: BookmarkChangeVO) {
-    const { user_id, ...data } = changelog
-    const wsSet = this.extensionSession.get(user_id.toString())
+    try {
+      const { user_id, ...data } = changelog
+      const wsSet = this.extensionSession.get(user_id.toString())
 
-    wsSet?.forEach(ws => {
-      try {
-        ws.send(`${JSON.stringify({ type: 'bookmark_changes', data })}`)
-      } catch (e) {
-        ws.close(1006, 'bye~')
-        this.removeSocket(ws)
-      }
-    })
+      wsSet?.forEach(ws => {
+        try {
+          ws.send(`${JSON.stringify({ type: 'bookmark_changes', data })}`)
+        } catch (e) {
+          ws.close(1006, 'bye~')
+          this.removeSocket(ws)
+        }
+      })
+    } catch (e) {
+      console.log('sendBookmarkChange error', e)
+    }
   }
 
   async webSocketMessage(ws: WebSocket, message: string) {}
