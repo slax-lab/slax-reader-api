@@ -915,39 +915,19 @@ export class BookmarkService {
     return { title: bookmark.title, content: body, bmId: bookmarkId }
   }
 
-  public async getStreamBookmarkContent(ctx: ContextManager, bookmarkUids: string): Promise<ReadableStream> {
+  public async getStreamBookmarkContent(ctx: ContextManager, bookmarkUids: string): Promise<ReadableStream | null> {
     const bookmarks = await this.bookmarkRepo.getBookmarkListByUid(ctx.getUserId(), bookmarkUids)
 
-    const stream = new ReadableStream({
-      start: async controller => {
-        try {
-          if (!bookmarks || bookmarks.length < 1 || !bookmarks[0].content_key) {
-            controller.close()
-            return
-          }
+    if (!bookmarks || bookmarks.length < 1 || !bookmarks[0].content_key) {
+      return null
+    }
 
-          try {
-            const r2Object = await this.bucket().R2Bucket.get(bookmarks[0].content_key)
-            if (r2Object && r2Object.body) {
-              const reader = r2Object.body.getReader()
-              while (true) {
-                const { done, value } = await reader.read()
-                if (done) break
-                controller.enqueue(value)
-              }
-            }
-          } catch (error) {
-            console.error(`Failed to get content for bookmark ${bookmarks[0].uuid}:`, error)
-          }
+    const r2Object = await this.bucket().R2Bucket.get(bookmarks[0].content_key)
 
-          controller.close()
-        } catch (error) {
-          console.error('Stream error:', error)
-          controller.error(error)
-        }
-      }
-    })
+    if (!r2Object || !r2Object.body) {
+      return null
+    }
 
-    return stream
+    return r2Object.body
   }
 }
