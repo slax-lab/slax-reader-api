@@ -9,7 +9,6 @@ generator hyperdrive_client {
 datasource hyperdrive {
     provider     = "postgresql"
     relationMode = "prisma"
-    url          = env("HYPERDRIVE_DATABASE_URL")
 }
 
 model sr_user {
