@@ -13,29 +13,30 @@ export class Hashid {
   }
 
   public decodeId(hash: number): number {
-    const decoded = this.hashids.decode(this.numberToString(hash))
-    return Number(decoded[0]) || 0
+    try {
+      const decoded = this.hashids.decode(this.numberToString(hash))
+      return Number(decoded[0])
+    } catch (error) {
+      console.log(`hashids decode error: ${error}, raw hash: ${hash}`)
+      return 0
+    }
   }
 
   private stringToNumber(str: string): number {
     let result = 0
-    const len = str.length
-    for (let i = 0; i < len; i++) {
-      result = (result << 8) + str.charCodeAt(i)
+    for (let i = 0; i < str.length; i++) {
+      result = result * 256 + str.charCodeAt(i)
     }
     return result
   }
 
   private numberToString(num: number): string {
-    if (num === 0) return ''
-
-    const chars: number[] = []
+    let str = ''
     while (num > 0) {
-      chars.push(num % 256)
+      str = String.fromCharCode(num % 256) + str
       num = Math.floor(num / 256)
     }
-
-    return String.fromCharCode(...chars.reverse())
+    return str
   }
 
   private readonly chatset = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
