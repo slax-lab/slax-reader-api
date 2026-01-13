@@ -38,10 +38,10 @@ export interface AppleKey {
 }
 
 export class AppleAuth {
-  private kv: KVNamespace
   private keyId: string
   private teamId: string
   private privateKey: string
+  private clientId: string
 
   static algorithm = 'ES256'
   static clientSecretKey = 'apple_client_secret'
@@ -49,7 +49,7 @@ export class AppleAuth {
   static ENDPOINT_URL = 'https://appleid.apple.com'
 
   constructor(env: Env) {
-    this.kv = env.KV
+    this.clientId = env.APPLE_CLIENT_ID
     this.keyId = env.APPLE_SIGN_KEY_ID
     this.privateKey = env.APPLE_SIGN_AUTH_KEY
     this.teamId = env.APPLE_SIGN_TEAM_ID
@@ -113,10 +113,11 @@ export class AppleAuth {
 
   //  Sign in with Apple
   async loginWithApple(code: string, idToken: string, clientId: string, redirectUri?: string): Promise<AppleIdTokenType> {
+    const appleClientId = clientId || this.clientId
     try {
-      const clientRes = await this.getClientSecret(clientId)
+      const clientRes = await this.getClientSecret(appleClientId)
 
-      const tokenResp = await this.getAuthorizationToken(code, clientId, clientRes, redirectUri)
+      const tokenResp = await this.getAuthorizationToken(code, appleClientId, clientRes, redirectUri)
 
       const authResp = await this.verifyIdToken(tokenResp.id_token)
 
