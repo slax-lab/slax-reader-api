@@ -40,7 +40,6 @@ export interface AppleKey {
 export class AppleAuth {
   private kv: KVNamespace
   private keyId: string
-  private clientId: string
   private teamId: string
   private privateKey: string
 
@@ -53,7 +52,6 @@ export class AppleAuth {
     this.kv = env.KV
     this.keyId = env.APPLE_SIGN_KEY_ID
     this.privateKey = env.APPLE_SIGN_AUTH_KEY
-    this.clientId = env.APPLE_SIGN_CLIENT_ID
     this.teamId = env.APPLE_SIGN_TEAM_ID
     this.privateKey = this.privateKey
       .replace(/\\n/g, '')
@@ -63,7 +61,7 @@ export class AppleAuth {
   }
 
   //  get client secret
-  private async getClientSecret(): Promise<string> {
+  private async getClientSecret(clientId: string): Promise<string> {
     const header = { alg: AppleAuth.algorithm, kid: this.keyId }
     const privateKey = await importPKCS8(this.privateKey, 'ES256')
 
@@ -72,17 +70,17 @@ export class AppleAuth {
       .setIssuer(this.teamId)
       .setExpirationTime('170days')
       .setIssuedAt()
-      .setSubject(this.clientId)
+      .setSubject(clientId)
       .setAudience(AppleAuth.ENDPOINT_URL)
       .sign(privateKey)
   }
 
-  private async getAuthorizationToken(code: string, clientSecret: string, redirectUri?: string): Promise<AppleAuthorizationTokenResponseType> {
+  private async getAuthorizationToken(code: string, clientId: string, clientSecret: string, redirectUri?: string): Promise<AppleAuthorizationTokenResponseType> {
     const url = new URL(AppleAuth.ENDPOINT_URL)
     url.pathname = '/auth/token'
 
     const params = new URLSearchParams()
-    params.append('client_id', this.clientId)
+    params.append('client_id', clientId)
     params.append('client_secret', clientSecret)
     params.append('code', code)
     params.append('grant_type', 'authorization_code')
@@ -114,11 +112,11 @@ export class AppleAuth {
   }
 
   //  Sign in with Apple
-  async loginWithApple(code: string, idToken: string, redirectUri?: string): Promise<AppleIdTokenType> {
+  async loginWithApple(code: string, idToken: string, clientId: string, redirectUri?: string): Promise<AppleIdTokenType> {
     try {
-      const clientRes = await this.getClientSecret()
+      const clientRes = await this.getClientSecret(clientId)
 
-      const tokenResp = await this.getAuthorizationToken(code, clientRes, redirectUri)
+      const tokenResp = await this.getAuthorizationToken(code, clientId, clientRes, redirectUri)
 
       const authResp = await this.verifyIdToken(tokenResp.id_token)
 

@@ -90,6 +90,7 @@ export interface userLoginReq {
   aff_code?: string
   siteverify_code?: string
   id_token?: string
+  client_id?: string
 }
 
 export interface userLoginResp {
@@ -118,6 +119,13 @@ export class UserService {
   public async userLogin(ctx: ContextManager, request: Request): Promise<userLoginResp> {
     const req = await RequestUtils.json<userLoginReq>(request)
     const authRes = await new SlaxAuth(ctx.env).login(req)
+
+    if (req.type === 'apple' && authRes.sub && authRes.email.endsWith('@appleid.apple.com')) {
+      const platformBind = await this.userRepo.getUserByPlatform('apple', authRes.sub)
+      if (platformBind && platformBind.user_name) {
+        authRes.email = platformBind.user_name
+      }
+    }
 
     // get user info by email
     const findRes = await this.userRepo.getInfoByEmail(authRes.email)
@@ -151,6 +159,10 @@ export class UserService {
     // sign token
     const signUserId = new Hashid(ctx.env).encodeId(regInfo.id)
     const token = await new Auth(ctx.env).sign({ id: String(signUserId), lang: regInfo.lang, email: regInfo.email })
+
+    if (req.type === 'apple' && authRes.sub && authRes.email && !authRes.email.endsWith('@appleid.apple.com')) {
+      await this.userRepo.userBindPlatform(regInfo.id, platformBindType.APPLE, authRes.sub, authRes.email)
+    }
 
     // 发放邀请奖励
     //   if (isFirstRegister && req.aff_code) {

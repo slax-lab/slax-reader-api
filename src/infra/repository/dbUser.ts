@@ -35,7 +35,8 @@ export enum platformBindType {
   TELEGRAM = 'telegram',
   WECHAT = 'wechat',
   QQ = 'qq',
-  EMAIL = 'email'
+  EMAIL = 'email',
+  APPLE = 'apple'
 }
 
 export enum noticeType {

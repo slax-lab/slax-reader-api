@@ -49,13 +49,13 @@ export class SlaxAuth {
   }
 
   public async loginWithApple(req: userLoginReq): Promise<SlaxAuthResult> {
-    const res = await new AppleAuth(this.env).loginWithApple(req.code, req.id_token || '', req.redirect_uri)
+    const res = await new AppleAuth(this.env).loginWithApple(req.code, req.id_token || '', req.client_id || '', req.redirect_uri)
     console.log('loginWithApple result:', res)
 
-    const userName = !!req.family_name ? `${req.given_name} ${req.family_name}` : undefined
-    const givenName = req.given_name || undefined
-    const familyName = req.family_name || undefined
-    const email = `${res.sub}@appleid.apple.com`
+    const givenName = req.given_name || ''
+    const familyName = req.family_name || ''
+    const userName = familyName ? `${givenName} ${familyName}`.trim() : givenName || ''
+    const email = res.email || `${res.sub}@appleid.apple.com`
 
     return {
       iss: res.iss,
