@@ -121,8 +121,12 @@ export class AppleAuth {
 
       const authResp = await this.verifyIdToken(tokenResp.id_token)
 
-      const userInfo = await this.verifyIdToken(idToken)
+      // web apple login may not provide idToken
+      if (idToken.length < 1) {
+        return authResp
+      }
 
+      const userInfo = await this.verifyIdToken(idToken)
       if (userInfo.sub !== authResp.sub) {
         console.error('loginWithApple sub mismatch:', userInfo.sub, authResp.sub)
         throw RequestAppleAuthFail()
