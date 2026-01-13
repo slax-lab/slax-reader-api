@@ -49,7 +49,7 @@ export class AppleAuth {
   static ENDPOINT_URL = 'https://appleid.apple.com'
 
   constructor(env: Env) {
-    this.clientId = env.APPLE_CLIENT_ID
+    this.clientId = env.APPLE_SIGN_CLIENT_ID
     this.keyId = env.APPLE_SIGN_KEY_ID
     this.privateKey = env.APPLE_SIGN_AUTH_KEY
     this.teamId = env.APPLE_SIGN_TEAM_ID
@@ -113,7 +113,7 @@ export class AppleAuth {
 
   //  Sign in with Apple
   async loginWithApple(code: string, idToken: string, clientId: string, redirectUri?: string): Promise<AppleIdTokenType> {
-    const appleClientId = clientId || this.clientId
+    const appleClientId = clientId.length > 0 ? clientId : this.clientId
     try {
       const clientRes = await this.getClientSecret(appleClientId)
 
