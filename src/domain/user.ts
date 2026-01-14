@@ -121,10 +121,12 @@ export class UserService {
     const authRes = await new SlaxAuth(ctx.env).login(req)
 
     if (req.type === 'apple' && authRes.sub && authRes.email.endsWith('@appleid.apple.com')) {
-      const platformBind = await this.userRepo.getUserByPlatform('apple', authRes.sub)
-      if (platformBind && platformBind.user_name) {
-        authRes.email = platformBind.user_name
-      }
+      try {
+        const platformBind = await this.userRepo.getUserByPlatform('apple', authRes.sub)
+        if (platformBind && platformBind.user_name) {
+          authRes.email = platformBind.user_name
+        }
+      } catch (e) {}
     }
 
     // get user info by email
