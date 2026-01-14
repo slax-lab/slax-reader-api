@@ -60,8 +60,7 @@ export class AigcController {
       })
 
       if (summary) {
-        await writable.getWriter().write(summary)
-        return new Response(readable, {
+        return new Response(summary.content, {
           headers: { 'Content-Type': 'text/event-stream; charset=utf-8', ...corsHeader }
         })
       }
