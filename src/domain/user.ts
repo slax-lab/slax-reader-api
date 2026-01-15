@@ -30,7 +30,7 @@ export interface userInfoResp {
   timezone: string
 }
 
-export type reportSourceType = 'web' | 'ios' | 'android' | 'extension'
+export type reportSourceType = 'web' | 'ios' | 'android' | 'chrome-extension'
 export interface reportInfoReq {
   user_id: number
   content: string
@@ -38,6 +38,7 @@ export interface reportInfoReq {
   bookmark_id?: number
   share_code?: string
   source?: reportSourceType
+  version?: string
 }
 
 export interface userBindPlatformItem {
