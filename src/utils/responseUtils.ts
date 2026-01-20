@@ -19,7 +19,7 @@ export const createResponse = (type: ResponseType, options: ResponseOptions): Re
   let { data, status = 200, headers = defaultHeaders[type], message = '' } = options
   if (data instanceof MultiLangError) {
     const mErr = data as MultiLangError
-    message = mErr.message
+    message = mErr.getMessage
     status = mErr.errCode
     data = mErr.name
   }
