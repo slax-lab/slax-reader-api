@@ -595,8 +595,8 @@ export class BookmarkService {
   }
 
   /** 获取书签ID */
-  public async getBookmarkId(ctx: ContextManager, params: { bmId?: number; shareCode?: string; cbId?: number; bmUId?: string }) {
-    const { bmId, shareCode, cbId, bmUId } = params
+  public async getBookmarkId(ctx: ContextManager, params: { bmId?: number; shareCode?: string; cbId?: number; bmUId?: string; uBmId?: string }) {
+    const { bmId, shareCode, cbId, bmUId, uBmId } = params
     if (bmId) return ctx.hashIds.decodeId(bmId)
 
     if (shareCode) {
@@ -613,6 +613,12 @@ export class BookmarkService {
 
     if (bmUId) {
       const bm = await this.bookmarkRepo.getUserBookmarkByUId(bmUId, ctx.getUserId())
+      if (!bm) return 0
+      return bm.bookmark_id
+    }
+
+    if (uBmId) {
+      const bm = await this.bookmarkRepo.getUserBookmarkByUId(uBmId, ctx.getUserId())
       if (!bm) return 0
       return bm.bookmark_id
     }
