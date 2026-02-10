@@ -96,6 +96,10 @@ export interface userLoginReq {
 export interface userLoginResp {
   token: string
   user_id: string
+  is_new_user: boolean
+  email: string
+  uuid: string
+  login_type: string
 }
 
 @injectable()
@@ -137,7 +141,7 @@ export class UserService {
     }
 
     let userInfo = (!!findRes ? findRes : {}) as userInfoPO
-    // const isFirstRegister = !findRes || !findRes.id
+    const isFirstRegister = !findRes || !findRes.id
 
     userInfo = UserService.getUserReuqestInfo(request, userInfo)
 
@@ -197,7 +201,11 @@ export class UserService {
 
     return {
       token,
-      user_id: signUserId.toString()
+      user_id: signUserId.toString(),
+      is_new_user: isFirstRegister,
+      email: regInfo.email,
+      uuid: regInfo.uuid,
+      login_type: req.type || 'unknown'
     }
   }
 
