@@ -259,23 +259,6 @@ export class AigcService {
       },
       {
         declaration: {
-          name: 'relatedQuestion',
-          description: 'Generate related questions',
-          parameters: {
-            type: Type.OBJECT,
-            properties: { question: { type: Type.STRING, description: 'Related question to generate' } },
-            required: ['question']
-          }
-        },
-        execute: async args => {
-          const question = args.question as string
-          console.log('relatedQuestion', question)
-          await this.writeProgress('tool', 'relatedQuestion', question, toolStatus.SUCCESSFULLY)
-          return `Generated related question: ${question}`
-        }
-      },
-      {
-        declaration: {
           name: 'googleSearch',
           description: 'Search the web using Google Search. Use this when you need current information, facts, or answers that require web search.',
           parameters: {
