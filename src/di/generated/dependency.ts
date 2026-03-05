@@ -10,7 +10,7 @@ import {
   MIDDLEWARES,
   CONTROLLERS,
   ROUTER,
-  CHAT_COMPLETION,
+  GEMINI_AGENT,
   PRISIMA_HYPERDRIVE_CLIENT
 } from '../../const/symbol'
 import { BookmarkRepo } from '../../infra/repository/dbBookmark'
@@ -56,12 +56,7 @@ import { UserController } from '../../handler/http/userController'
 import { DatabaseRegistry } from '../data'
 
 container.register(AigcService, {
-  useFactory: container =>
-    new AigcService(
-      lazy(() => container.resolve(CHAT_COMPLETION)),
-      lazy(() => container.resolve(BucketClient)),
-      container.resolve(BookmarkRepo)
-    )
+  useFactory: container => new AigcService(lazy(() => container.resolve(GEMINI_AGENT)))
 })
 
 container.register(BookmarkService, {

@@ -8,7 +8,7 @@ import { Post } from '../../decorators/route'
 import { UserService } from '../../domain/user'
 import { BookmarkService } from '../../domain/bookmark'
 import { RequestUtils } from '../../utils/requestUtils'
-import { convertToCore } from '../../utils/ai'
+import { convertToGeminiContent } from '../../utils/conversation'
 
 type SummaryRequest = {
   bm_id?: number
@@ -98,7 +98,7 @@ export class AigcController {
 
     const aiSvc = this.aigcService
     const { readable, writable } = new TransformStream()
-    ctx.execution.waitUntil(aiSvc.bookmarkChat(ctx, title, content, convertToCore(req.messages), writable, req.quote || []))
+    ctx.execution.waitUntil(aiSvc.bookmarkChat(ctx, title, content, convertToGeminiContent(req.messages), writable, req.quote || []))
 
     return new Response(readable, {
       headers: { 'Content-Type': 'text/event-stream; charset=utf-8', ...corsHeader }

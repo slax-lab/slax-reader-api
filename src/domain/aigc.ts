@@ -1,5 +1,5 @@
-import { CoreAssistantMessage, CoreMessage, CoreUserMessage, ToolCallPart, tool } from 'ai'
-import { z } from 'zod'
+import { Content, Type } from '@google/genai'
+import { ToolDefinition } from '../infra/external/vertexAIClient'
 import {
   generateQuestionPrompt,
   systemPrompt,
@@ -10,16 +10,14 @@ import {
   generateOverviewTagsUserPrompt
 } from '../const/prompt'
 import { ContextManager } from '../utils/context'
-import { GoogleSearch } from '../infra/external/searchGoogle'
 import { ContentParser } from '../utils/parser'
 import { inject, injectable } from '../decorators/di'
 import type { LazyInstance } from '../decorators/lazy'
-import { BucketClient } from '../infra/repository/bucketClient'
 import { MultiLangError } from '../utils/multiLangError'
-import { CHAT_COMPLETION } from '../const/symbol'
-import { AppChatCompletion } from '../di/data'
+import { GEMINI_AGENT } from '../const/symbol'
+import { VertexAIClient } from '../infra/external/vertexAIClient'
 import { SlaxFetch } from '../infra/external/remoteFetcher'
-import { BookmarkRepo } from '../infra/repository/dbBookmark'
+import { AIError } from '../const/err'
 
 export type deltaType = {
   role?: 'system' | 'user' | 'assistant' | 'tool'
@@ -54,6 +52,10 @@ export type OverviewObjectStreamResult = {
   }
 }
 
+export type OutlineObjectStreamResult = {
+  content: string
+}
+
 @injectable()
 export class AigcService {
   private chunks: Uint8Array[] = []
@@ -62,11 +64,7 @@ export class AigcService {
 
   static target = '<relatedQuestionStart>'
 
-  constructor(
-    @inject(CHAT_COMPLETION) private aigc: LazyInstance<AppChatCompletion>,
-    @inject(BucketClient) private bucket: LazyInstance<BucketClient>,
-    @inject(BookmarkRepo) private bookmarkRepo: BookmarkRepo
-  ) {}
+  constructor(@inject(GEMINI_AGENT) private gemini: LazyInstance<VertexAIClient>) {}
 
   async recordChunks(chunk: Uint8Array, controller: TransformStreamDefaultController<Uint8Array>) {
     this.chunks.push(chunk)
@@ -78,12 +76,12 @@ export class AigcService {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private isToolCallPart(part: any): part is ToolCallPart {
-    return part.type === 'tool-call'
+  private isFunctionCall(part: any): boolean {
+    return !!part.functionCall
   }
 
-  private isToolCall(message: CoreMessage): message is CoreAssistantMessage {
-    return message.role === 'assistant' && Array.isArray(message.content) && message.content.length > 0 && message.content.every(part => this.isToolCallPart(part))
+  private isToolCallMessage(message: Content): boolean {
+    return message.role === 'model' && Array.isArray(message.parts) && message.parts.length > 0 && message.parts.every(p => this.isFunctionCall(p))
   }
 
   public async writeChunk(delta: deltaType[], status: string | null = null, finishReason: string | null = null) {
@@ -91,7 +89,6 @@ export class AigcService {
       id: `slax-chat-${Date.now()}`,
       object: 'chat.completion.chunk',
       created: Math.floor(Date.now() / 1000),
-      model: 'slax-4o',
       choices: [{ index: 0, delta, status, finish_reason: finishReason }]
     }
     await this.wr.write(this.ted.encode(`data: ${JSON.stringify(chunk)}\n\n`))
@@ -107,25 +104,8 @@ export class AigcService {
     await this.writeChunk([{ role, name, content }], status, finishReason)
   }
 
-  /** LLM Detail Bookmark Tool */
-  public async chatToolDetailBookmark(ctx: ContextManager, args: { bookmark_id: number }) {
-    const bmId = ctx.hashIds.decodeId(args.bookmark_id)
-
-    const bookmark = await this.bookmarkRepo.getBookmarkById(bmId)
-    if (!bookmark) return 'Bookmark not found'
-    if (!bookmark.content_md_key) return 'Bookmark content not found'
-
-    const content = await this.bucket().R2Bucket.get(bookmark.content_md_key)
-    if (!content) return 'Bookmark content not found'
-
-    return {
-      title: bookmark.title,
-      content: content,
-      bookmark_id: bookmark.id
-    }
-  }
-
   /** LLM Browser Tool */
+  //@ts-ignore
   public async chatToolBrowser(env: Env, args: { title: string; url: string }) {
     await this.writeProgress('tool', 'browser', args.title, toolStatus.PROCESSING)
 
@@ -139,8 +119,7 @@ export class AigcService {
     }
 
     try {
-      // max 10s timeout
-      return await Promise.race([fetchUrl(), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))])
+      return await Promise.race([fetchUrl(), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 30000))])
     } catch (e) {
       console.log(`fetch failed: ${e as Error}`)
       await this.writeProgress('tool', 'browser', args.title, toolStatus.FAILED)
@@ -148,30 +127,42 @@ export class AigcService {
     }
   }
 
-  /** LLM Search Tool */
-  public async chatToolSeach(env: Env, args: { q: string }) {
-    await this.writeProgress('tool', 'search', args.q, toolStatus.PROCESSING)
-    const res = await new GoogleSearch(env).search(args.q)
-    if (res instanceof MultiLangError) {
-      console.log(`chat tool search search failed: ${res.message}`)
-      await this.writeProgress('tool', 'search', '', toolStatus.FAILED)
-      return `search failed, please use your knowledge to answer the question.`
+  /** LLM Google Search Tool */
+  public async chatToolGoogleSearch(query: string): Promise<string> {
+    await this.writeProgress('tool', 'search', query, toolStatus.PROCESSING)
+
+    try {
+      const searchAgent = this.gemini()
+      const searchMessages: Content[] = [
+        {
+          role: 'user',
+          parts: [{ text: `Search for: ${query}` }]
+        }
+      ]
+
+      const result = await searchAgent.chat(
+        searchMessages,
+        {
+          tools: [{ googleSearch: {} }],
+          temperature: 0.7,
+          maxOutputTokens: 2048
+        },
+        {
+          systemInstruction: 'You are a search assistant. Use Google Search to find relevant information and provide a concise summary of the results.'
+        }
+      )
+
+      const searchResult = result.text || 'No search results found'
+      await this.writeProgress('tool', 'search', searchResult, toolStatus.SUCCESSFULLY)
+      return searchResult
+    } catch (error) {
+      await this.writeProgress('tool', 'search', query, toolStatus.FAILED)
+      return `Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`
     }
-    await this.writeProgress('tool', 'search', JSON.stringify(res), toolStatus.SUCCESSFULLY)
-    return res.map(item => {
-      return {
-        source: item.url,
-        title: item.title,
-        snippet: item.content
-      }
-    })
   }
 
   /** LLM Search bookmark tool */
   public async chatToolSearchBookmark(ctx: ContextManager, args: { q: string }) {
-    // HOOK: Due to hierarchical issues
-    // It is not possible to use the search method directly
-    // But we can to call the HTTP request first.
     this.writeProgress('tool', 'searchBookmark', args.q, toolStatus.PROCESSING)
 
     const url = ctx.get('req_url')
@@ -202,109 +193,130 @@ export class AigcService {
     return data
   }
 
+  private createStopSequenceFilter(stopSequence: string, onChunk: (chunk: string) => Promise<void>) {
+    let buffer = ''
+    let matchIndex = 0
+    let stopped = false
+
+    return {
+      async process(chunk: string) {
+        if (stopped) return
+        for (const char of chunk) {
+          if (char === stopSequence[matchIndex]) {
+            buffer += char
+            matchIndex++
+            if (matchIndex === stopSequence.length) {
+              stopped = true
+              return
+            }
+          } else {
+            if (matchIndex > 0) {
+              await onChunk(buffer + char)
+              buffer = ''
+              matchIndex = 0
+            } else {
+              await onChunk(char)
+            }
+          }
+        }
+      },
+      async flush() {
+        if (buffer && !stopped) await onChunk(buffer)
+      }
+    }
+  }
+
   /** Chat with bookmark */
-  public async chatRawContentText(ctx: ContextManager, rawContent: string, content: string, messages: CoreMessage[], quote: completionQuote[]) {
+  public async chatRawContentText(ctx: ContextManager, rawContent: string, content: string, messages: Content[], quote: completionQuote[]) {
     if (!rawContent) return await this.writeChunk([{ role: 'assistant', content: 'No Content' }])
 
     messages.pop()
-    const model = this.aigc().hasOrDefaultModel(ctx.get('ai_chat_model'))
     const systemMessage = userChatBookmarkSystemPrompt.replace('{article}', rawContent)
     const userContent = getUserChatBookmarkUserPrompt().replace('{content}', content).replace('{ai_lang}', ctx.get('ai_lang'))
-    const quoteMessage: CoreUserMessage[] = quote.map(item => {
-      if (item.type === 'text') {
-        return { role: 'user', content: item.content }
-      } else {
-        return {
-          role: 'user',
-          content: [{ type: 'image', image: new URL(item.content) }]
-        }
-      }
-    })
+    const quoteMessages: Content[] = quote.map(item => ({
+      role: 'user',
+      parts: [item.type === 'text' ? { text: item.content } : { inlineData: { data: item.content, mimeType: 'image/png' } }]
+    }))
 
-    messages.push({ role: 'system', content: systemMessage })
-    messages.push(...quoteMessage, { role: 'user', content: userContent })
+    messages.push(...quoteMessages, { role: 'user', parts: [{ text: userContent }] })
+    const filter = this.createStopSequenceFilter(AigcService.target, chunk => this.writeChunk([{ role: 'assistant', content: chunk }]))
 
-    const tools = {
-      search: tool({
-        description: 'Search for information in network',
-        parameters: z.object({
-          q: z.string().describe('Search query')
-        }),
-        execute: this.chatToolSeach.bind(this, ctx.env)
-      }),
-      // searchBookmark: tool({
-      //   description: 'Search for user bookmarks in database',
-      //   parameters: z.object({
-      //     q: z.string().describe('Search query')
-      //   }),
-      //   execute: this.chatToolSearchBookmark.bind(this, ctx)
-      // }),
-      // getBookmarkDetail: tool({
-      //   description: 'Get bookmark detail by bookmark id',
-      //   parameters: z.object({
-      //     bookmark_id: z.number().describe('Bookmark ID')
-      //   }),
-      //   execute: this.chatToolDetailBookmark.bind(this, ctx)
-      // }),
-      browser: tool({
-        description: 'Browse a web page by url',
-        parameters: z.object({
-          title: z.string().describe('Page title'),
-          url: z.string().describe('URL to browse')
-        }),
-        execute: this.chatToolBrowser.bind(this, ctx.env)
-      }),
-      relatedQuestion: tool({
-        description: 'Generate related questions',
-        parameters: z.object({
-          question: z.string().describe('Related question to generate')
-        }),
-        execute: async (args: { question: string }) => {
-          console.log('relatedQuestion', args.question)
-          await this.writeProgress('tool', 'relatedQuestion', args.question, toolStatus.SUCCESSFULLY)
-          return `Generated related question: ${args.question}`
-        }
-      })
-    }
-    //
-    let buffer = ''
-    let matchIndex = 0
-
-    let outputDone = false
-
-    const callback = async (chunk: string | MultiLangError) => {
-      if (chunk instanceof MultiLangError) return await this.writeChunk([{ role: 'assistant', content: chunk.message }])
-      if (outputDone) return
-
-      for (const char of chunk) {
-        if (char === AigcService.target[matchIndex]) {
-          buffer += char
-          matchIndex++
-          if (matchIndex === AigcService.target.length) {
-            outputDone = true
-            return
+    const toolDefinitions: ToolDefinition[] = [
+      {
+        declaration: {
+          name: 'browser',
+          description: 'Browse a web page by url',
+          parameters: {
+            type: Type.OBJECT,
+            properties: {
+              title: { type: Type.STRING, description: 'Page title' },
+              url: { type: Type.STRING, description: 'URL to browse' }
+            },
+            required: ['title', 'url']
           }
-        } else {
-          if (matchIndex > 0) {
-            await this.writeChunk([{ role: 'assistant', content: buffer + char }])
-            buffer = ''
-            matchIndex = 0
-          } else {
-            await this.writeChunk([{ role: 'assistant', content: char }])
+        },
+        execute: async args => this.chatToolBrowser(ctx.env, args as { title: string; url: string })
+      },
+      {
+        declaration: {
+          name: 'relatedQuestion',
+          description: 'Generate related questions',
+          parameters: {
+            type: Type.OBJECT,
+            properties: { question: { type: Type.STRING, description: 'Related question to generate' } },
+            required: ['question']
           }
+        },
+        execute: async args => {
+          const question = args.question as string
+          console.log('relatedQuestion', question)
+          await this.writeProgress('tool', 'relatedQuestion', question, toolStatus.SUCCESSFULLY)
+          return `Generated related question: ${question}`
         }
+      },
+      {
+        declaration: {
+          name: 'googleSearch',
+          description: 'Search the web using Google Search. Use this when you need current information, facts, or answers that require web search.',
+          parameters: {
+            type: Type.OBJECT,
+            properties: {
+              query: { type: Type.STRING, description: 'Search query' }
+            },
+            required: ['query']
+          }
+        },
+        execute: async args => this.chatToolGoogleSearch(args.query as string)
       }
-    }
+    ]
+
+    // Register tools with the client
+    const client = this.gemini()
+    client.registerTools(toolDefinitions)
 
     try {
-      await this.aigc().generate(messages, { tools, models: [model], isStreaming: true, callback })
+      await client.chatStream(
+        messages,
+        {
+          model: 'gemini-3-flash-preview',
+          tools: [
+            {
+              functionDeclarations: toolDefinitions.map(t => t.declaration)
+            }
+          ],
+          thinkingConfig: { thinkingBudget: 2048 }
+        },
+        {
+          onTextDelta: chunk => filter.process(chunk),
+          systemInstruction: systemMessage
+        }
+      )
     } catch (error) {
       console.error('StreamText error:', error)
       throw error
     }
 
-    if (buffer && !outputDone) await this.writeChunk([{ role: 'assistant', content: buffer }])
-
+    await filter.flush()
     await this.writeProgress('assistant', 'chat', undefined, 'completed')
     await this.writeDone()
   }
@@ -313,17 +325,12 @@ export class AigcService {
   public async chatToolGenerateRawContentQuestion(ctx: ContextManager, title: string) {
     if (!title) return this.writeChunk([{ role: 'assistant', content: 'No raw content' }])
 
-    const messages: CoreMessage[] = [
-      { role: 'system', content: generateQuestionPrompt.replace('{ai_lang}', ctx.get('ai_lang')) },
-      { role: 'user', content: title }
-    ]
+    const contents: Content[] = [{ role: 'user', parts: [{ text: title }] }]
+    const sysInstruction = generateQuestionPrompt.replace('{ai_lang}', ctx.get('ai_lang'))
 
     let buffer: string = ''
-    const model = this.aigc().hasOrDefaultModel(ctx.get('ai_chat_model'))
 
-    const callback = async (chunk: string | MultiLangError) => {
-      if (chunk instanceof MultiLangError) return this.wr.write(this.ted.encode(chunk.message))
-
+    const onTextDelta = async (chunk: string) => {
       if (chunk.endsWith('\n') && buffer.length > 0) {
         buffer = buffer.concat(chunk)
         await this.writeProgress('tool', 'generateQuestion', JSON.stringify([buffer]), toolStatus.SUCCESSFULLY)
@@ -335,13 +342,10 @@ export class AigcService {
       }
     }
 
-    // 给前端一个提示
     await this.writeProgress('tool', 'generateQuestion', undefined, toolStatus.PROCESSING)
 
-    // 调用GPT-4o生成问题
-    await this.aigc().generate(messages, { models: [model], isStreaming: true, callback })
+    await this.gemini().chatStream(contents, { model: 'gemini-3-flash-preview' }, { onTextDelta, systemInstruction: sysInstruction })
 
-    // 如果buffer还有内容，则直接输出
     if (buffer) await this.writeProgress('tool', 'generateQuestion', JSON.stringify([buffer]), toolStatus.SUCCESSFULLY)
 
     await this.writeDone()
@@ -349,12 +353,8 @@ export class AigcService {
 
   // Generate tags from system tag list
   public async generateTagsFromPresupposition(bmTitle: string, bmContent: string): Promise<string[]> {
-    const messages: CoreMessage[] = [
-      { role: 'system', content: generateRelatedTagPrompt },
-      { role: 'user', content: `title: ${bmTitle}\n content: ${bmContent.slice(0, 200)}` }
-    ]
-
-    const result = await this.aigc().generate(messages, { models: ['gpt-4o-mini'], isStreaming: false })
+    const contents: Content[] = [{ role: 'user', parts: [{ text: `title: ${bmTitle}\n content: ${bmContent.slice(0, 200)}` }] }]
+    const result = await this.gemini().chat(contents, { model: 'gemini-3-flash-preview' }, { systemInstruction: generateRelatedTagPrompt })
 
     const tags = result.text.split('\n').filter(tag => tag.length >= 1)
 
@@ -366,59 +366,88 @@ export class AigcService {
   public async generateOverviewTags(ctx: ContextManager, bmTitle: string, bmContent: string, byline: string, userTags: string[]): Promise<MixTagsOverviewResult> {
     const userLang = ctx.get('ai_lang') || 'EN'
 
-    const messages: CoreMessage[] = [
-      {
-        role: 'system',
-        content: generateOverviewTagsPrompt(bmTitle, bmContent, '')
-      },
-      {
-        role: 'system',
-        content: generateOverviewTagsUserPrompt(userLang, userTags)
-      }
+    const contents: Content[] = [
+      { role: 'user', parts: [{ text: generateOverviewTagsPrompt(bmTitle, bmContent, byline) }] },
+      { role: 'user', parts: [{ text: generateOverviewTagsUserPrompt(userLang, userTags) }] }
     ]
 
-    const result = await this.aigc().generate(messages, {
-      models: ['gpt-4o-mini'],
-      isStreaming: false,
-      schema: z.object({
-        overview: z.object({
-          gist: z.string(),
-          key_takeaways: z.array(z.string())
-        }),
-        tags: z.array(z.string())
-      })
+    const result = await this.gemini().chat(contents, {
+      model: 'gemini-3-flash-preview',
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          overview: {
+            type: Type.OBJECT,
+            properties: {
+              gist: { type: Type.STRING },
+              key_takeaways: { type: Type.ARRAY, items: { type: Type.STRING } }
+            },
+            required: ['gist', 'key_takeaways']
+          },
+          tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+        },
+        required: ['overview', 'tags']
+      }
     })
 
-    const object = result.object as Partial<OverviewObjectStreamResult>
+    const object = JSON.parse(result.text) as Partial<OverviewObjectStreamResult>
 
     const overview = object.overview?.gist || ''
     const key_takeaways = object.overview?.key_takeaways || []
     const tags = (object.tags || []).map(tag => tag.trim())
 
-    console.log(`${result.model} generate overview tags result: ${JSON.stringify(result.object)}`)
-    console.log(`generate overview tags: ${overview}`)
-    console.log(`generate overview tags: ${tags}`)
+    console.log(`generate overview tags result: ${result.text}`)
 
     return { tags, overview, key_takeaways }
   }
 
+  // Generate outline from content
+  public async generateOutline(ctx: ContextManager, bmContent: string, callback: (chunk: MultiLangError | Partial<OutlineObjectStreamResult>) => Promise<void>) {
+    const contents: Content[] = [
+      { role: 'user', parts: [{ text: systemPrompt.replace('{ai_lang}', ctx.get('ai_lang')) }] },
+      { role: 'user', parts: [{ text: bmContent }] }
+    ]
+
+    try {
+      let buffer = ''
+      await this.gemini().chatStream(
+        contents,
+        {
+          model: 'gemini-3-flash-preview'
+        },
+        {
+          onTextDelta: async (chunk: string) => {
+            buffer += chunk
+            await callback({ content: buffer })
+          }
+        }
+      )
+
+      return { model: 'gemini-3-flash-preview' }
+    } catch (error) {
+      console.error('Generate outline error:', error)
+      await callback(AIError())
+      return { model: 'gemini-3-flash-preview' }
+    }
+  }
+
   // chat with bookmark
-  public async bookmarkChat(ctx: ContextManager, title: string, rawContent: string, messages: CoreMessage[], writer: WritableStream<Uint8Array>, quote: completionQuote[]) {
+  public async bookmarkChat(ctx: ContextManager, title: string, rawContent: string, messages: Content[], writer: WritableStream<Uint8Array>, quote: completionQuote[]) {
     this.wr = writer.getWriter()
     const latestMessageIdx = messages.length - 1
 
     if (messages.length < 1) return this.wr.write(this.ted.encode('Invalid request\n'))
 
-    // just process the latest message
     const latestMessage = messages[latestMessageIdx]
-    const isToolCall = this.isToolCall(latestMessage)
-    const content = typeof latestMessage.content === 'string' ? latestMessage.content : ''
+    const isToolCall = this.isToolCallMessage(latestMessage)
+    const content = (!isToolCall && latestMessage.parts?.[0]?.text) || ''
 
     try {
       if (!isToolCall) return await this.chatRawContentText(ctx, rawContent, content, messages, quote)
-      if (!this.isToolCallPart(latestMessage.content[0])) return this.wr.write(this.ted.encode('Invalid request\n'))
+      if (!latestMessage.parts?.[0]?.functionCall) return this.wr.write(this.ted.encode('Invalid request\n'))
 
-      switch (latestMessage.content[0].toolName) {
+      switch (latestMessage.parts[0].functionCall.name) {
         case 'generateQuestion':
           return await this.chatToolGenerateRawContentQuestion(ctx, title)
         default:
@@ -439,36 +468,41 @@ export class AigcService {
     writer: WritableStream<Uint8Array>,
     callbackHandler?: (result: { provider: string; model: string; response: string }) => Promise<void>
   ) {
-    let providerInfo
     this.wr = writer.getWriter()
-    const model = this.aigc().hasOrDefaultModel(ctx.get('ai_chat_model'))
 
     try {
-      const callback = async (chunk: string | MultiLangError) => {
-        if (chunk instanceof MultiLangError) return this.wr.write(this.ted.encode(chunk.message))
-        await this.wr.write(this.ted.encode(chunk))
-      }
-
-      const prompt = systemPrompt.replace('{ai_lang}', ctx.get('ai_lang'))
-      const messages: CoreMessage[] = [
-        { role: 'system', content: prompt },
-        { role: 'user', content: rawContent }
+      const contents: Content[] = [
+        { role: 'user', parts: [{ text: systemPrompt.replace('{ai_lang}', ctx.get('ai_lang')) }] },
+        { role: 'user', parts: [{ text: rawContent }] }
       ]
 
-      providerInfo = await this.aigc().generate(messages, { models: [model], isStreaming: true, callback })
+      await this.gemini().chatStream(
+        contents,
+        {
+          model: 'gemini-3-flash-preview'
+        },
+        {
+          onTextDelta: async (chunk: string) => {
+            await this.wr.write(this.ted.encode(chunk))
+          },
+          onStep: async step => {
+            console.log(`Step: ${step}`)
+          }
+        }
+      )
     } catch (error) {
       console.error(error)
       this.wr.write(this.ted.encode(error instanceof MultiLangError ? error.message : 'Failed to get summary, please try again later.\n'))
     } finally {
       this.wr.close()
 
-      if (!callbackHandler || !this.chunks || !providerInfo) return
+      if (!callbackHandler || !this.chunks) return
 
       const blob = new Blob(this.chunks)
 
       await callbackHandler({
-        provider: providerInfo?.model || '',
-        model: providerInfo?.model || '',
+        provider: 'google',
+        model: 'gemini-3-flash-preview',
         response: await blob.text()
       })
     }
