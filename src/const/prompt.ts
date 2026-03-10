@@ -43,10 +43,11 @@ export const generateUserAnserPrompt = `<|文章开始|>
 问题列表：
 {questions}`
 
-export const userChatBookmarkSystemPrompt = `<文章开始>
+export const userChatBookmarkContentPrompt = `<文章开始>
 {article}
-<文章结束>
+<文章结束>`
 
+export const userChatBookmarkSystemPrompt = `
 # 关于Slax
 Slax是一家2023年在新加坡成立的软件工作室。我们的产品品牌是Slax，寓意是 Simple and Relax，我们的Slogan是**Simple tools, relax life。**
 

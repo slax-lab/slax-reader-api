@@ -7,7 +7,8 @@ import {
   getUserChatBookmarkUserPrompt,
   generateRelatedTagPrompt,
   generateOverviewTagsPrompt,
-  generateOverviewTagsUserPrompt
+  generateOverviewTagsUserPrompt,
+  userChatBookmarkContentPrompt
 } from '../const/prompt'
 import { ContextManager } from '../utils/context'
 import { ContentParser } from '../utils/parser'
@@ -231,14 +232,14 @@ export class AigcService {
     if (!rawContent) return await this.writeChunk([{ role: 'assistant', content: 'No Content' }])
 
     messages.pop()
-    const systemMessage = userChatBookmarkSystemPrompt.replace('{article}', rawContent)
+    const systemMessage: Content = { role: 'user', parts: [{ text: userChatBookmarkSystemPrompt }, { text: userChatBookmarkContentPrompt.replace('{article}', rawContent) }] }
     const userContent = getUserChatBookmarkUserPrompt().replace('{content}', content).replace('{ai_lang}', ctx.get('ai_lang'))
     const quoteMessages: Content[] = quote.map(item => ({
       role: 'user',
       parts: [item.type === 'text' ? { text: item.content } : { inlineData: { data: item.content, mimeType: 'image/png' } }]
     }))
 
-    messages.push(...quoteMessages, { role: 'user', parts: [{ text: userContent }] })
+    messages.push(systemMessage, ...quoteMessages, { role: 'user', parts: [{ text: userContent }] })
     const filter = this.createStopSequenceFilter(AigcService.target, chunk => this.writeChunk([{ role: 'assistant', content: chunk }]))
 
     const toolDefinitions: ToolDefinition[] = [
@@ -290,8 +291,7 @@ export class AigcService {
           thinkingConfig: { thinkingBudget: 2048 }
         },
         {
-          onTextDelta: chunk => filter.process(chunk),
-          systemInstruction: systemMessage
+          onTextDelta: chunk => filter.process(chunk)
         }
       )
     } catch (error) {
