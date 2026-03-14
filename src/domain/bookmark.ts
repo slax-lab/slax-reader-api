@@ -499,8 +499,9 @@ export class BookmarkService {
 
   /** 获取收藏列表 */
   public async bookmarkList(ctx: ContextManager, page: number, size: number, filter: string) {
-    return (await this.bookmarkRepo.listUserBookmarks(ctx.getUserId(), (page - 1) * size, size, filter)).map(
-      ({ bookmark, alias_title, archive_status, is_starred, deleted_at, type }) => {
+    return (await this.bookmarkRepo.listUserBookmarks(ctx.getUserId(), (page - 1) * size, size, filter))
+      .filter(({ bookmark }) => bookmark !== null)
+      .map(({ bookmark, alias_title, archive_status, is_starred, deleted_at, type }) => {
         const { private_user, content_md_key, content_key, ...bookmarkWithout } = bookmark!
         return {
           ...bookmarkWithout,
@@ -511,22 +512,23 @@ export class BookmarkService {
           trashed_at: !!deleted_at ? deleted_at : undefined,
           type: type === 1 ? 'shortcut' : 'article'
         }
-      }
-    )
+      })
   }
 
   /** 根据标签ID获取收藏列表 */
   public async bookmarkListByTopic(ctx: ContextManager, page: number, size: number, tagId: number): Promise<bookmarkPO[]> {
-    return (await this.bookmarkRepo.listUserBookmarksByTagId(ctx.getUserId(), tagId, (page - 1) * size, size)).map(({ user_bookmark, bookmark }) => {
-      const { private_user, content_md_key, content_key, ...bookmarkWithout } = bookmark!
-      return {
-        ...bookmarkWithout!,
-        alias_title: user_bookmark!.alias_title,
-        id: ctx.hashIds.encodeId(user_bookmark!.bookmark_id),
-        archived: user_bookmark!.archive_status === 1 ? 'archive' : user_bookmark!.archive_status === 2 ? 'later' : 'inbox',
-        starred: user_bookmark!.is_starred ? 'star' : 'unstar'
-      }
-    })
+    return (await this.bookmarkRepo.listUserBookmarksByTagId(ctx.getUserId(), tagId, (page - 1) * size, size))
+      .filter(({ bookmark }) => bookmark !== null)
+      .map(({ user_bookmark, bookmark }) => {
+        const { private_user, content_md_key, content_key, ...bookmarkWithout } = bookmark!
+        return {
+          ...bookmarkWithout!,
+          alias_title: user_bookmark!.alias_title,
+          id: ctx.hashIds.encodeId(user_bookmark!.bookmark_id),
+          archived: user_bookmark!.archive_status === 1 ? 'archive' : user_bookmark!.archive_status === 2 ? 'later' : 'inbox',
+          starred: user_bookmark!.is_starred ? 'star' : 'unstar'
+        }
+      })
   }
 
   public async getBookmarkContent(bmKey: string) {
