@@ -13,6 +13,7 @@ export class ContextManager {
   private lang?: string
   public hashIds!: Hashid
   private context: Record<string, any> = {}
+  private cleanupCallbacks: Array<() => Promise<void>> = []
 
   constructor(
     public execution: ExecutionContext,
@@ -57,5 +58,13 @@ export class ContextManager {
 
   getlang(): string {
     return (this.lang || '').slice(0, 2) || 'en'
+  }
+
+  onCleanup(callback: () => Promise<void>) {
+    this.cleanupCallbacks.push(callback)
+  }
+
+  async cleanup() {
+    await Promise.all(this.cleanupCallbacks.map(cb => cb().catch(err => console.error('Cleanup error:', err))))
   }
 }

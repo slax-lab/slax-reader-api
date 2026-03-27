@@ -17,20 +17,26 @@ initializeCore()
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const currentContainer = container.clone()
-    initializeInfrastructure(env, currentContainer)
+    const ctxManager = new ContextManager(ctx, env)
+    initializeInfrastructure(env, currentContainer, ctxManager)
 
-    return getRouter(currentContainer)
-      .fetch(request, new ContextManager(ctx, env))
-      .catch(err => {
-        if (err instanceof MultiLangError) return Failed(err)
-        console.error(err)
-        return Failed(ServerError())
-      })
-      .then(res => {
-        if (res instanceof Response) return res
-        console.error(`[${request.method}] ${request.url} ${res} is not a response`)
-        return Failed(ServerError())
-      })
+    try {
+      const response = await getRouter(currentContainer)
+        .fetch(request, ctxManager)
+        .catch(err => {
+          if (err instanceof MultiLangError) return Failed(err)
+          console.error(err)
+          return Failed(ServerError())
+        })
+        .then(res => {
+          if (res instanceof Response) return res
+          console.error(`[${request.method}] ${request.url} ${res} is not a response`)
+          return Failed(ServerError())
+        })
+      return response
+    } finally {
+      await ctxManager.cleanup()
+    }
   },
 
   async queue(batch: MessageBatch, env: Env, ctx: ExecutionContext) {

@@ -418,11 +418,9 @@ export class BookmarkService {
     const deleteBookmarkContentTry = async () => {
       const bmPO = await bmRepo.deleteBookmarkTry(bmId, userId)
       if (!bmPO) {
-        console.error('delete bookmark error:', bmPO)
+        // bookmark is public (private_user !== userId) or not found, skip deleting sr_bookmark itself
         return null
       }
-
-      if (!bmPO) return null
 
       try {
         const promiseList = [

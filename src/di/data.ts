@@ -14,7 +14,7 @@ import { VertexAIClient } from '../infra/external/vertexAIClient'
 @singleton()
 export class DatabaseRegistry {
   //@ts-ignore
-  public register(env: Env, targetContainer: Container = container): void {
+  public register(env: Env, targetContainer: Container = container, ctx?: ContextManager): void {
     targetContainer.register(PRISIMA_CLIENT, {
       useFactory: () => new PrismaClient({ adapter: new PrismaD1(env.DB) }),
       uncached: false
@@ -24,7 +24,11 @@ export class DatabaseRegistry {
       uncached: false
     })
     targetContainer.register(PRISIMA_HYPERDRIVE_CLIENT, {
-      useFactory: () => new HyperdrivePrismaClient({ log: ['query'], adapter: new PrismaPg(new Pool({ connectionString: env.HYPERDRIVE.connectionString, max: 1, maxUses: 1 })) }),
+      useFactory: () => {
+        const client = new HyperdrivePrismaClient({ log: ['query'], adapter: new PrismaPg(new Pool({ connectionString: env.HYPERDRIVE.connectionString, max: 1, maxUses: 1 })) })
+        ctx?.onCleanup(async () => await client.$disconnect())
+        return client
+      },
       uncached: false
     })
     targetContainer.register(VECTORIZE_CLIENTS, {

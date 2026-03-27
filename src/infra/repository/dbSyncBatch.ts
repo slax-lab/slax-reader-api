@@ -83,24 +83,40 @@ export class DBSyncBatchOperation {
       }
     })
 
-    await tx.sr_user_bookmark.upsert({
-      where: { user_id_bookmark_id: { user_id: operation.userId, bookmark_id: bookmark.id } },
-      create: {
-        uuid: operation.bookmarkUuid,
-        user_id: operation.userId,
-        bookmark_id: bookmark.id,
-        type: 0,
-        archive_status: isArchive ? 1 : 0,
-        deleted_at: null,
-        created_at: new Date(),
-        updated_at: new Date()
-      },
-      update: {
-        deleted_at: null,
-        archive_status: isArchive ? 1 : 0,
-        updated_at: new Date()
-      }
+    const existingByUuid = await tx.sr_user_bookmark.findUnique({
+      where: { uuid: operation.bookmarkUuid }
     })
+
+    if (existingByUuid) {
+      await tx.sr_user_bookmark.update({
+        where: { uuid: operation.bookmarkUuid },
+        data: {
+          bookmark_id: bookmark.id,
+          deleted_at: null,
+          archive_status: isArchive ? 1 : 0,
+          updated_at: new Date()
+        }
+      })
+    } else {
+      await tx.sr_user_bookmark.upsert({
+        where: { user_id_bookmark_id: { user_id: operation.userId, bookmark_id: bookmark.id } },
+        create: {
+          uuid: operation.bookmarkUuid,
+          user_id: operation.userId,
+          bookmark_id: bookmark.id,
+          type: 0,
+          archive_status: isArchive ? 1 : 0,
+          deleted_at: null,
+          created_at: new Date(),
+          updated_at: new Date()
+        },
+        update: {
+          deleted_at: null,
+          archive_status: isArchive ? 1 : 0,
+          updated_at: new Date()
+        }
+      })
+    }
 
     if (isNewBookmark) {
       return {
