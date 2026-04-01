@@ -111,6 +111,10 @@ model sr_user_bookmark {
     alias_title    String    @default("")
     // 0- 文章 1- URL快捷方式
     type           Int       @default(0)
+
+    starred_at  DateTime?
+    archived_at DateTime?
+
     deleted_at     DateTime?
 
     metadata Json @default("{}")
@@ -119,8 +123,8 @@ model sr_user_bookmark {
     sr_user_bookmark_tag sr_user_bookmark_tag[]
 
     @@unique([user_id, bookmark_id])
-    @@index([user_id, deleted_at, archive_status, created_at(sort: Desc)])
-    @@index([user_id, deleted_at, is_starred, created_at(sort: Desc)])
+    @@index([user_id, deleted_at, archive_status, archived_at(sort: Desc)])
+    @@index([user_id, deleted_at, is_starred, starred_at(sort: Desc)])
 }
 
 model sr_user_bookmark_tag {
