@@ -35,6 +35,7 @@ export interface markRequest {
   parent_id: number
   comment?: string
   bm_id?: number
+  bookmark_uid?: string
   share_code?: string
   collection_code?: string
   cb_id?: number
@@ -140,7 +141,13 @@ export class MarkService {
     let userId = 0
 
     const bookmarkHandle = async () => {
-      bmId = ctx.hashIds.decodeId(data.bm_id || 0)
+      if (data.bm_id) {
+        bmId = ctx.hashIds.decodeId(data.bm_id || 0)
+      } else if (data.bookmark_uid) {
+        const bm = await this.bookmarkRepo.getUserBookmarkByUId(data.bookmark_uid, ctx.getUserId())
+        bm && (bmId = bm.bookmark_id)
+      }
+
       if (bmId < 1) throw BookmarkNotFoundError()
       userId = ctx.getUserId()
     }
