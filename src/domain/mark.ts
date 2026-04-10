@@ -168,7 +168,7 @@ export class MarkService {
       bmId = res.bookmark_id
     }
 
-    if (data.bm_id) {
+    if (data.bm_id || data.bookmark_uid) {
       await bookmarkHandle()
     } else if (data.share_code) {
       await shareHandle()
