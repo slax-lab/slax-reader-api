@@ -1,4 +1,4 @@
-import { ErrorParam, SyncTableRuleError, SyncTableTagNameError, UserNotFoundError } from '../../const/err'
+import { ErrorMarkTypeError, ErrorParam, SyncTableRuleError, SyncTableTagNameError, UserNotFoundError } from '../../const/err'
 import { inject, injectable } from '../../decorators/di'
 import { ContextManager } from '../../utils/context'
 import { UserService } from '../user'
@@ -6,6 +6,7 @@ import { SignJWT } from 'jose'
 import { DBSyncBatchOperation } from '../../infra/repository/dbSyncBatch'
 import { QueueClient, queueRetryParseMessage, callbackType } from '../../infra/queue/queueClient'
 import { parserType, URLPolicie } from '../../utils/urlPolicie'
+import { markType } from '../../infra/repository/dbMark'
 
 export type SyncExecOperation = 'PUT' | 'PATCH' | 'DELETE'
 
@@ -52,6 +53,23 @@ export interface UpdateShareData {
   isEnable: boolean
 }
 
+export interface CreateCommentData {
+  userBookmarkUuid: string
+  type: number
+  source: string
+  comment: string
+  rootUuid: string
+  parentUuid: string
+  approxSource: string
+  content: string
+  sourceType: string
+  sourceId: string
+}
+
+export interface DeleteCommentData {
+  isDeleted: boolean
+}
+
 type SyncOperation<T extends string, D = undefined, U = string> = {
   userId: number
   type: T
@@ -66,6 +84,13 @@ type TagSyncOperation<T extends string, D = undefined, U = string> = {
   data: D
 }
 
+type CommentSyncOperation<T extends string, D = undefined, U = string> = {
+  userId: number
+  type: T
+  commentUuid: U
+  data: D
+}
+
 export type OrderedSyncOperation =
   | TagSyncOperation<'create_tag', CreateTagData, string>
   | SyncOperation<'create_bookmark', CreateBookmarkData, string>
@@ -73,6 +98,8 @@ export type OrderedSyncOperation =
   | SyncOperation<'update_tags', UpdateTagsData, string>
   | SyncOperation<'update_share', UpdateShareData, string>
   | SyncOperation<'delete_bookmark', undefined, string>
+  | CommentSyncOperation<'create_comment', CreateCommentData, string>
+  | CommentSyncOperation<'delete_comment', DeleteCommentData, string>
 
 export interface SyncChangeUserBookmark {
   uuid: string
@@ -140,6 +167,8 @@ export class SyncOrchestrator {
         this.processUserBookmarkChange(change, userId, orderedOperations)
       } else if (change.table === 'sr_user_tag' && change.op === 'PUT') {
         this.processUserTagChange(change, userId, orderedOperations)
+      } else if (change.table === 'sr_bookmark_comment') {
+        this.processUserBookmarkCommentChange(change, userId, orderedOperations)
       } else {
         throw SyncTableRuleError()
       }
@@ -148,6 +177,71 @@ export class SyncOrchestrator {
     const result = await this.dbSyncBatch.executeOrderedOperations(orderedOperations)
     for (const newBookmark of result) {
       await this.sendRetryParseEvent(ctx, newBookmark)
+    }
+  }
+
+  public processUserBookmarkCommentChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
+    if (!change.data) return
+
+    // soft delete comment
+    if (change.op === 'PATCH' && change.data && change.data.hasOwnProperty('is_deleted')) {
+      const isDeleted = change.data.is_deleted === 'true' || change.data.is_deleted === '1'
+      if (!isDeleted) return
+
+      operations.push({
+        type: 'delete_comment',
+        commentUuid: change.id,
+        userId,
+        data: {
+          isDeleted: true
+        }
+      })
+      return
+    }
+
+    // create comment
+    if (change.op === 'PUT') {
+      const userBookmarkUuid = change.data['user_bookmark_uuid'] || ''
+      if (!userBookmarkUuid) throw ErrorParam()
+
+      const type = parseInt(change.data['type'] || '0')
+      if (![markType.LINE, markType.COMMENT, markType.REPLY, markType.ORIGIN_LINE, markType.ORIGIN_COMMENT].includes(type)) {
+        throw ErrorMarkTypeError()
+      }
+
+      // 从 metadata 中提取 root_id、parent_id、source_id
+      let rootUuid = ''
+      let parentUuid = ''
+      let sourceId = ''
+      if (change.data['metadata']) {
+        try {
+          const metadata = JSON.parse(change.data['metadata']) as { root_id?: string; parent_id?: string; source_id?: string }
+          rootUuid = metadata.root_id || ''
+          parentUuid = metadata.parent_id || ''
+          sourceId = metadata.source_id || ''
+        } catch {
+          // metadata parse failure
+        }
+      }
+
+      operations.push({
+        type: 'create_comment',
+        commentUuid: change.id,
+        userId,
+        data: {
+          userBookmarkUuid,
+          type,
+          source: change.data['source'] || '[]',
+          comment: change.data['comment'] || '',
+          rootUuid,
+          parentUuid,
+          approxSource: change.data['approx_source'] || '',
+          content: change.data['content'] || '',
+          sourceType: sourceId ? 'bookmark' : '',
+          sourceId
+        }
+      })
+      return
     }
   }
 

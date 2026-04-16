@@ -72,4 +72,13 @@ export class MarkController {
     const listResult = await this.markService.getMarkList(ctx, page, size)
     return Successed(listResult)
   }
+
+  @Get('/users')
+  public async getMarkUsers(ctx: ContextManager, request: Request) {
+    const req = await RequestUtils.query<{ user_bookmark_uuid: string }>(request)
+    if (!req || !req.user_bookmark_uuid) return Failed(ErrorParam())
+
+    const users = await this.markService.getMarkUsersByUserBookmarkUuid(ctx, req.user_bookmark_uuid)
+    return Successed(users)
+  }
 }
