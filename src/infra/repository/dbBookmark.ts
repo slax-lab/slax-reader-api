@@ -214,6 +214,10 @@ export class BookmarkRepo {
     return await this.prismaPg().sr_user_bookmark.findFirst({ where: { uuid: uid, user_id: userId }, include: { bookmark: true } })
   }
 
+  public async getUserBookmarkByUuid(uuid: string) {
+    return await this.prismaPg().sr_user_bookmark.findFirst({ where: { uuid } })
+  }
+
   public async getUserBookmarkByUserBmId(userBmId: number) {
     return await this.prismaPg().sr_user_bookmark.findFirst({ where: { id: userBmId }, include: { bookmark: true } })
   }

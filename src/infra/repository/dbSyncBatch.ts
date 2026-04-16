@@ -2,7 +2,18 @@ import { PRISIMA_HYPERDRIVE_CLIENT } from '../../const/symbol'
 import { inject, injectable } from '../../decorators/di'
 import { LazyInstance } from '../../decorators/lazy'
 import { Prisma, PrismaClient as HyperdrivePrismaClient } from '@prisma/hyperdrive-client'
-import { OrderedSyncOperation, CreateTagData, CreateBookmarkData, UpdateBookmarkData, UpdateTagsData, UpdateShareData } from '../../domain/orchestrator/sync'
+import {
+  OrderedSyncOperation,
+  CreateTagData,
+  CreateBookmarkData,
+  UpdateBookmarkData,
+  UpdateTagsData,
+  UpdateShareData,
+  CreateCommentData,
+  DeleteCommentData
+} from '../../domain/orchestrator/sync'
+import { CommentTooLongError, ErrorMarkTypeError, MarkLineTooLongError, ShareActionNotAllowedError } from '../../const/err'
+import { markType } from './dbMark'
 
 export type prismaTx = Omit<HyperdrivePrismaClient<Prisma.PrismaClientOptions>, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'>
 export type executeFunction = (tx: prismaTx, operation: OrderedSyncOperation) => Promise<{ bookmarkId: number; targetUrl: string; userId: number } | null | void>
@@ -22,7 +33,9 @@ export class DBSyncBatchOperation {
       update_bookmark: this.executeUpdateBookmark,
       update_tags: this.executeUpdateTags,
       update_share: this.executeUpdateShare,
-      delete_bookmark: this.executeDeleteBookmark
+      delete_bookmark: this.executeDeleteBookmark,
+      create_comment: this.executeCreateComment,
+      delete_comment: this.executeDeleteComment
     }
 
     await this.prismaHyperdrive().$transaction(async tx => {
@@ -217,6 +230,123 @@ export class DBSyncBatchOperation {
     await tx.sr_user_bookmark.update({
       where: { uuid: operation.bookmarkUuid, user_id: operation.userId },
       data: { deleted_at: new Date() }
+    })
+  }
+
+  /** create comment */
+  public async executeCreateComment(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
+    if (operation.type !== 'create_comment') return
+
+    const { userBookmarkUuid, type, source, comment, rootUuid, parentUuid, approxSource, content, sourceType, sourceId } = operation.data as CreateCommentData
+
+    if (type === markType.LINE && comment) throw ErrorMarkTypeError()
+    if (type === markType.COMMENT && (!comment || comment.length < 1)) throw ErrorMarkTypeError()
+    if (type === markType.REPLY && (!comment || comment.length < 1)) throw ErrorMarkTypeError()
+    if ([markType.ORIGIN_COMMENT, markType.ORIGIN_LINE].includes(type) && !approxSource) throw ErrorMarkTypeError()
+    if (comment && comment.length > 1500) throw CommentTooLongError()
+
+    // 校验 source 长度（非回复类型）
+    if (type !== markType.REPLY) {
+      try {
+        const sourceItems = JSON.parse(source) as Array<{ type: string; start: number; end: number }>
+        if (Array.isArray(sourceItems)) {
+          let sourceLength = 0
+          let sourceImageCount = 0
+          sourceItems.forEach(item => {
+            if (item.type === 'image') sourceImageCount++
+            else sourceLength += (item.end || 0) - (item.start || 0)
+          })
+          if (sourceLength > 1000 || sourceImageCount > 3) throw MarkLineTooLongError()
+        }
+      } catch (e) {
+        if (e instanceof Error && (e.message.includes('MarkLine') || e.message.includes('MARK_LINE'))) throw e
+      }
+    }
+
+    // 查找目标书签（sr_user_bookmark）
+    const userBookmark = await tx.sr_user_bookmark.findUnique({
+      where: { uuid: userBookmarkUuid }
+    })
+    if (!userBookmark) throw ShareActionNotAllowedError()
+
+    // 权限校验：本人书签直接放行，非本人需检查是否开启分享
+    if (userBookmark.user_id !== operation.userId) {
+      const share = await tx.sr_bookmark_share.findFirst({
+        where: { bookmark_id: userBookmark.bookmark_id, user_id: userBookmark.user_id, is_enable: true }
+      })
+      if (!share) throw ShareActionNotAllowedError()
+    }
+
+    // 通过 UUID 解析 root_id 和 parent_id 对应的整数 ID
+    let rootId = 0
+    let parentId = 0
+
+    if (rootUuid) {
+      const rootComment = await tx.sr_bookmark_comment.findUnique({ where: { uuid: rootUuid } })
+      if (rootComment) rootId = rootComment.id
+    }
+
+    if (type === markType.REPLY && parentUuid) {
+      const parentComment = await tx.sr_bookmark_comment.findUnique({ where: { uuid: parentUuid } })
+      if (!parentComment) throw ShareActionNotAllowedError()
+      if (parentComment.bookmark_id !== userBookmark.id) throw ShareActionNotAllowedError()
+      if (parentComment.is_deleted) throw ShareActionNotAllowedError()
+      parentId = parentComment.id
+      if (parentComment.root_id > 0) rootId = parentComment.root_id
+    }
+
+    const created = await tx.sr_bookmark_comment.create({
+      data: {
+        uuid: operation.commentUuid,
+        user_id: operation.userId,
+        bookmark_id: userBookmark.id,
+        user_bookmark_uuid: userBookmarkUuid,
+        type,
+        source,
+        comment,
+        root_id: rootId,
+        parent_id: parentId,
+        approx_source: approxSource,
+        content,
+        source_type: sourceType,
+        source_id: sourceId,
+        is_deleted: false,
+        created_at: new Date(),
+        updated_at: new Date()
+      }
+    })
+
+    if ([markType.COMMENT, markType.ORIGIN_COMMENT].includes(type) && rootId === 0) {
+      await tx.sr_bookmark_comment.update({
+        where: { id: created.id },
+        data: { root_id: created.id, updated_at: new Date() }
+      })
+    }
+  }
+
+  /** soft delete comment */
+  public async executeDeleteComment(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
+    if (operation.type !== 'delete_comment') return
+
+    const { isDeleted } = operation.data as DeleteCommentData
+
+    const commentRecord = await tx.sr_bookmark_comment.findUnique({
+      where: { uuid: operation.commentUuid }
+    })
+    if (!commentRecord) return
+
+    // 权限校验：评论作者可删除自己的评论，书签拥有者可删除其书签下的任意评论
+    if (commentRecord.user_id !== operation.userId) {
+      // bookmark_id 存的是 sr_user_bookmark.id，用 id 去查
+      const userBookmark = await tx.sr_user_bookmark.findFirst({
+        where: { id: commentRecord.bookmark_id, user_id: operation.userId }
+      })
+      if (!userBookmark) throw ShareActionNotAllowedError()
+    }
+
+    await tx.sr_bookmark_comment.update({
+      where: { uuid: operation.commentUuid },
+      data: { is_deleted: isDeleted, updated_at: new Date() }
     })
   }
 }

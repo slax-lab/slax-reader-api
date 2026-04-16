@@ -145,6 +145,10 @@ export function getRouter(container: Container) {
     const controller = container.resolve(MarkController)
     return await controller.getMarkList(ctx, req)
   })
+  router.get('/v1/mark/users', async (req: Request, ctx: ContextManager) => {
+    const controller = container.resolve(MarkController)
+    return await controller.getMarkUsers(ctx, req)
+  })
   router.all('/v1/mcp/*', async (req: Request, ctx: ContextManager) => {
     const controller = container.resolve(McpServerController)
     return await controller.handleMcpRequest(ctx, req)

@@ -409,4 +409,25 @@ export class MarkService {
 
     return res
   }
+
+  public async getMarkUsersByUserBookmarkUuid(ctx: ContextManager, userBookmarkUuid: string): Promise<{ uuid: string; nick_name: string; avatar: string }[]> {
+    const userBookmark = await this.bookmarkRepo.getUserBookmarkByUuid(userBookmarkUuid)
+    if (!userBookmark) throw BookmarkNotFoundError()
+
+    // check permission
+    if (userBookmark.user_id !== ctx.getUserId()) {
+      const share = await this.bookmarkRepo.getBookmarkShareByBookmarkId(userBookmark.bookmark_id, userBookmark.user_id)
+      if (!share || !share.is_enable) throw ShareActionNotAllowedError()
+    }
+
+    const userIds = await this.markRepo.getDistinctUserIdsByUserBookmarkUuid(userBookmarkUuid)
+    if (userIds.length === 0) return []
+
+    const users = await this.userRepo.getUserInfoList(userIds)
+    return users.map(u => ({
+      uuid: u.uuid,
+      nick_name: u.name,
+      avatar: u.picture
+    }))
+  }
 }

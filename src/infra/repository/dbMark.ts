@@ -193,4 +193,13 @@ export class MarkRepo {
       take: size
     })
   }
+
+  async getDistinctUserIdsByUserBookmarkUuid(userBookmarkUuid: string): Promise<number[]> {
+    const comments = await this.prismaPg().sr_bookmark_comment.findMany({
+      where: { user_bookmark_uuid: userBookmarkUuid, is_deleted: false },
+      select: { user_id: true },
+      distinct: ['user_id']
+    })
+    return comments.map(c => c.user_id)
+  }
 }
