@@ -209,16 +209,13 @@ export class SyncOrchestrator {
         throw ErrorMarkTypeError()
       }
 
-      // 从 metadata 中提取 root_id、parent_id、source_id
       let rootUuid = ''
       let parentUuid = ''
-      let sourceId = ''
       if (change.data['metadata']) {
         try {
-          const metadata = JSON.parse(change.data['metadata']) as { root_id?: string; parent_id?: string; source_id?: string }
+          const metadata = JSON.parse(change.data['metadata']) as { root_id?: string; parent_id?: string }
           rootUuid = metadata.root_id || ''
           parentUuid = metadata.parent_id || ''
-          sourceId = metadata.source_id || ''
         } catch {
           // metadata parse failure
         }
@@ -237,8 +234,8 @@ export class SyncOrchestrator {
           parentUuid,
           approxSource: change.data['approx_source'] || '',
           content: change.data['content'] || '',
-          sourceType: sourceId ? 'bookmark' : '',
-          sourceId
+          sourceType: 'bookmark',
+          sourceId: ''
         }
       })
       return
