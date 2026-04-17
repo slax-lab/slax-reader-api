@@ -295,6 +295,9 @@ export class DBSyncBatchOperation {
       if (parentComment.root_id > 0) rootId = parentComment.root_id
     }
 
+    const finalSourceType = sourceType || 'bookmark'
+    const finalSourceId = sourceId || userBookmark.id.toString()
+
     const created = await tx.sr_bookmark_comment.create({
       data: {
         uuid: operation.commentUuid,
@@ -308,8 +311,8 @@ export class DBSyncBatchOperation {
         parent_id: parentId,
         approx_source: approxSource,
         content,
-        source_type: sourceType,
-        source_id: sourceId,
+        source_type: finalSourceType,
+        source_id: finalSourceId,
         is_deleted: false,
         created_at: new Date(),
         updated_at: new Date()
