@@ -43,40 +43,6 @@ export class DBSyncBatchOperation {
         const result = await executeMap[operation.type].bind(this)(tx, operation)
         if (result) newBookmarks.push(result)
       }
-
-      // 批量回填评论的 root_id 和 parent_id
-      const commentOps = operations.filter(op => op.type === 'create_comment')
-      if (commentOps.length > 0) {
-        const uuids = commentOps.map(op => (op as { commentUuid: string }).commentUuid)
-        const created = await tx.sr_bookmark_comment.findMany({ where: { uuid: { in: uuids } } })
-        const uuidToComment = new Map(created.map(c => [c.uuid, c]))
-
-        for (const op of commentOps) {
-          if (op.type !== 'create_comment') continue
-          const { type } = op.data as CreateCommentData
-          const comment = uuidToComment.get(op.commentUuid)
-          if (comment && [markType.COMMENT, markType.ORIGIN_COMMENT].includes(type)) {
-            await tx.sr_bookmark_comment.update({ where: { id: comment.id }, data: { root_id: comment.id, updated_at: new Date() } })
-          }
-        }
-
-        for (const op of commentOps) {
-          if (op.type !== 'create_comment') continue
-          const { parentUuid } = op.data as CreateCommentData
-          if (!parentUuid) continue
-          const comment = uuidToComment.get(op.commentUuid)
-          if (!comment) continue
-          const parent = await tx.sr_bookmark_comment.findUnique({ where: { uuid: parentUuid } })
-          if (!parent) throw ShareActionNotAllowedError()
-          if (parent.bookmark_id !== comment.bookmark_id) throw ShareActionNotAllowedError()
-          if (parent.is_deleted) throw ShareActionNotAllowedError()
-          const rootId = parent.root_id > 0 ? parent.root_id : parent.id
-          await tx.sr_bookmark_comment.update({
-            where: { id: comment.id },
-            data: { parent_id: parent.id, root_id: rootId, updated_at: new Date() }
-          })
-        }
-      }
     })
 
     return newBookmarks
@@ -271,7 +237,7 @@ export class DBSyncBatchOperation {
   public async executeCreateComment(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
     if (operation.type !== 'create_comment') return
 
-    const { userBookmarkUuid, type, source, comment, approxSource, content, sourceType, sourceId } = operation.data as CreateCommentData
+    const { userBookmarkUuid, type, source, comment, rootUuid, parentUuid, approxSource, content, sourceType, sourceId } = operation.data as CreateCommentData
 
     if (type === markType.LINE && comment) throw ErrorMarkTypeError()
     if (type === markType.COMMENT && (!comment || comment.length < 1)) throw ErrorMarkTypeError()
@@ -279,6 +245,7 @@ export class DBSyncBatchOperation {
     if ([markType.ORIGIN_COMMENT, markType.ORIGIN_LINE].includes(type) && !approxSource) throw ErrorMarkTypeError()
     if (comment && comment.length > 1500) throw CommentTooLongError()
 
+    // 校验 source 长度（非回复类型）
     if (type !== markType.REPLY) {
       try {
         const sourceItems = JSON.parse(source) as Array<{ type: string; start: number; end: number }>
@@ -296,9 +263,13 @@ export class DBSyncBatchOperation {
       }
     }
 
-    const userBookmark = await tx.sr_user_bookmark.findUnique({ where: { uuid: userBookmarkUuid } })
+    // 查找目标书签（sr_user_bookmark）
+    const userBookmark = await tx.sr_user_bookmark.findUnique({
+      where: { uuid: userBookmarkUuid }
+    })
     if (!userBookmark) throw ShareActionNotAllowedError()
 
+    // 权限校验：本人书签直接放行，非本人需检查是否开启分享
     if (userBookmark.user_id !== operation.userId) {
       const share = await tx.sr_bookmark_share.findFirst({
         where: { bookmark_id: userBookmark.bookmark_id, user_id: userBookmark.user_id, is_enable: true }
@@ -306,7 +277,28 @@ export class DBSyncBatchOperation {
       if (!share) throw ShareActionNotAllowedError()
     }
 
-    await tx.sr_bookmark_comment.create({
+    // 通过 UUID 解析 root_id 和 parent_id 对应的整数 ID
+    let rootId = 0
+    let parentId = 0
+
+    if (rootUuid) {
+      const rootComment = await tx.sr_bookmark_comment.findUnique({ where: { uuid: rootUuid } })
+      if (rootComment) rootId = rootComment.id
+    }
+
+    if (type === markType.REPLY && parentUuid) {
+      const parentComment = await tx.sr_bookmark_comment.findUnique({ where: { uuid: parentUuid } })
+      if (!parentComment) throw ShareActionNotAllowedError()
+      if (parentComment.bookmark_id !== userBookmark.id) throw ShareActionNotAllowedError()
+      if (parentComment.is_deleted) throw ShareActionNotAllowedError()
+      parentId = parentComment.id
+      if (parentComment.root_id > 0) rootId = parentComment.root_id
+    }
+
+    const finalSourceType = sourceType || 'bookmark'
+    const finalSourceId = sourceId || userBookmark.id.toString()
+
+    const created = await tx.sr_bookmark_comment.create({
       data: {
         uuid: operation.commentUuid,
         user_id: operation.userId,
@@ -315,17 +307,24 @@ export class DBSyncBatchOperation {
         type,
         source,
         comment,
-        root_id: 0,
-        parent_id: 0,
+        root_id: rootId,
+        parent_id: parentId,
         approx_source: approxSource,
         content,
-        source_type: sourceType || 'bookmark',
-        source_id: sourceId || userBookmark.id.toString(),
+        source_type: finalSourceType,
+        source_id: finalSourceId,
         is_deleted: false,
         created_at: new Date(),
         updated_at: new Date()
       }
     })
+
+    if ([markType.COMMENT, markType.ORIGIN_COMMENT].includes(type) && rootId === 0) {
+      await tx.sr_bookmark_comment.update({
+        where: { id: created.id },
+        data: { root_id: created.id, updated_at: new Date() }
+      })
+    }
   }
 
   /** soft delete comment */
