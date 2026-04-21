@@ -23,7 +23,7 @@ export class MarkController {
   @Post('/create')
   public async createMark(ctx: ContextManager, request: Request) {
     const req = await RequestUtils.json<markRequest>(request)
-    if (!req || !req.source || (!req.bm_id && !req.share_code && !req.collection_code && !req.cb_id)) {
+    if (!req || !req.source || (!req.bm_id && !req.bookmark_uid && !req.share_code && !req.collection_code && !req.cb_id)) {
       return Failed(ErrorParam())
     }
 
@@ -34,14 +34,16 @@ export class MarkController {
     const sourceType = typeof req.source
     if (req.type === markType.LINE && (req.comment || sourceType !== 'object')) return Failed(ErrorMarkTypeError())
     if (req.type === markType.COMMENT && (!req.comment || req.comment.length < 1 || sourceType !== 'object')) return Failed(ErrorMarkTypeError())
-    if (req.type === markType.REPLY && (!req.comment || req.comment.length < 1)) return Failed(ErrorMarkTypeError())
+    if (req.type === markType.REPLY && (!req.comment || req.comment.length < 1 || (!req.parent_id && !req.parent_uid))) return Failed(ErrorMarkTypeError())
     if ([markType.ORIGIN_COMMENT, markType.ORIGIN_LINE].includes(req.type) && !req.approx_source) return Failed(ErrorMarkTypeError())
 
     const createResult = await this.markOrchestrator.createMark(ctx, req)
 
     return Successed({
       mark_id: createResult.id,
-      root_id: createResult.root_id
+      root_id: createResult.root_id,
+      mark_uid: createResult.uid,
+      root_uid: createResult.root_uid
     })
   }
 
@@ -50,11 +52,14 @@ export class MarkController {
    */
   @Post('/delete')
   public async deleteMark(ctx: ContextManager, request: Request) {
-    const req = await RequestUtils.json<{ mark_id: number }>(request)
-    if (!req || !req.mark_id) {
+    const req = await RequestUtils.json<{ mark_id?: number; mark_uid?: string }>(request)
+    if (!req || (!req.mark_id && !req.mark_uid)) {
       return Failed(ErrorParam())
     }
-    const deleteResult = await this.markService.deleteMark(ctx, ctx.hashIds.decodeId(req.mark_id))
+    const deleteResult = await this.markService.deleteMark(ctx, {
+      id: req.mark_id ? ctx.hashIds.decodeId(req.mark_id) : undefined,
+      uid: req.mark_uid
+    })
     return Successed(deleteResult)
   }
 

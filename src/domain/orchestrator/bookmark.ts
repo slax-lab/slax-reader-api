@@ -19,7 +19,7 @@ export class BookmarkOrchestrator {
     if (!res || !res.bookmark) throw BookmarkNotFoundError()
     if (res.bookmark.private_user > 0 && res.bookmark.private_user !== userId) throw BookmarkNotFoundError()
 
-    const marksResult = await this.markService.getBookmarkMarkList(ctx, res.id, true)
+    const marksResult = await this.markService.getBookmarkMarkList(ctx, { id: res.id, isShowMarks: true })
     return marksResult
   }
 
@@ -29,7 +29,7 @@ export class BookmarkOrchestrator {
     if (res.bookmark.private_user > 0 && res.bookmark.private_user !== ctx.getUserId()) throw BookmarkNotFoundError()
 
     const [marksResult, overviewResult, tagsResult] = await Promise.allSettled([
-      this.markService.getBookmarkMarkList(ctx, res.id, true),
+      this.markService.getBookmarkMarkList(ctx, { id: res.id, isShowMarks: true }),
       this.bookmarkService.getUserBookmarkOverview(ctx.getUserId(), bmId),
       this.tagService.getBookmarkTags(ctx, ctx.getUserId(), bmId)
     ])
@@ -59,7 +59,7 @@ export class BookmarkOrchestrator {
 
     const [contentResult, marksResult, tagsResult, overviewResult] = await Promise.allSettled([
       this.bookmarkService.getBookmarkContent(res.bookmark.content_key),
-      this.markService.getBookmarkMarkList(ctx, res.id, true),
+      this.markService.getBookmarkMarkList(ctx, { id: res.id, isShowMarks: true }),
       this.tagService.getBookmarkTags(ctx, userId, bmId),
       this.bookmarkService.getUserBookmarkOverview(userId, bmId)
     ])
