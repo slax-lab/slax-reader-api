@@ -1,6 +1,6 @@
 import { ErrorMarkTypeError, ErrorParam } from '../../const/err'
 import { markType } from '../../infra/repository/dbMark'
-import { markRequest } from '../../domain/mark'
+import { markRequest, markIdParams } from '../../domain/mark'
 import { RequestUtils } from '../../utils/requestUtils'
 import { Failed, Successed } from '../../utils/responseUtils'
 import { Controller } from '../../decorators/controller'
@@ -56,7 +56,13 @@ export class MarkController {
     if (!req || (!req.mark_id && !req.mark_uid)) {
       return Failed(ErrorParam())
     }
-    const deleteResult = await this.markService.deleteMark(ctx, req.mark_uid ? { uid: req.mark_uid } : { id: ctx.hashIds.decodeId(req.mark_id!) })
+    let params: markIdParams
+    if (req.mark_uid) {
+      params = { uuid: req.mark_uid }
+    } else {
+      params = { id: ctx.hashIds.decodeId(req.mark_id!) }
+    }
+    const deleteResult = await this.markService.deleteMark(ctx, params)
     return Successed(deleteResult)
   }
 

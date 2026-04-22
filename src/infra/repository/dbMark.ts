@@ -1,4 +1,4 @@
-import { markSelectContent } from '../../domain/mark'
+import { markSelectContent, markMetadata } from '../../domain/mark'
 import { inject, injectable } from '../../decorators/di'
 import { PRISIMA_CLIENT, PRISIMA_HYPERDRIVE_CLIENT } from '../../const/symbol'
 import type { LazyInstance } from '../../decorators/lazy'
@@ -122,7 +122,7 @@ export class MarkRepo {
         }
       })
     ).map(item => {
-      const metadata = item.metadata as { parent_id?: string; root_id?: string }
+      const metadata = item.metadata as markMetadata
       return {
         id: item.id,
         uuid: item.uuid,
@@ -147,7 +147,7 @@ export class MarkRepo {
     const res = await this.prismaPg().sr_bookmark_comment.findFirst({ where: { id } })
     if (!res) return null
 
-    const metadata = res.metadata as { parent_id?: string; root_id?: string }
+    const metadata = res.metadata as markMetadata
 
     return {
       id: res.id,
@@ -171,7 +171,7 @@ export class MarkRepo {
     const res = await this.prismaPg().sr_bookmark_comment.findFirst({ where: { uuid } })
     if (!res) return null
 
-    const metadata = res.metadata as { parent_id?: string; root_id?: string }
+    const metadata = res.metadata as markMetadata
 
     return {
       id: res.id,

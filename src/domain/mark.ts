@@ -58,7 +58,15 @@ export interface markSelectContent {
   src: string
 }
 
-export type markIdParams = { uid: string } | { id: number }
+export type markIdParams = { uuid: string } | { id: number }
+
+export interface markMetadata {
+  root_id?: string | null
+  parent_id?: string | null
+  user_id?: string
+  source_id?: string
+  bookmark_id?: string
+}
 
 export interface markInfo {
   id: number
@@ -117,7 +125,12 @@ export class MarkService {
   }
 
   protected resolveMark = async (params: markIdParams) => {
-    const mark = 'uid' in params ? await this.markRepo.getByUuid(params.uid) : await this.markRepo.get(params.id)
+    if ('uuid' in params) {
+      const mark = await this.markRepo.getByUuid(params.uuid)
+      if (!mark) throw ErrorParam()
+      return mark
+    }
+    const mark = await this.markRepo.get(params.id)
     if (!mark) throw ErrorParam()
     return mark
   }
@@ -204,7 +217,7 @@ export class MarkService {
     let parentId = 0
     let replyComment: markDetailPO | undefined = undefined
     if (data.type === markType.REPLY) {
-      const parentParams: markIdParams = data.parent_uid ? { uid: data.parent_uid } : { id: ctx.hashIds.decodeId(data.parent_id) }
+      const parentParams: markIdParams = data.parent_uid ? { uuid: data.parent_uid } : { id: ctx.hashIds.decodeId(data.parent_id) }
       const res = await this.assertMarkBookmark(ctx, userBookmark.id, parentParams)
       replyComment = res
       rootId = res.root_id
@@ -252,7 +265,7 @@ export class MarkService {
     }
     ctx.execution.waitUntil(callback())
 
-    const metadata = res.metadata as { parent_id?: string; root_id?: string }
+    const metadata = res.metadata as markMetadata
     return {
       response: {
         id: ctx.hashIds.encodeId(res.id),
@@ -331,8 +344,8 @@ export class MarkService {
     if (!params.isShowMarks) return defaultResult
 
     let userBmId: number | undefined
-    if ('uid' in params) {
-      const ub = await this.bookmarkRepo.getUserBookmarkByUuid(params.uid)
+    if ('uuid' in params) {
+      const ub = await this.bookmarkRepo.getUserBookmarkByUuid(params.uuid)
       if (!ub) return defaultResult
       userBmId = ub.id
     } else {
@@ -436,7 +449,7 @@ export class MarkService {
           sourceId = `${collectionCode}/${ctx.hashIds.encodeId(parseInt(cbId))}`
         }
 
-        const metadata = mark.metadata as { parent_id?: string; root_id?: string }
+        const metadata = mark.metadata as markMetadata
 
         res.push({
           id: ctx.hashIds.encodeId(mark.id),
