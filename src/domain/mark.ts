@@ -58,10 +58,7 @@ export interface markSelectContent {
   src: string
 }
 
-export interface markIdParams {
-  id?: number
-  uid?: string
-}
+export type markIdParams = { uid: string } | { id: number }
 
 export interface markInfo {
   id: number
@@ -119,11 +116,14 @@ export class MarkService {
     return res
   }
 
-  assertMarkBookmark = async (ctx: ContextManager, bmId: number, params: markIdParams) => {
-    if (!params.uid && (!params.id || params.id < 1)) throw ErrorParam()
-
-    const mark = params.uid ? await this.markRepo.getByUuid(params.uid) : await this.markRepo.get(params.id!)
+  protected resolveMark = async (params: markIdParams) => {
+    const mark = 'uid' in params ? await this.markRepo.getByUuid(params.uid) : await this.markRepo.get(params.id)
     if (!mark) throw ErrorParam()
+    return mark
+  }
+
+  assertMarkBookmark = async (ctx: ContextManager, bmId: number, params: markIdParams) => {
+    const mark = await this.resolveMark(params)
     if (mark.user_bookmark_id !== bmId) throw ShareActionNotAllowedError()
     if (mark.is_deleted) throw ShareActionNotAllowedError()
     return mark
@@ -205,7 +205,6 @@ export class MarkService {
     let replyComment: markDetailPO | undefined = undefined
     if (data.type === markType.REPLY) {
       const parentParams: markIdParams = data.parent_uid ? { uid: data.parent_uid } : { id: ctx.hashIds.decodeId(data.parent_id) }
-      if (!parentParams.uid && (!parentParams.id || parentParams.id < 1)) throw ErrorParam()
       const res = await this.assertMarkBookmark(ctx, userBookmark.id, parentParams)
       replyComment = res
       rootId = res.root_id
@@ -268,49 +267,32 @@ export class MarkService {
   }
 
   public async deleteMark(ctx: ContextManager, params: markIdParams): Promise<string> {
-    if (!params.uid && !params.id) throw ErrorParam()
-    const userId = ctx.getUserId()
-    const useUid = !!params.uid
+    const mark = await this.resolveMark(params)
+    if (mark.is_deleted) throw ErrorParam()
 
-    const mark = useUid ? await this.markRepo.getByUuid(params.uid!) : await this.markRepo.get(params.id!)
-    if (!mark || mark.is_deleted) throw ErrorParam()
+    const userId = ctx.getUserId()
     if (mark.user_id !== userId) {
-      // 非本人则去校验文章所有权
       const ubm = await this.bookmarkRepo.getUserBookmarkById(mark.user_bookmark_id)
-      if (!ubm) throw ShareActionNotAllowedError()
-      if (ubm.user_id !== userId) throw ShareActionNotAllowedError()
+      if (!ubm || ubm.user_id !== userId) throw ShareActionNotAllowedError()
     }
 
-    // 如果root_id的评论底下有任意子评论，则软删除当前评论
-    if ([markType.COMMENT, markType.ORIGIN_COMMENT, markType.REPLY].includes(mark.type)) {
-      const res =
-        useUid && mark.root_uid
-          ? await this.markRepo.existsCommentMarkChildByRootUid(mark.user_bookmark_id, mark.root_uid)
-          : await this.markRepo.existsCommentMarkChild(mark.user_bookmark_id, mark.root_id)
-      // 如果有子评论，把评论标记为删除
-      if (res && res > 1) {
-        if (useUid) {
-          await this.markRepo.updateCommentMarkDeletedByUid(params.uid!)
-        } else {
-          await this.markRepo.updateCommentMarkDeleted(params.id!)
-        }
+    const isComment = [markType.COMMENT, markType.ORIGIN_COMMENT, markType.REPLY].includes(mark.type)
+
+    if (isComment) {
+      const childCount = mark.root_uid
+        ? await this.markRepo.existsCommentMarkChildByRootUid(mark.user_bookmark_id, mark.root_uid)
+        : await this.markRepo.existsCommentMarkChild(mark.user_bookmark_id, mark.root_id)
+      if (childCount && childCount > 1) {
+        await this.softDeleteMark(mark)
         return 'ok'
       }
     }
-    // 硬删除评论
+
     try {
-      if ([markType.COMMENT, markType.ORIGIN_COMMENT, markType.REPLY].includes(mark.type)) {
-        if (useUid && mark.root_uid) {
-          await this.markRepo.deleteByRootUid(mark.user_bookmark_id, mark.root_uid)
-        } else {
-          await this.markRepo.deleteByRootId(mark.user_bookmark_id, mark.root_id)
-        }
-      } else if ([markType.LINE, markType.ORIGIN_LINE].includes(mark.type)) {
-        if (useUid) {
-          await this.markRepo.delByUid(params.uid!)
-        } else {
-          await this.markRepo.del(params.id!)
-        }
+      if (isComment) {
+        await this.hardDeleteComment(mark)
+      } else {
+        await this.hardDeleteLine(mark)
       }
     } catch (e) {
       console.error(`delete mark failed: ${e}`)
@@ -320,24 +302,48 @@ export class MarkService {
     return 'ok'
   }
 
+  private async softDeleteMark(mark: markDetailPO) {
+    if (mark.uuid) {
+      await this.markRepo.updateCommentMarkDeletedByUid(mark.uuid)
+    } else {
+      await this.markRepo.updateCommentMarkDeleted(mark.id)
+    }
+  }
+
+  private async hardDeleteComment(mark: markDetailPO) {
+    if (mark.root_uid) {
+      await this.markRepo.deleteByRootUid(mark.user_bookmark_id, mark.root_uid)
+    } else {
+      await this.markRepo.deleteByRootId(mark.user_bookmark_id, mark.root_id)
+    }
+  }
+
+  private async hardDeleteLine(mark: markDetailPO) {
+    if (mark.uuid) {
+      await this.markRepo.delByUid(mark.uuid)
+    } else {
+      await this.markRepo.del(mark.id)
+    }
+  }
+
   public async getBookmarkMarkList(ctx: ContextManager, params: markIdParams & { isShowMarks: boolean }) {
     const defaultResult = { mark_list: [], user_list: [] }
     if (!params.isShowMarks) return defaultResult
-    const markRepo = this.markRepo
-    const userRepo = this.userRepo
 
-    let userBmId = params.id
-    if (params.uid && !userBmId) {
+    let userBmId: number | undefined
+    if ('uid' in params) {
       const ub = await this.bookmarkRepo.getUserBookmarkByUuid(params.uid)
       if (!ub) return defaultResult
       userBmId = ub.id
+    } else {
+      userBmId = params.id
     }
     if (!userBmId) return defaultResult
 
-    const marks = await markRepo.list(userBmId)
+    const marks = await this.markRepo.list(userBmId)
     if (marks.length === 0) return defaultResult
 
-    const users = await userRepo.getUserInfoList(marks.map(m => m.user_id))
+    const users = await this.userRepo.getUserInfoList(marks.map(m => m.user_id))
     const markList: markInfo[] = marks.map(m => {
       return {
         id: ctx.hashIds.encodeId(m.id),
@@ -377,7 +383,6 @@ export class MarkService {
   }
 
   public async getMarkList(ctx: ContextManager, page: number, size: number): Promise<markCommentItem[]> {
-    const markRepo = this.markRepo
     const markTypeMap: Record<markType, string> = {
       [markType.COMMENT]: 'comment',
       [markType.LINE]: 'mark',
@@ -385,7 +390,7 @@ export class MarkService {
       [markType.ORIGIN_LINE]: 'mark',
       [markType.ORIGIN_COMMENT]: 'comment'
     }
-    const marks = await markRepo.listUserMark(ctx.getUserId(), page, size)
+    const marks = await this.markRepo.listUserMark(ctx.getUserId(), page, size)
     if (marks.length === 0) return []
 
     const bookmarkIdList: number[] = []

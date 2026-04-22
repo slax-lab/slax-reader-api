@@ -56,10 +56,7 @@ export class MarkController {
     if (!req || (!req.mark_id && !req.mark_uid)) {
       return Failed(ErrorParam())
     }
-    const deleteResult = await this.markService.deleteMark(ctx, {
-      id: req.mark_id ? ctx.hashIds.decodeId(req.mark_id) : undefined,
-      uid: req.mark_uid
-    })
+    const deleteResult = await this.markService.deleteMark(ctx, req.mark_uid ? { uid: req.mark_uid } : { id: ctx.hashIds.decodeId(req.mark_id!) })
     return Successed(deleteResult)
   }
 
