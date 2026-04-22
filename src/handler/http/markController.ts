@@ -42,7 +42,7 @@ export class MarkController {
     return Successed({
       mark_id: createResult.id,
       root_id: createResult.root_id,
-      mark_uid: createResult.uid,
+      mark_uid: createResult.uuid,
       root_uid: createResult.root_uid
     })
   }

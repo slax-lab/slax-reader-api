@@ -80,7 +80,7 @@ export interface markDetailPO {
   is_deleted: boolean
   parent_id: number
   root_id: number
-  uid: string
+  uuid: string
   parent_uid?: string
   root_uid?: string
 }
@@ -125,7 +125,7 @@ export class MarkRepo {
       const metadata = item.metadata as { parent_id?: string; root_id?: string }
       return {
         id: item.id,
-        uid: item.uuid,
+        uuid: item.uuid,
         user_id: item.is_deleted ? 0 : item.user_id,
         user_bookmark_id: item.bookmark_id,
         type: item.type,
@@ -151,7 +151,7 @@ export class MarkRepo {
 
     return {
       id: res.id,
-      uid: res.uuid,
+      uuid: res.uuid,
       user_id: res.is_deleted ? 0 : res.user_id,
       user_bookmark_id: res.bookmark_id,
       type: res.type,
@@ -167,15 +167,15 @@ export class MarkRepo {
     }
   }
 
-  async getByUid(uid: string): Promise<markDetailPO | null> {
-    const res = await this.prismaPg().sr_bookmark_comment.findFirst({ where: { uuid: uid } })
+  async getByUuid(uuid: string): Promise<markDetailPO | null> {
+    const res = await this.prismaPg().sr_bookmark_comment.findFirst({ where: { uuid } })
     if (!res) return null
 
     const metadata = res.metadata as { parent_id?: string; root_id?: string }
 
     return {
       id: res.id,
-      uid: res.uuid,
+      uuid: res.uuid,
       user_id: res.is_deleted ? 0 : res.user_id,
       user_bookmark_id: res.bookmark_id,
       type: res.type,
@@ -204,7 +204,7 @@ export class MarkRepo {
   }
 
   async deleteByRootUid(bookmarkId: number, rootUid: string) {
-    const rootMark = await this.getByUid(rootUid)
+    const rootMark = await this.getByUuid(rootUid)
     if (!rootMark) return
     return await this.prismaPg().sr_bookmark_comment.deleteMany({ where: { bookmark_id: bookmarkId, root_id: rootMark.id } })
   }
@@ -224,7 +224,7 @@ export class MarkRepo {
   }
 
   async existsCommentMarkChildByRootUid(bookmarkId: number, rootUid: string) {
-    const rootMark = await this.getByUid(rootUid)
+    const rootMark = await this.getByUuid(rootUid)
     if (!rootMark) return 0
     return await this.existsCommentMarkChild(bookmarkId, rootMark.id)
   }
@@ -242,7 +242,7 @@ export class MarkRepo {
   }
 
   async updateCommentRootUid(uid: string, rootUid: string) {
-    const rootMark = await this.getByUid(rootUid)
+    const rootMark = await this.getByUuid(rootUid)
     if (!rootMark) return
     return await this.prismaPg().sr_bookmark_comment.update({ where: { uuid: uid }, data: { root_id: rootMark.id, updated_at: new Date() } })
   }

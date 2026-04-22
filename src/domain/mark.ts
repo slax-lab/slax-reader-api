@@ -18,7 +18,7 @@ import { UserRepo } from '../infra/repository/dbUser'
 export interface markResponse {
   id: number
   root_id: number
-  uid: string
+  uuid: string
   root_uid?: string
 }
 
@@ -93,7 +93,7 @@ export interface markCommentItem {
   source_type: 'share' | 'bookmark'
   source_id: string
   approx_source?: markApproxSource
-  uid: string
+  uuid: string
   parent_uid?: string
   root_uid?: string
 }
@@ -122,7 +122,7 @@ export class MarkService {
   assertMarkBookmark = async (ctx: ContextManager, bmId: number, params: markIdParams) => {
     if (!params.uid && (!params.id || params.id < 1)) throw ErrorParam()
 
-    const mark = params.uid ? await this.markRepo.getByUid(params.uid) : await this.markRepo.get(params.id!)
+    const mark = params.uid ? await this.markRepo.getByUuid(params.uid) : await this.markRepo.get(params.id!)
     if (!mark) throw ErrorParam()
     if (mark.user_bookmark_id !== bmId) throw ShareActionNotAllowedError()
     if (mark.is_deleted) throw ShareActionNotAllowedError()
@@ -258,7 +258,7 @@ export class MarkService {
       response: {
         id: ctx.hashIds.encodeId(res.id),
         root_id: ctx.hashIds.encodeId(res.root_id > 0 ? res.root_id : res.id),
-        uid: res.uuid,
+        uuid: res.uuid,
         root_uid: metadata?.root_id ?? undefined
       },
       mark: res,
@@ -272,7 +272,7 @@ export class MarkService {
     const userId = ctx.getUserId()
     const useUid = !!params.uid
 
-    const mark = useUid ? await this.markRepo.getByUid(params.uid!) : await this.markRepo.get(params.id!)
+    const mark = useUid ? await this.markRepo.getByUuid(params.uid!) : await this.markRepo.get(params.id!)
     if (!mark || mark.is_deleted) throw ErrorParam()
     if (mark.user_id !== userId) {
       // 非本人则去校验文章所有权
@@ -350,7 +350,7 @@ export class MarkService {
         created_at: m.created_at,
         is_deleted: m.is_deleted,
         approx_source: m.approx_source,
-        uid: m.uid,
+        uuid: m.uuid,
         parent_uid: m.parent_uid,
         root_uid: m.root_uid
       }
@@ -435,7 +435,7 @@ export class MarkService {
 
         res.push({
           id: ctx.hashIds.encodeId(mark.id),
-          uid: mark.uuid,
+          uuid: mark.uuid,
           type: markTypeMap[mark.type as markType],
           content: JSON.parse(mark.content) as markSelectContent[],
           created_at: mark.created_at,
