@@ -1,9 +1,10 @@
-import { markSelectContent } from '../../domain/mark'
+import { markSelectContent, markMetadata } from '../../domain/mark'
 import { inject, injectable } from '../../decorators/di'
 import { PRISIMA_CLIENT, PRISIMA_HYPERDRIVE_CLIENT } from '../../const/symbol'
 import type { LazyInstance } from '../../decorators/lazy'
 import { PrismaClient as HyperdrivePrismaClient } from '@prisma/hyperdrive-client'
 import { PrismaClient } from '@prisma/client'
+import { JsonValue } from '@prisma/client/runtime/client'
 
 export enum markType {
   LINE = 1,
@@ -63,6 +64,8 @@ export interface markPOWithId {
   is_deleted: boolean
   created_at: Date
   updated_at: Date
+  uuid: string
+  metadata: JsonValue // { parent_id?: string; root_id?: string }
 }
 
 export interface markDetailPO {
@@ -77,6 +80,9 @@ export interface markDetailPO {
   is_deleted: boolean
   parent_id: number
   root_id: number
+  uuid: string
+  parent_uid?: string
+  root_uid?: string
 }
 
 @injectable()
@@ -116,8 +122,10 @@ export class MarkRepo {
         }
       })
     ).map(item => {
+      const metadata = item.metadata as markMetadata
       return {
         id: item.id,
+        uuid: item.uuid,
         user_id: item.is_deleted ? 0 : item.user_id,
         user_bookmark_id: item.bookmark_id,
         type: item.type,
@@ -128,6 +136,8 @@ export class MarkRepo {
         is_deleted: item.is_deleted,
         parent_id: item.parent_id,
         root_id: item.root_id,
+        parent_uid: metadata?.parent_id ?? undefined,
+        root_uid: metadata?.root_id ?? undefined,
         approx_source: JSON.parse(item.approx_source.length > 0 ? item.approx_source : '{}')
       }
     })
@@ -136,8 +146,12 @@ export class MarkRepo {
   async get(id: number): Promise<markDetailPO | null> {
     const res = await this.prismaPg().sr_bookmark_comment.findFirst({ where: { id } })
     if (!res) return null
+
+    const metadata = res.metadata as markMetadata
+
     return {
       id: res.id,
+      uuid: res.uuid,
       user_id: res.is_deleted ? 0 : res.user_id,
       user_bookmark_id: res.bookmark_id,
       type: res.type,
@@ -147,7 +161,33 @@ export class MarkRepo {
       updated_at: res.updated_at,
       is_deleted: res.is_deleted,
       parent_id: res.parent_id,
-      root_id: res.root_id
+      root_id: res.root_id,
+      parent_uid: metadata?.parent_id ?? undefined,
+      root_uid: metadata?.root_id ?? undefined
+    }
+  }
+
+  async getByUuid(uuid: string): Promise<markDetailPO | null> {
+    const res = await this.prismaPg().sr_bookmark_comment.findFirst({ where: { uuid } })
+    if (!res) return null
+
+    const metadata = res.metadata as markMetadata
+
+    return {
+      id: res.id,
+      uuid: res.uuid,
+      user_id: res.is_deleted ? 0 : res.user_id,
+      user_bookmark_id: res.bookmark_id,
+      type: res.type,
+      source: JSON.parse(res.source),
+      comment: res.is_deleted ? '' : res.comment,
+      created_at: res.created_at,
+      updated_at: res.updated_at,
+      is_deleted: res.is_deleted,
+      parent_id: res.parent_id,
+      root_id: res.root_id,
+      parent_uid: metadata?.parent_id ?? undefined,
+      root_uid: metadata?.root_id ?? undefined
     }
   }
 
@@ -155,8 +195,18 @@ export class MarkRepo {
     return await this.prismaPg().sr_bookmark_comment.delete({ where: { id } })
   }
 
+  async delByUid(uid: string) {
+    return await this.prismaPg().sr_bookmark_comment.delete({ where: { uuid: uid } })
+  }
+
   async deleteByRootId(bookmarkId: number, rootId: number) {
     return await this.prismaPg().sr_bookmark_comment.deleteMany({ where: { bookmark_id: bookmarkId, root_id: rootId } })
+  }
+
+  async deleteByRootUid(bookmarkId: number, rootUid: string) {
+    const rootMark = await this.getByUuid(rootUid)
+    if (!rootMark) return
+    return await this.prismaPg().sr_bookmark_comment.deleteMany({ where: { bookmark_id: bookmarkId, root_id: rootMark.id } })
   }
 
   async existsCommentMarkChild(bookmarkId: number, rootId: number) {
@@ -173,12 +223,28 @@ export class MarkRepo {
     return Number(res || 0)
   }
 
+  async existsCommentMarkChildByRootUid(bookmarkId: number, rootUid: string) {
+    const rootMark = await this.getByUuid(rootUid)
+    if (!rootMark) return 0
+    return await this.existsCommentMarkChild(bookmarkId, rootMark.id)
+  }
+
   async updateCommentMarkDeleted(id: number) {
     return await this.prismaPg().sr_bookmark_comment.update({ where: { id }, data: { is_deleted: true, updated_at: new Date() } })
   }
 
+  async updateCommentMarkDeletedByUid(uid: string) {
+    return await this.prismaPg().sr_bookmark_comment.update({ where: { uuid: uid }, data: { is_deleted: true, updated_at: new Date() } })
+  }
+
   async updateCommentRootId(id: number, rootId: number) {
     return await this.prismaPg().sr_bookmark_comment.update({ where: { id }, data: { root_id: rootId, updated_at: new Date() } })
+  }
+
+  async updateCommentRootUid(uid: string, rootUid: string) {
+    const rootMark = await this.getByUuid(rootUid)
+    if (!rootMark) return
+    return await this.prismaPg().sr_bookmark_comment.update({ where: { uuid: uid }, data: { root_id: rootMark.id, updated_at: new Date() } })
   }
 
   async deleteByBookmarkId(bookmarkId: number) {

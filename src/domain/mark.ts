@@ -8,8 +8,6 @@ import {
   ServerError,
   ShareActionNotAllowedError,
   ShareCodeNotFoundError,
-  ShareCollectionNotAllowedError,
-  ShareCollectionNotFoundError,
   ShareDisabledError
 } from '../const/err'
 import { markDetailPO, MarkRepo, markType } from '../infra/repository/dbMark'
@@ -20,6 +18,8 @@ import { UserRepo } from '../infra/repository/dbUser'
 export interface markResponse {
   id: number
   root_id: number
+  uuid: string
+  root_uid?: string
 }
 
 export interface markPathItem {
@@ -33,6 +33,7 @@ export interface markRequest {
   source: markPathItem[]
   select_content: markSelectContent[]
   parent_id: number
+  parent_uid?: string
   comment?: string
   bm_id?: number
   bookmark_uid?: string
@@ -55,6 +56,16 @@ export interface markSelectContent {
   type: 'text' | 'image'
   text: string
   src: string
+}
+
+export type markIdParams = { uuid: string } | { id: number }
+
+export interface markMetadata {
+  root_id?: string | null
+  parent_id?: string | null
+  user_id?: string
+  source_id?: string
+  bookmark_id?: string
 }
 
 export interface markInfo {
@@ -87,6 +98,9 @@ export interface markCommentItem {
   source_type: 'share' | 'bookmark'
   source_id: string
   approx_source?: markApproxSource
+  uuid: string
+  parent_uid?: string
+  root_uid?: string
 }
 
 @injectable()
@@ -110,11 +124,19 @@ export class MarkService {
     return res
   }
 
-  assertMarkBookmark = async (ctx: ContextManager, bmId: number, parentId: number) => {
-    if (parentId < 1) throw ErrorParam()
-
-    const mark = await this.markRepo.get(parentId)
+  protected resolveMark = async (params: markIdParams) => {
+    if ('uuid' in params) {
+      const mark = await this.markRepo.getByUuid(params.uuid)
+      if (!mark) throw ErrorParam()
+      return mark
+    }
+    const mark = await this.markRepo.get(params.id)
     if (!mark) throw ErrorParam()
+    return mark
+  }
+
+  assertMarkBookmark = async (ctx: ContextManager, bmId: number, params: markIdParams) => {
+    const mark = await this.resolveMark(params)
     if (mark.user_bookmark_id !== bmId) throw ShareActionNotAllowedError()
     if (mark.is_deleted) throw ShareActionNotAllowedError()
     return mark
@@ -168,7 +190,7 @@ export class MarkService {
       bmId = res.bookmark_id
     }
 
-    if (data.bm_id) {
+    if (data.bm_id || data.bookmark_uid) {
       await bookmarkHandle()
     } else if (data.share_code) {
       await shareHandle()
@@ -195,11 +217,11 @@ export class MarkService {
     let parentId = 0
     let replyComment: markDetailPO | undefined = undefined
     if (data.type === markType.REPLY) {
-      parentId = ctx.hashIds.decodeId(data.parent_id)
-      if (parentId < 1) throw ErrorParam()
-      const res = await this.assertMarkBookmark(ctx, userBookmark.id, parentId)
+      const parentParams: markIdParams = data.parent_uid ? { uuid: data.parent_uid } : { id: ctx.hashIds.decodeId(data.parent_id) }
+      const res = await this.assertMarkBookmark(ctx, userBookmark.id, parentParams)
       replyComment = res
       rootId = res.root_id
+      parentId = res.id
       data.source = []
     }
 
@@ -215,7 +237,7 @@ export class MarkService {
       sourceId = `${data.collection_code!}/${cbId}`
     } else {
       sourceType = 'bookmark'
-      sourceId = ctx.hashIds.decodeId(data.bm_id || 0)
+      sourceId = data.bm_id ? ctx.hashIds.decodeId(data.bm_id) : userBookmark.bookmark_id
     }
 
     // 创建实体
@@ -234,6 +256,7 @@ export class MarkService {
       root_id: rootId,
       approx_source: data.approx_source
     })
+
     if (!res) throw ServerError()
 
     // 如果是父级评论，多update一次追加root_id，后续delete的时候不需要重新查询
@@ -242,10 +265,13 @@ export class MarkService {
     }
     ctx.execution.waitUntil(callback())
 
+    const metadata = res.metadata as markMetadata
     return {
       response: {
         id: ctx.hashIds.encodeId(res.id),
-        root_id: ctx.hashIds.encodeId(res.root_id > 0 ? res.root_id : res.id)
+        root_id: ctx.hashIds.encodeId(res.root_id > 0 ? res.root_id : res.id),
+        uuid: res.uuid,
+        root_uid: metadata?.root_id ?? undefined
       },
       mark: res,
       userBookmark,
@@ -253,33 +279,33 @@ export class MarkService {
     }
   }
 
-  public async deleteMark(ctx: ContextManager, markId: number): Promise<string> {
-    const userId = ctx.getUserId()
+  public async deleteMark(ctx: ContextManager, params: markIdParams): Promise<string> {
+    const mark = await this.resolveMark(params)
+    if (mark.is_deleted) throw ErrorParam()
 
-    const mark = await this.markRepo.get(markId)
-    if (!mark || mark.is_deleted) throw ErrorParam()
+    const userId = ctx.getUserId()
     if (mark.user_id !== userId) {
-      // 非本人则去校验文章所有权
       const ubm = await this.bookmarkRepo.getUserBookmarkById(mark.user_bookmark_id)
-      if (!ubm) throw ShareActionNotAllowedError()
-      if (ubm.user_id !== userId) throw ShareActionNotAllowedError()
+      if (!ubm || ubm.user_id !== userId) throw ShareActionNotAllowedError()
     }
 
-    // 如果root_id的评论底下有任意子评论，则软删除当前评论
-    if ([markType.COMMENT, markType.ORIGIN_COMMENT, markType.REPLY].includes(mark.type)) {
-      const res = await this.markRepo.existsCommentMarkChild(mark.user_bookmark_id, mark.root_id)
-      // 如果有子评论，把评论标记为删除
-      if (res && res > 1) {
-        await this.markRepo.updateCommentMarkDeleted(markId)
+    const isComment = [markType.COMMENT, markType.ORIGIN_COMMENT, markType.REPLY].includes(mark.type)
+
+    if (isComment) {
+      const childCount = mark.root_uid
+        ? await this.markRepo.existsCommentMarkChildByRootUid(mark.user_bookmark_id, mark.root_uid)
+        : await this.markRepo.existsCommentMarkChild(mark.user_bookmark_id, mark.root_id)
+      if (childCount && childCount > 1) {
+        await this.softDeleteMark(mark)
         return 'ok'
       }
     }
-    // 硬删除评论
+
     try {
-      if ([markType.COMMENT, markType.ORIGIN_COMMENT, markType.REPLY].includes(mark.type)) {
-        await this.markRepo.deleteByRootId(mark.user_bookmark_id, mark.root_id)
-      } else if ([markType.LINE, markType.ORIGIN_LINE].includes(mark.type)) {
-        await this.markRepo.del(markId)
+      if (isComment) {
+        await this.hardDeleteComment(mark)
+      } else {
+        await this.hardDeleteLine(mark)
       }
     } catch (e) {
       console.error(`delete mark failed: ${e}`)
@@ -289,16 +315,48 @@ export class MarkService {
     return 'ok'
   }
 
-  public async getBookmarkMarkList(ctx: ContextManager, userBmId: number, isShowMarks: boolean) {
-    const defaultResult = { mark_list: [], user_list: [] }
-    if (!isShowMarks) return defaultResult
-    const markRepo = this.markRepo
-    const userRepo = this.userRepo
+  private async softDeleteMark(mark: markDetailPO) {
+    if (mark.uuid) {
+      await this.markRepo.updateCommentMarkDeletedByUid(mark.uuid)
+    } else {
+      await this.markRepo.updateCommentMarkDeleted(mark.id)
+    }
+  }
 
-    const marks = await markRepo.list(userBmId)
+  private async hardDeleteComment(mark: markDetailPO) {
+    if (mark.root_uid) {
+      await this.markRepo.deleteByRootUid(mark.user_bookmark_id, mark.root_uid)
+    } else {
+      await this.markRepo.deleteByRootId(mark.user_bookmark_id, mark.root_id)
+    }
+  }
+
+  private async hardDeleteLine(mark: markDetailPO) {
+    if (mark.uuid) {
+      await this.markRepo.delByUid(mark.uuid)
+    } else {
+      await this.markRepo.del(mark.id)
+    }
+  }
+
+  public async getBookmarkMarkList(ctx: ContextManager, params: markIdParams & { isShowMarks: boolean }) {
+    const defaultResult = { mark_list: [], user_list: [] }
+    if (!params.isShowMarks) return defaultResult
+
+    let userBmId: number | undefined
+    if ('uuid' in params) {
+      const ub = await this.bookmarkRepo.getUserBookmarkByUuid(params.uuid)
+      if (!ub) return defaultResult
+      userBmId = ub.id
+    } else {
+      userBmId = params.id
+    }
+    if (!userBmId) return defaultResult
+
+    const marks = await this.markRepo.list(userBmId)
     if (marks.length === 0) return defaultResult
 
-    const users = await userRepo.getUserInfoList(marks.map(m => m.user_id))
+    const users = await this.userRepo.getUserInfoList(marks.map(m => m.user_id))
     const markList: markInfo[] = marks.map(m => {
       return {
         id: ctx.hashIds.encodeId(m.id),
@@ -310,7 +368,10 @@ export class MarkService {
         root_id: ctx.hashIds.encodeId(m.root_id),
         created_at: m.created_at,
         is_deleted: m.is_deleted,
-        approx_source: m.approx_source
+        approx_source: m.approx_source,
+        uuid: m.uuid,
+        parent_uid: m.parent_uid,
+        root_uid: m.root_uid
       }
     })
     const userMap: Record<number, markUserInfo> = {
@@ -335,7 +396,6 @@ export class MarkService {
   }
 
   public async getMarkList(ctx: ContextManager, page: number, size: number): Promise<markCommentItem[]> {
-    const markRepo = this.markRepo
     const markTypeMap: Record<markType, string> = {
       [markType.COMMENT]: 'comment',
       [markType.LINE]: 'mark',
@@ -343,7 +403,7 @@ export class MarkService {
       [markType.ORIGIN_LINE]: 'mark',
       [markType.ORIGIN_COMMENT]: 'comment'
     }
-    const marks = await markRepo.listUserMark(ctx.getUserId(), page, size)
+    const marks = await this.markRepo.listUserMark(ctx.getUserId(), page, size)
     if (marks.length === 0) return []
 
     const bookmarkIdList: number[] = []
@@ -388,8 +448,12 @@ export class MarkService {
           const [collectionCode, cbId] = mark.source_id.split('/')
           sourceId = `${collectionCode}/${ctx.hashIds.encodeId(parseInt(cbId))}`
         }
+
+        const metadata = mark.metadata as markMetadata
+
         res.push({
           id: ctx.hashIds.encodeId(mark.id),
+          uuid: mark.uuid,
           type: markTypeMap[mark.type as markType],
           content: JSON.parse(mark.content) as markSelectContent[],
           created_at: mark.created_at,
@@ -400,7 +464,9 @@ export class MarkService {
           comment: mark.comment,
           source_type: mark.source_type as 'share' | 'bookmark',
           source_id: sourceId,
-          approx_source: JSON.parse(mark.approx_source)
+          approx_source: JSON.parse(mark.approx_source),
+          parent_uid: metadata?.parent_id ?? undefined,
+          root_uid: metadata?.root_id ?? undefined
         })
       } catch (e) {
         console.log(`get mark list failed: ${e}, content: ${mark.content}`)
