@@ -124,20 +124,25 @@ export class UserService {
     const req = await RequestUtils.json<userLoginReq>(request)
     const authRes = await new SlaxAuth(ctx.env).login(req)
 
-    if (req.type === 'apple' && authRes.sub && authRes.email.endsWith('@appleid.apple.com')) {
-      try {
-        const platformBind = await this.userRepo.getUserByPlatform('apple', authRes.sub)
-        if (platformBind && platformBind.user_name) {
-          authRes.email = platformBind.user_name
-        }
-      } catch (e) {}
+    let findRes: userInfoPO | null = null
+    if (!['apple', 'google'].includes(req.type) || !authRes.sub) throw RegisterUserError()
+
+    try {
+      const platformBind = await this.userRepo.getUserByPlatform(req.type, authRes.sub)
+      if (platformBind?.user_id) {
+        findRes = await this.userRepo.getInfoByUserId(platformBind.user_id)
+      }
+    } catch (e) {
+      console.log(`get user by platform error: ${e}`)
     }
 
-    // get user info by email
-    const findRes = await this.userRepo.getInfoByEmail(authRes.email)
-    if (findRes instanceof Error) {
-      console.error(`get user info error: ${findRes}`)
-      throw RegisterUserError()
+    if (!findRes) {
+      const emailRes = await this.userRepo.getInfoByEmail(authRes.email)
+      if (emailRes instanceof Error) {
+        console.error(`get user info error: ${emailRes}`)
+        throw RegisterUserError()
+      }
+      findRes = emailRes
     }
 
     let userInfo = (!!findRes ? findRes : {}) as userInfoPO
@@ -168,6 +173,10 @@ export class UserService {
 
     if (req.type === 'apple' && authRes.sub && authRes.email && !authRes.email.endsWith('@appleid.apple.com')) {
       await this.userRepo.userBindPlatform(regInfo.id, platformBindType.APPLE, authRes.sub, authRes.email)
+    }
+
+    if (req.type === 'google' && authRes.sub) {
+      await this.userRepo.userBindPlatform(regInfo.id, platformBindType.GOOGLE, authRes.sub, authRes.email)
     }
 
     // 发放邀请奖励

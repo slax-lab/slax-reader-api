@@ -37,7 +37,8 @@ export enum platformBindType {
   QQ = 'qq',
   EMAIL = 'email',
   APPLE = 'apple',
-  TWITTER = 'twitter'
+  TWITTER = 'twitter',
+  GOOGLE = 'google'
 }
 
 export enum noticeType {
