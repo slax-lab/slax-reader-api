@@ -499,12 +499,13 @@ export class BookmarkService {
   public async bookmarkList(ctx: ContextManager, page: number, size: number, filter: string) {
     return (await this.bookmarkRepo.listUserBookmarks(ctx.getUserId(), (page - 1) * size, size, filter))
       .filter(({ bookmark }) => bookmark !== null)
-      .map(({ bookmark, alias_title, archive_status, is_starred, deleted_at, type }) => {
+      .map(({ uuid, bookmark, alias_title, archive_status, is_starred, deleted_at, type }) => {
         const { private_user, content_md_key, content_key, ...bookmarkWithout } = bookmark!
         return {
           ...bookmarkWithout,
           alias_title,
           id: ctx.hashIds.encodeId(bookmark!.id),
+          bookmark_user_uuid: uuid,
           archived: archive_status === 1 ? 'archive' : archive_status === 2 ? 'later' : 'inbox',
           starred: is_starred ? 'star' : 'unstar',
           trashed_at: !!deleted_at ? deleted_at : undefined,
