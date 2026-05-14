@@ -1,10 +1,26 @@
 import { inject, injectable } from '../../decorators/di'
 import { ContextManager } from '../../utils/context'
-import { BookmarkNotFoundError, BookmarkOverviewContentError } from '../../const/err'
+import { BookmarkNotFoundError } from '../../const/err'
 import { BookmarkService } from '../bookmark'
 import { TagService } from '../tag'
 import { MarkService } from '../mark'
 import { MixTagsOverviewResult } from '../aigc'
+
+type BookmarkRow = { id: number; content_key: string; content_md_key: string | null; private_user: number; [key: string]: unknown }
+
+export function stripBookmarkInternals<T extends BookmarkRow>(
+  bookmark: T,
+  encodeId: (id: number) => number
+): Omit<T, 'id' | 'content_key' | 'content_md_key' | 'private_user'> & { bookmark_id: number } {
+  const copy = { ...bookmark } as Record<string, unknown>
+  const id = copy.id as number
+  delete copy.id
+  delete copy.content_key
+  delete copy.content_md_key
+  delete copy.private_user
+  copy.bookmark_id = encodeId(id)
+  return copy as Omit<T, 'id' | 'content_key' | 'content_md_key' | 'private_user'> & { bookmark_id: number }
+}
 
 @injectable()
 export class BookmarkOrchestrator {
@@ -33,12 +49,11 @@ export class BookmarkOrchestrator {
       this.bookmarkService.getUserBookmarkOverview(ctx.getUserId(), bmId),
       this.tagService.getBookmarkTags(ctx, ctx.getUserId(), bmId)
     ])
-    const { id, content_key, content_md_key, private_user, ...bookmarkWithoutId } = res.bookmark
     const { overview, key_takeaways } = this.parseOverviewRes(overviewResult.status === 'fulfilled' ? (overviewResult.value ?? null) : null)
+    const base = stripBookmarkInternals(res.bookmark, id => ctx.hashIds.encodeId(id))
 
     return {
-      ...bookmarkWithoutId,
-      bookmark_id: ctx.hashIds.encodeId(res.bookmark.id),
+      ...base,
       archived: res.archive_status === 1 ? 'archive' : res.archive_status === 2 ? 'later' : 'inbox',
       starred: res.is_starred ? 'star' : 'unstar',
       alias_title: res.alias_title,
@@ -64,13 +79,11 @@ export class BookmarkOrchestrator {
       this.bookmarkService.getUserBookmarkOverview(userId, bmId)
     ])
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id, content_key, content_md_key, private_user, ...bookmarkWithoutId } = res.bookmark
     const { overview, key_takeaways } = this.parseOverviewRes(overviewResult.status === 'fulfilled' ? (overviewResult.value ?? null) : null)
+    const base = stripBookmarkInternals(res.bookmark, id => ctx.hashIds.encodeId(id))
 
     return {
-      ...bookmarkWithoutId,
-      bookmark_id: ctx.hashIds.encodeId(res.bookmark.id),
+      ...base,
       content: contentResult.status === 'fulfilled' ? contentResult.value : undefined,
       archived: res.archive_status === 1 ? 'archive' : res.archive_status === 2 ? 'later' : 'inbox',
       starred: res.is_starred ? 'star' : 'unstar',
