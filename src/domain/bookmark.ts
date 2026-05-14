@@ -522,6 +522,7 @@ export class BookmarkService {
         const { private_user, content_md_key, content_key, ...bookmarkWithout } = bookmark!
         return {
           ...bookmarkWithout!,
+          bookmark_user_uuid: user_bookmark!.uuid,
           alias_title: user_bookmark!.alias_title,
           id: ctx.hashIds.encodeId(user_bookmark!.bookmark_id),
           archived: user_bookmark!.archive_status === 1 ? 'archive' : user_bookmark!.archive_status === 2 ? 'later' : 'inbox',
