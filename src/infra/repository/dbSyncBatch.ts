@@ -100,7 +100,6 @@ export class DBSyncBatchOperation {
       where: { uuid: operation.bookmarkUuid }
     })
 
-    // sr_user_bookmark.uuid 全局唯一,若该 UUID 已存在但不属于当前用户,拒绝跨用户改写 (IDOR)
     if (existingByUuid && existingByUuid.user_id !== operation.userId) {
       throw ShareActionNotAllowedError()
     }

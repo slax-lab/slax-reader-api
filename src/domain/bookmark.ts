@@ -826,14 +826,10 @@ export class BookmarkService {
   }
 
   public async getPartialBookmarkChangesLog(ctx: ContextManager, userId: number, time: number) {
-    // res 按 created_at 正序(最旧在前),最多一批 limit 条;不足一批说明已追平
     const res = (await this.bookmarkRepo.getPartialBookmarkChanges(userId, time)) || []
 
-    // 游标取本批最新一条(正序最后一条):被 limit 截断时这是"中间点",客户端下次
-    // 会从此继续往后拉,逐批追平不丢数据;未截断时即为最新,已追平。
     const previous_sync = res.length > 0 ? res[res.length - 1].created_at.getTime() : null
 
-    // 客户端假定响应为倒序(内部 logs.reverse 后再按时间正序应用),故倒序返回
     const logs = res
       .slice()
       .reverse()

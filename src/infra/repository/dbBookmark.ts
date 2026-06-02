@@ -695,8 +695,7 @@ export class BookmarkRepo {
       return await this.prisma().slax_user_bookmark_change.create({
         data: {
           user_id: userId,
-          // 截断异常超长 URL,避免单条变更撑爆后续增量同步的响应序列化
-          target_url: url.length > 2048 ? url.slice(0, 2048) : url,
+          target_url: url,
           bookmark_id: bookmarkId,
           action,
           created_at: time
@@ -709,7 +708,6 @@ export class BookmarkRepo {
   }
 
   public async getPartialBookmarkChanges(userId: number, time: number, limit = 5000) {
-    // 取游标之后最旧的一批 (ASC) 最多 limit 条,前向分页,避免单次响应过大 (RangeError)
     const res = await this.prisma().slax_user_bookmark_change.findMany({
       where: {
         user_id: userId,
