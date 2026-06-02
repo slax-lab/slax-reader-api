@@ -828,13 +828,16 @@ export class BookmarkService {
   public async getPartialBookmarkChangesLog(ctx: ContextManager, userId: number, time: number) {
     const res = (await this.bookmarkRepo.getPartialBookmarkChanges(userId, time)) || []
 
-    const logs = res.map(item => ({
-      target_url: item.target_url,
-      bookmark_id: ctx.hashIds.encodeId(item.bookmark_id),
-      action: item.action
-    }))
+    const previous_sync = res.length > 0 ? res[res.length - 1].created_at.getTime() : null
 
-    const previous_sync = res.length > 0 ? res[0].created_at.getTime() : null
+    const logs = res
+      .slice()
+      .reverse()
+      .map(item => ({
+        target_url: item.target_url,
+        bookmark_id: ctx.hashIds.encodeId(item.bookmark_id),
+        action: item.action
+      }))
 
     return {
       logs,

@@ -707,7 +707,7 @@ export class BookmarkRepo {
     }
   }
 
-  public async getPartialBookmarkChanges(userId: number, time: number) {
+  public async getPartialBookmarkChanges(userId: number, time: number, limit = 5000) {
     const res = await this.prisma().slax_user_bookmark_change.findMany({
       where: {
         user_id: userId,
@@ -716,8 +716,9 @@ export class BookmarkRepo {
         }
       },
       orderBy: {
-        created_at: 'desc'
-      }
+        created_at: 'asc'
+      },
+      take: limit
     })
 
     return res as bookmarkActionChangePO[]

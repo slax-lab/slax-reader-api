@@ -100,9 +100,13 @@ export class DBSyncBatchOperation {
       where: { uuid: operation.bookmarkUuid }
     })
 
+    if (existingByUuid && existingByUuid.user_id !== operation.userId) {
+      throw ShareActionNotAllowedError()
+    }
+
     if (existingByUuid) {
       await tx.sr_user_bookmark.update({
-        where: { uuid: operation.bookmarkUuid },
+        where: { uuid: operation.bookmarkUuid, user_id: operation.userId },
         data: {
           bookmark_id: bookmark.id,
           deleted_at: null,
