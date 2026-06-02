@@ -390,6 +390,24 @@ export class UserService {
     return { nick_name: user.name, avatar: user.picture }
   }
 
+  public async getOwnerShareInfo(userId: number): Promise<{ nick_name: string; avatar: string; snapshot_sharing: boolean }> {
+    const user = await this.userRepo.getInfoByUserId(userId)
+    return { nick_name: user.name, avatar: user.picture, snapshot_sharing: user.snapshot_sharing ?? true }
+  }
+
+  public async updateShareEnabled(ctx: ContextManager, enabled: boolean) {
+    await this.userRepo.updateShareEnabled(ctx.getUserId(), enabled)
+  }
+
+  public async getShareEnabled(userId: number): Promise<boolean> {
+    try {
+      const user = await this.userRepo.getInfoByUserId(userId)
+      return user.snapshot_sharing ?? true
+    } catch {
+      return false
+    }
+  }
+
   /** 获取绑定Telegram链接 */
   public async getBindTelegramLink(ctx: ContextManager): Promise<string> {
     const userId = ctx.getUserId()

@@ -114,6 +114,20 @@ export class MarkRepo {
     })
   }
 
+  async getFirstComment(bmId: number, userId: number): Promise<string> {
+    const row = await this.prismaPg().sr_bookmark_comment.findFirst({
+      where: {
+        bookmark_id: bmId,
+        user_id: userId,
+        is_deleted: false,
+        type: markType.COMMENT
+      },
+      orderBy: { created_at: 'asc' },
+      select: { comment: true }
+    })
+    return row?.comment ?? ''
+  }
+
   async list(userBmId: number) {
     return (
       await this.prismaPg().sr_bookmark_comment.findMany({

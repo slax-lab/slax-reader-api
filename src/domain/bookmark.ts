@@ -785,6 +785,10 @@ export class BookmarkService {
     }
   }
 
+  public async getUserBookmarkByUuidWithDetail(uuid: string) {
+    return await this.bookmarkRepo.getUserBookmarkByUuidWithDetail(uuid)
+  }
+
   public async getUserBookmarkWithDetail(userId: number, bmId: number) {
     return (await this.bookmarkRepo.getUserBookmarkWithDetail(bmId, userId)) ?? null
   }
@@ -878,6 +882,11 @@ export class BookmarkService {
     if (!bookmarkId || bookmarkId < 1) throw ErrorParam()
 
     return await this.bookmarkRepo.getUserBookmarkSummary(bookmarkId, ctx.getUserId(), ctx.get('ai_lang'))
+  }
+
+  public async getBookmarkOutline(bookmarkId: number, userId: number): Promise<string | null> {
+    const summary = await this.bookmarkRepo.getBookmarkOutline(bookmarkId, userId)
+    return summary?.content ?? null
   }
 
   public async getUserBookmarkSummaryByMCP(bmId: number, userId: number, lang: string) {

@@ -111,6 +111,10 @@ export class MarkService {
     @inject(UserRepo) private userRepo: UserRepo
   ) {}
 
+  public async getFirstComment(bmId: number, userId: number): Promise<string> {
+    return await this.markRepo.getFirstComment(bmId, userId)
+  }
+
   assertBookmarkShareCode = async (ctx: ContextManager, shareCode: string) => {
     const res = await this.bookmarkRepo.getBookmarkShareByShareCode(shareCode)
     if (!res) throw ShareCodeNotFoundError()

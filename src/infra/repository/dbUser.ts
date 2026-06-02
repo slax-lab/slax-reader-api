@@ -29,6 +29,7 @@ export interface userInfoPO {
   last_read_at?: Date
 
   uuid: string
+  snapshot_sharing: boolean
 }
 
 export enum platformBindType {
@@ -214,6 +215,13 @@ export class UserRepo {
   public async addUserNotice(po: userNoticePO): Promise<userNoticePO> {
     return await this.prismaPg().sr_user_notification.create({
       data: po
+    })
+  }
+
+  public async updateShareEnabled(userId: number, enabled: boolean) {
+    return await this.prismaPg().sr_user.update({
+      data: { snapshot_sharing: enabled },
+      where: { id: userId }
     })
   }
 

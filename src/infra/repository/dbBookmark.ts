@@ -218,6 +218,10 @@ export class BookmarkRepo {
     return await this.prismaPg().sr_user_bookmark.findFirst({ where: { uuid } })
   }
 
+  public async getUserBookmarkByUuidWithDetail(uuid: string) {
+    return await this.prismaPg().sr_user_bookmark.findFirst({ where: { uuid }, include: { bookmark: true } })
+  }
+
   public async getUserBookmarkByUserBmId(userBmId: number) {
     return await this.prismaPg().sr_user_bookmark.findFirst({ where: { id: userBmId }, include: { bookmark: true } })
   }
@@ -612,6 +616,13 @@ export class BookmarkRepo {
         user_id: userId,
         lang
       }
+    })
+  }
+
+  public async getBookmarkOutline(bookmarkId: number, userId: number) {
+    return await this.prismaPg().sr_bookmark_summary.findFirst({
+      where: { bookmark_id: bookmarkId, user_id: userId },
+      orderBy: { id: 'desc' }
     })
   }
 
