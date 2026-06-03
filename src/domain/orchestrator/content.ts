@@ -40,7 +40,7 @@ export class ContentOrchestrator {
       } else if (!owner.snapshot_sharing) {
         throw BookmarkNotFoundError()
       }
-      showTrace = share?.show_userinfo ?? false
+      showTrace = share?.show_userinfo !== false
     }
 
     const trace = showTrace ? await this.loadTrace(ctx, ub.bookmark_id, ub.id, ub.user_id, { nick_name: owner.nick_name, avatar: owner.avatar }) : EMPTY_TRACE
