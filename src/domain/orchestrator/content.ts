@@ -43,7 +43,7 @@ export class ContentOrchestrator {
       showTrace = share?.show_userinfo ?? false
     }
 
-    const trace = showTrace ? await this.loadTrace(ctx, ub.bookmark_id, ub.user_id, { nick_name: owner.nick_name, avatar: owner.avatar }) : EMPTY_TRACE
+    const trace = showTrace ? await this.loadTrace(ctx, ub.bookmark_id, ub.id, ub.user_id, { nick_name: owner.nick_name, avatar: owner.avatar }) : EMPTY_TRACE
 
     const { id, content_key, content_md_key, private_user, created_at, updated_at, published_at, ...bookmarkMeta } = ub.bookmark
 
@@ -70,10 +70,10 @@ export class ContentOrchestrator {
     }
   }
 
-  private async loadTrace(ctx: ContextManager, bookmarkId: number, userId: number, owner: { nick_name: string; avatar: string }) {
+  private async loadTrace(ctx: ContextManager, bookmarkId: number, userBookmarkId: number, userId: number, owner: { nick_name: string; avatar: string }) {
     const [tags, firstComment, outline] = await Promise.all([
       this.tagService.getBookmarkTags(ctx, userId, bookmarkId),
-      this.markService.getFirstComment(bookmarkId, userId),
+      this.markService.getFirstComment(userBookmarkId, userId),
       this.bookmarkService.getBookmarkOutline(bookmarkId, userId)
     ])
 
