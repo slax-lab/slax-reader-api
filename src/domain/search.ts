@@ -404,7 +404,7 @@ export class SearchService {
       )
     } catch (e) {
       console.log(e, 'fulltextNormalize error')
-      return []
+      throw e
     }
   }
 
@@ -432,7 +432,7 @@ export class SearchService {
       return res
     } catch (e) {
       console.log(e, 'semanticNormalize error')
-      return []
+      throw e
     }
   }
 }
