@@ -28,9 +28,11 @@ export class BookmarkOrchestrator {
     const ub = await this.bookmarkService.getUserBookmarkByUuidWithDetail(bmUId)
     if (!ub) return empty
 
-    const share = await this.bookmarkService.getBookmarkShareByBookmarkId(ub.bookmark_id, ub.user_id)
-    const allowed = !share || (!!share && share.is_enable && share.allow_comment && share.allow_line)
-    if (!allowed) return empty
+    if (ub.user_id !== ctx.getUserId()) {
+      const share = await this.bookmarkService.getBookmarkShareByBookmarkId(ub.bookmark_id, ub.user_id)
+      const allowed = !share || (share.is_enable && share.allow_comment && share.allow_line)
+      if (!allowed) return empty
+    }
 
     return await this.markService.getBookmarkMarkList(ctx, { id: ub.id, isShowMarks: true })
   }
