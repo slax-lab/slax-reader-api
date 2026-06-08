@@ -789,6 +789,10 @@ export class BookmarkService {
     return await this.bookmarkRepo.getUserBookmarkByUuidWithDetail(uuid)
   }
 
+  public async getBookmarkShareByBookmarkId(bmId: number, userId: number) {
+    return await this.bookmarkRepo.getBookmarkShareByBookmarkId(bmId, userId)
+  }
+
   public async getUserBookmarkWithDetail(userId: number, bmId: number) {
     return (await this.bookmarkRepo.getUserBookmarkWithDetail(bmId, userId)) ?? null
   }
