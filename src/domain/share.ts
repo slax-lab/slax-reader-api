@@ -17,7 +17,6 @@ export interface updateBookmarkShareReq {
   show_userinfo: boolean
   allow_action: boolean
   bookmark_id?: number
-  // 公开快照页 /b/[id]：用 bookmark_uid（= user_bookmark uuid）定位书签
   bookmark_uid?: string
 }
 
@@ -54,10 +53,6 @@ export class ShareService {
   constructor(@inject(BookmarkRepo) private bookmarkRepo: BookmarkRepo) {}
 
   public async checkBookmarkShareExists(ctx: ContextManager, params: { bmId?: number; bmUId?: string }): Promise<createBookmarkShareResp> {
-    // 解析书签 + 其 owner：
-    // - bookmark_uid（公开快照页）：按 uuid 查 sr_user_bookmark（不按调用者过滤），取 owner user_id + bookmark_id，
-    //   这样非 owner 访客也能查到 owner 是否开启了分享（划线评论可见）。
-    // - bookmark_id（旧流程）：按调用者 userId。
     let bmId: number
     let ownerUserId: number
     if (params.bmUId) {
@@ -92,7 +87,6 @@ export class ShareService {
   public async updateBookmarkShare(ctx: ContextManager, req: updateBookmarkShareReq): Promise<createBookmarkShareResp> {
     const userId = ctx.getUserId()
 
-    // 定位 bmId：优先 bookmark_uid（公开快照页，owner-only 解析），否则 bookmark_id（旧流程）
     let bmId: number
     const viaUid = !!req.bookmark_uid
     if (req.bookmark_uid) {
@@ -121,7 +115,6 @@ export class ShareService {
     }
     const createShare = async () => {
       for (let i = 0; i < 3; i++) {
-        // 快照页改版后 share_code 不再使用：bookmark_uid 路径建空 share_code；旧 bookmark_id 路径保留生成逻辑
         let code = ''
         if (!viaUid) {
           const timeCode = ctx.hashIds.generateTimeCode()

@@ -23,11 +23,6 @@ export class BookmarkOrchestrator {
     return marksResult
   }
 
-  /**
-   * 公开快照页 /b/[id] 非 owner 访客按 bookmark_uid 读取划线：
-   * 按 uuid 解析 owner + 书签，校验该书签分享已开启且 allow_comment && allow_line 同时为 true，
-   * 满足才返回划线，否则返回空数据。
-   */
   public async getBookmarkMarkListByUid(ctx: ContextManager, bmUId: string) {
     const empty = { mark_list: [], user_list: [] }
     const ub = await this.bookmarkService.getUserBookmarkByUuidWithDetail(bmUId)
