@@ -66,10 +66,10 @@ export class ShareController {
    */
   @Get('/exists')
   public async existsShare(ctx: ContextManager, request: Request) {
-    const req = await RequestUtils.query<{ bookmark_id: number }>(request)
-    if (!req) return Failed(ErrorParam())
+    const req = await RequestUtils.query<{ bookmark_id?: number; bookmark_uid?: string }>(request)
+    if (!req || (!req.bookmark_id && !req.bookmark_uid)) return Failed(ErrorParam())
 
-    const res = await this.shareService.checkBookmarkShareExists(ctx, req.bookmark_id)
+    const res = await this.shareService.checkBookmarkShareExists(ctx, { bmId: req.bookmark_id, bmUId: req.bookmark_uid })
     return Successed(res)
   }
 

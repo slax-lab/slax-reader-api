@@ -16,7 +16,9 @@ export interface updateBookmarkShareReq {
   show_comment_line: boolean
   show_userinfo: boolean
   allow_action: boolean
-  bookmark_id: number
+  bookmark_id?: number
+  // 公开快照页 /b/[id]：用 bookmark_uid（= user_bookmark uuid）定位书签
+  bookmark_uid?: string
 }
 
 export interface getBookmarkByShareResp {
@@ -51,13 +53,25 @@ export interface getBookmarkByShareResp {
 export class ShareService {
   constructor(@inject(BookmarkRepo) private bookmarkRepo: BookmarkRepo) {}
 
-  public async checkBookmarkShareExists(ctx: ContextManager, bmId: number): Promise<createBookmarkShareResp> {
-    const userId = ctx.getUserId()
+  public async checkBookmarkShareExists(ctx: ContextManager, params: { bmId?: number; bmUId?: string }): Promise<createBookmarkShareResp> {
+    // 解析书签 + 其 owner：
+    // - bookmark_uid（公开快照页）：按 uuid 查 sr_user_bookmark（不按调用者过滤），取 owner user_id + bookmark_id，
+    //   这样非 owner 访客也能查到 owner 是否开启了分享（划线评论可见）。
+    // - bookmark_id（旧流程）：按调用者 userId。
+    let bmId: number
+    let ownerUserId: number
+    if (params.bmUId) {
+      const ub = await this.bookmarkRepo.getUserBookmarkByUuid(params.bmUId)
+      if (!ub) throw ErrorParam()
+      bmId = ub.bookmark_id
+      ownerUserId = ub.user_id
+    } else {
+      bmId = ctx.hashIds.decodeId(params.bmId ?? 0)
+      if (bmId < 1) throw ErrorParam()
+      ownerUserId = ctx.getUserId()
+    }
 
-    bmId = ctx.hashIds.decodeId(bmId)
-    if (bmId < 1) throw ErrorParam()
-
-    const res = await this.bookmarkRepo.getBookmarkShareByBookmarkId(bmId, userId)
+    const res = await this.bookmarkRepo.getBookmarkShareByBookmarkId(bmId, ownerUserId)
     const isEnable = res && res.is_enable
     return {
       allow_action: isEnable ? res.allow_comment : false,
@@ -78,8 +92,17 @@ export class ShareService {
   public async updateBookmarkShare(ctx: ContextManager, req: updateBookmarkShareReq): Promise<createBookmarkShareResp> {
     const userId = ctx.getUserId()
 
-    const bmId = ctx.hashIds.decodeId(req.bookmark_id)
-    if (bmId < 1 || !bmId) throw ErrorParam()
+    // 定位 bmId：优先 bookmark_uid（公开快照页，owner-only 解析），否则 bookmark_id（旧流程）
+    let bmId: number
+    const viaUid = !!req.bookmark_uid
+    if (req.bookmark_uid) {
+      const ub = await this.bookmarkRepo.getUserBookmarkByUId(req.bookmark_uid, userId)
+      if (!ub) throw BookmarkNotFoundError()
+      bmId = ub.bookmark_id
+    } else {
+      bmId = ctx.hashIds.decodeId(req.bookmark_id ?? 0)
+      if (bmId < 1 || !bmId) throw ErrorParam()
+    }
 
     const bookmark = await this.bookmarkRepo.getUserBookmark(bmId, userId)
     if (!bookmark) throw BookmarkNotFoundError()
@@ -98,9 +121,13 @@ export class ShareService {
     }
     const createShare = async () => {
       for (let i = 0; i < 3; i++) {
-        const timeCode = ctx.hashIds.generateTimeCode()
-        const hash = (await hashMD5(`${bmId}-${userId}-${Date.now()}`)).slice(0, 7)
-        const code = `${timeCode}${hash}`
+        // 快照页改版后 share_code 不再使用：bookmark_uid 路径建空 share_code；旧 bookmark_id 路径保留生成逻辑
+        let code = ''
+        if (!viaUid) {
+          const timeCode = ctx.hashIds.generateTimeCode()
+          const hash = (await hashMD5(`${bmId}-${userId}-${Date.now()}`)).slice(0, 7)
+          code = `${timeCode}${hash}`
+        }
         const shareRes = await this.bookmarkRepo.createBookmarkShare(code, userId, bmId, req.show_comment_line, req.show_userinfo, req.allow_action)
         if (!shareRes) throw ServerError()
         res = shareRes
