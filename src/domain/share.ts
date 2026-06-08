@@ -110,7 +110,8 @@ export class ShareService {
         res = await this.bookmarkRepo.updateBookmarkShare(bmId, userId, req.show_comment_line, req.show_userinfo, req.allow_action)
       } catch (err) {
         console.log(`update bookmark share failed: ${err}`)
-        return BookmarkNotFoundError()
+        // 必须抛出：之前 return 的错误对象会被丢弃，导致 res 为 undefined，下方取 res.allow_comment 抛 500
+        throw BookmarkNotFoundError()
       }
     }
     const createShare = async () => {
