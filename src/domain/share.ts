@@ -16,7 +16,8 @@ export interface updateBookmarkShareReq {
   show_comment_line: boolean
   show_userinfo: boolean
   allow_action: boolean
-  bookmark_id: number
+  bookmark_id?: number
+  bookmark_uid?: string
 }
 
 export interface getBookmarkByShareResp {
@@ -51,13 +52,21 @@ export interface getBookmarkByShareResp {
 export class ShareService {
   constructor(@inject(BookmarkRepo) private bookmarkRepo: BookmarkRepo) {}
 
-  public async checkBookmarkShareExists(ctx: ContextManager, bmId: number): Promise<createBookmarkShareResp> {
-    const userId = ctx.getUserId()
+  public async checkBookmarkShareExists(ctx: ContextManager, params: { bmId?: number; bmUId?: string }): Promise<createBookmarkShareResp> {
+    let bmId: number
+    let ownerUserId: number
+    if (params.bmUId) {
+      const ub = await this.bookmarkRepo.getUserBookmarkByUuid(params.bmUId)
+      if (!ub) throw ErrorParam()
+      bmId = ub.bookmark_id
+      ownerUserId = ub.user_id
+    } else {
+      bmId = ctx.hashIds.decodeId(params.bmId ?? 0)
+      if (bmId < 1) throw ErrorParam()
+      ownerUserId = ctx.getUserId()
+    }
 
-    bmId = ctx.hashIds.decodeId(bmId)
-    if (bmId < 1) throw ErrorParam()
-
-    const res = await this.bookmarkRepo.getBookmarkShareByBookmarkId(bmId, userId)
+    const res = await this.bookmarkRepo.getBookmarkShareByBookmarkId(bmId, ownerUserId)
     const isEnable = res && res.is_enable
     return {
       allow_action: isEnable ? res.allow_comment : false,
@@ -78,8 +87,16 @@ export class ShareService {
   public async updateBookmarkShare(ctx: ContextManager, req: updateBookmarkShareReq): Promise<createBookmarkShareResp> {
     const userId = ctx.getUserId()
 
-    const bmId = ctx.hashIds.decodeId(req.bookmark_id)
-    if (bmId < 1 || !bmId) throw ErrorParam()
+    let bmId: number
+    const viaUid = !!req.bookmark_uid
+    if (req.bookmark_uid) {
+      const ub = await this.bookmarkRepo.getUserBookmarkByUId(req.bookmark_uid, userId)
+      if (!ub) throw BookmarkNotFoundError()
+      bmId = ub.bookmark_id
+    } else {
+      bmId = ctx.hashIds.decodeId(req.bookmark_id ?? 0)
+      if (bmId < 1 || !bmId) throw ErrorParam()
+    }
 
     const bookmark = await this.bookmarkRepo.getUserBookmark(bmId, userId)
     if (!bookmark) throw BookmarkNotFoundError()
@@ -93,14 +110,18 @@ export class ShareService {
         res = await this.bookmarkRepo.updateBookmarkShare(bmId, userId, req.show_comment_line, req.show_userinfo, req.allow_action)
       } catch (err) {
         console.log(`update bookmark share failed: ${err}`)
-        return BookmarkNotFoundError()
+        // 必须抛出：之前 return 的错误对象会被丢弃，导致 res 为 undefined，下方取 res.allow_comment 抛 500
+        throw BookmarkNotFoundError()
       }
     }
     const createShare = async () => {
       for (let i = 0; i < 3; i++) {
-        const timeCode = ctx.hashIds.generateTimeCode()
-        const hash = (await hashMD5(`${bmId}-${userId}-${Date.now()}`)).slice(0, 7)
-        const code = `${timeCode}${hash}`
+        let code = ''
+        if (!viaUid) {
+          const timeCode = ctx.hashIds.generateTimeCode()
+          const hash = (await hashMD5(`${bmId}-${userId}-${Date.now()}`)).slice(0, 7)
+          code = `${timeCode}${hash}`
+        }
         const shareRes = await this.bookmarkRepo.createBookmarkShare(code, userId, bmId, req.show_comment_line, req.show_userinfo, req.allow_action)
         if (!shareRes) throw ServerError()
         res = shareRes

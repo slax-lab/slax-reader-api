@@ -401,7 +401,8 @@ export class BookmarkRepo {
       })
     } catch (err) {
       console.log(`create bookmark share failed: ${err}`)
-      return CreateBookmarkShareUniqueFail()
+      // 失败要抛出，让上层走错误响应；之前 return 错误对象会被 createShare 当成 share 行，导致返回畸形 200
+      throw CreateBookmarkShareUniqueFail()
     }
   }
 

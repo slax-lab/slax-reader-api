@@ -250,8 +250,7 @@ model sr_platform_bind {
 }
 
 model sr_bookmark_share {
-    id   Int    @id @default(autoincrement())
-    uuid String @unique @default(dbgenerated("gen_random_uuid()"))
+    id Int @id @default(autoincrement())
 
     share_code    String   @default("")
     user_id       Int      @default(0)
@@ -264,8 +263,8 @@ model sr_bookmark_share {
     is_enable     Boolean  @default(true)
     created_at    DateTime @default(now())
 
-    @@unique([share_code])
     @@unique([bookmark_id, user_id])
+    @@index([share_code])
 }
 
 model sr_bookmark_import {

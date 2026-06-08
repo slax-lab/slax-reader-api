@@ -12,6 +12,7 @@ import { convertToGeminiContent } from '../../utils/conversation'
 
 type SummaryRequest = {
   bm_id?: number
+  bookmark_uid?: string
   share_code?: string
   cb_id?: number
   collection_code: string
@@ -21,6 +22,7 @@ type SummaryRequest = {
 
 type CompletionsRequest = {
   bm_id?: number
+  bookmark_uid?: string
   share_code?: string
   cb_id?: number
   collection_code?: string
@@ -52,11 +54,12 @@ export class AigcController {
     ctx.set('country', request.cf?.country || '')
     ctx.set('continent', request.cf?.continent || '')
 
-    if (!req.force && req.bm_id) {
+    if (!req.force && (req.bm_id || req.bookmark_uid)) {
       const summary = await this.bookmarkService.getUserBookmarkSummary(ctx, {
         bmId: req.bm_id,
         shareCode: req.share_code,
-        cbId: req.cb_id
+        cbId: req.cb_id,
+        bmUId: req.bookmark_uid
       })
 
       if (summary) {
@@ -66,7 +69,14 @@ export class AigcController {
       }
     }
 
-    const { title, content, bmId } = await this.bookmarkService.getBookmarkTitleContent(ctx, req.bm_id, req.share_code, req.cb_id, 'no title', req.raw_content)
+    const { title, content, bmId } = await this.bookmarkService.getBookmarkTitleContent(ctx, {
+      bmId: req.bm_id,
+      shareCode: req.share_code,
+      cbId: req.cb_id,
+      title: 'no title',
+      content: req.raw_content,
+      bmUId: req.bookmark_uid
+    })
     ctx.execution.waitUntil(
       aiSvc.bookmarkSummary(ctx, content, writable, async result => {
         bmId > 0 && (await this.bookmarkService.saveSummary(ctx, bmId, result.provider, result.response, result.model))
@@ -85,7 +95,14 @@ export class AigcController {
 
     const [user, { title, content, bmId }] = await Promise.all([
       this.userService.getUserInfo(ctx),
-      this.bookmarkService.getBookmarkTitleContent(ctx, req.bm_id, req.share_code, req.cb_id, req.title, req.raw_content)
+      this.bookmarkService.getBookmarkTitleContent(ctx, {
+        bmId: req.bm_id,
+        shareCode: req.share_code,
+        cbId: req.cb_id,
+        title: req.title,
+        content: req.raw_content,
+        bmUId: req.bookmark_uid
+      })
     ])
 
     // 设置上下文

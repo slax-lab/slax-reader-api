@@ -113,4 +113,18 @@ export class ShareOrchestrator {
     if (!userBm) return { mark_list: [], user_list: [] }
     return await this.markService.getBookmarkMarkList(ctx, { id: userBm.id, isShowMarks: share.show_comment && share.show_line })
   }
+
+  public async getBookmarkShareMarkListByUid(ctx: ContextManager, bmUId: string): Promise<markDetail> {
+    const empty = { mark_list: [], user_list: [] }
+    const ub = await this.bookmarkService.getUserBookmarkByUuidWithDetail(bmUId)
+    if (!ub) return empty
+
+    if (ub.user_id !== ctx.getUserId()) {
+      const share = await this.bookmarkService.getBookmarkShareByBookmarkId(ub.bookmark_id, ub.user_id)
+      const allowed = !share || (share.is_enable && share.allow_comment && share.allow_line)
+      if (!allowed) return empty
+    }
+
+    return await this.markService.getBookmarkMarkList(ctx, { id: ub.id, isShowMarks: true })
+  }
 }

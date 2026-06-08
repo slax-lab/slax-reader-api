@@ -789,6 +789,10 @@ export class BookmarkService {
     return await this.bookmarkRepo.getUserBookmarkByUuidWithDetail(uuid)
   }
 
+  public async getBookmarkShareByBookmarkId(bmId: number, userId: number) {
+    return await this.bookmarkRepo.getBookmarkShareByBookmarkId(bmId, userId)
+  }
+
   public async getUserBookmarkWithDetail(userId: number, bmId: number) {
     return (await this.bookmarkRepo.getUserBookmarkWithDetail(bmId, userId)) ?? null
   }
@@ -908,19 +912,17 @@ export class BookmarkService {
 
   public async getBookmarkTitleContent(
     ctx: ContextManager,
-    bmId?: number,
-    shareCode?: string,
-    cbId?: number,
-    title?: string,
-    content?: string
+    params: { bmId?: number; shareCode?: string; cbId?: number; title?: string; content?: string; bmUId?: string }
   ): Promise<{ title: string; content: string; bmId: number }> {
-    if (!bmId && !shareCode && !cbId && !title && !content) throw ErrorParam()
+    const { bmId, shareCode, cbId, title, content, bmUId } = params
 
-    if (!bmId && !shareCode && !cbId && title && content) {
+    const emptyId = !bmId && !shareCode && !cbId && !bmUId
+    if (emptyId && !title && !content) throw ErrorParam()
+    if (emptyId && title && content) {
       return { title, content, bmId: 0 }
     }
 
-    const bookmarkId = await this.getBookmarkId(ctx, { bmId, shareCode, cbId })
+    const bookmarkId = await this.getBookmarkId(ctx, { bmId, shareCode, cbId, bmUId })
     if (!bookmarkId || bookmarkId < 1) throw ErrorParam()
 
     const bookmark = await this.getBookmarkById(bookmarkId)
