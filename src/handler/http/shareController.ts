@@ -78,10 +78,12 @@ export class ShareController {
    */
   @Get('/mark_list')
   public async getMarkList(ctx: ContextManager, request: Request) {
-    const req = await RequestUtils.query<{ share_code: string }>(request)
-    if (!req) return Failed(ErrorParam())
+    const req = await RequestUtils.query<{ share_code?: string; bookmark_uid?: string }>(request)
+    if (!req || (!req.share_code && !req.bookmark_uid)) return Failed(ErrorParam())
 
-    const markList = await this.shareOrchestrator.getBookmarkShareMarkList(ctx, req.share_code)
+    const markList = req.bookmark_uid
+      ? await this.shareOrchestrator.getBookmarkShareMarkListByUid(ctx, req.bookmark_uid)
+      : await this.shareOrchestrator.getBookmarkShareMarkList(ctx, req.share_code!)
     return Successed(markList)
   }
 }
