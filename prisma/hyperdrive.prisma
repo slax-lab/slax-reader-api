@@ -250,7 +250,8 @@ model sr_platform_bind {
 }
 
 model sr_bookmark_share {
-    id Int @id @default(autoincrement())
+    id   Int    @id @default(autoincrement())
+    uuid String @unique @default(dbgenerated("gen_random_uuid()"))
 
     share_code    String   @default("")
     user_id       Int      @default(0)
