@@ -67,7 +67,10 @@ export class ShareService {
     }
 
     const res = await this.bookmarkRepo.getBookmarkShareByBookmarkId(bmId, ownerUserId)
-    const isEnable = res && res.is_enable
+    if (!res) {
+      return { allow_action: true, show_comment_line: true, show_userinfo: true, share_code: '' }
+    }
+    const isEnable = res.is_enable
     return {
       allow_action: isEnable ? res.allow_comment : false,
       show_comment_line: isEnable ? res.show_comment : false,
