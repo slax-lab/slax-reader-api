@@ -206,6 +206,15 @@ export class BookmarkRepo {
     return await this.prismaPg().sr_user_bookmark.findFirst({ where: { bookmark_id: bmId, user_id: userId } })
   }
 
+  public async getUserBookmarkUuidsByBmIds(userId: number, bmIds: number[]): Promise<Map<number, string>> {
+    if (bmIds.length < 1) return new Map()
+    const rows = await this.prismaPg().sr_user_bookmark.findMany({
+      where: { user_id: userId, bookmark_id: { in: bmIds } },
+      select: { bookmark_id: true, uuid: true }
+    })
+    return new Map(rows.map(row => [row.bookmark_id, row.uuid]))
+  }
+
   public async getUserBookmarkById(id: number) {
     return await this.prismaPg().sr_user_bookmark.findFirst({ where: { id } })
   }

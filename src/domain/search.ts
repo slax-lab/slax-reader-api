@@ -38,6 +38,7 @@ export interface hybridSearchItem {
   vs_score: number
   fts_score: number
   bookmark_id: number
+  bookmark_user_uuid?: string
   highlight_title: string
   highlight_content: string
   title?: string
@@ -170,20 +171,23 @@ export class SearchService {
         }
       })
 
-    // 回表查询raw title 跟Content
-    if (returnTableIds.length > 0) {
-      const t1 = performance.now()
-      const raw = await this.bookmarkSearchRepo.getBookmarkRaw(returnTableIds)
-      raw.forEach(item => {
-        if (!hybridSearchMap[item.bookmark_id]) return
-        hybridSearchMap[item.bookmark_id].highlight_title = item.raw_title
-        hybridSearchMap[item.bookmark_id].highlight_content = item.raw_content
-      })
-      console.log(`get raw data cost: ${performance.now() - t1} ms`)
-    }
+    const matchedIds = Object.keys(hybridSearchMap).map(Number)
+
+    const t3 = performance.now()
+    const [rawList, uuidMap] = await Promise.all([
+      returnTableIds.length > 0 ? this.bookmarkSearchRepo.getBookmarkRaw(returnTableIds) : Promise.resolve([] as Awaited<ReturnType<BookmarkSearchRepo['getBookmarkRaw']>>),
+      this.bookmarkRepo.getUserBookmarkUuidsByBmIds(ctx.getUserId(), matchedIds)
+    ])
+
+    rawList.forEach(item => {
+      if (!hybridSearchMap[item.bookmark_id]) return
+      hybridSearchMap[item.bookmark_id].highlight_title = item.raw_title
+      hybridSearchMap[item.bookmark_id].highlight_content = item.raw_content
+    })
+    console.log(`get raw & uuid data cost: ${performance.now() - t3} ms`)
 
     // return processHybridSearchRerank(env, fulltextContent, hybridSearchMap)
-    return this.processHybridSearchList(hybridSearchMap)
+    return this.processHybridSearchList(hybridSearchMap, uuidMap)
   }
 
   public async processHybridSearchRerank(ctx: ContextManager, keyword: string, hybridSearchMap: Record<number, hybridSearchItem>) {
@@ -219,7 +223,7 @@ export class SearchService {
   /**
    * 混合搜索结果排序
    */
-  processHybridSearchList = (hybridSearchMap: Record<number, hybridSearchItem>, RRF_K: number = 60) => {
+  processHybridSearchList = (hybridSearchMap: Record<number, hybridSearchItem>, uuidMap: Map<number, string> = new Map(), RRF_K: number = 60) => {
     // 预处理
     const processedItems = Object.values(hybridSearchMap).map(item => ({
       ...item,
@@ -257,6 +261,7 @@ export class SearchService {
 
       return {
         ...item,
+        bookmark_user_uuid: uuidMap.get(item.bookmark_id),
         final_score: finalScore
       }
     })
