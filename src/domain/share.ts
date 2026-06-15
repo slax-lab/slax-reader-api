@@ -45,7 +45,6 @@ export interface getBookmarkByShareResp {
     show_userinfo: boolean
   }
   user_id: number
-  bookmark_user_uuid?: string
   tags: BookmarkTag[]
 }
 
