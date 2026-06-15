@@ -24,6 +24,7 @@ import { Hashid } from '../utils/hashids'
 
 export interface BookmarkDetailResp {
   bookmark_id?: number
+  bookmark_user_uuid?: string
   title: string
   alias_title?: string
   host_url: string
