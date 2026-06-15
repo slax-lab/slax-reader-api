@@ -72,10 +72,11 @@ export class ShareOrchestrator {
   public async getBookmarkByShareCode(ctx: ContextManager, shareCode: string): Promise<getBookmarkByShareResp> {
     const share = await this.shareService.getBookmarkShareByShareCode(shareCode)
 
-    const [userInfo, bookmark, tags] = await Promise.all([
+    const [userInfo, bookmark, tags, userBm] = await Promise.all([
       this.userService.getUserBriefInfo(share.show_userinfo, share.user_id),
       this.bookmarkService.getBookmarkById(share.bookmark_id),
-      this.tagService.getBookmarkTags(ctx, share.user_id, share.bookmark_id)
+      this.tagService.getBookmarkTags(ctx, share.user_id, share.bookmark_id),
+      this.bookmarkService.getUserBookmark(share.bookmark_id, share.user_id)
     ])
 
     if (!bookmark) throw BookmarkNotFoundError()
@@ -101,6 +102,7 @@ export class ShareOrchestrator {
         show_userinfo: share.show_userinfo
       },
       user_id: ctx.hashIds.encodeId(share.user_id),
+      bookmark_user_uuid: userBm?.uuid,
       tags
     }
   }

@@ -24,6 +24,8 @@ import { Hashid } from '../utils/hashids'
 
 export interface BookmarkDetailResp {
   bookmark_id?: number
+  /** 用户书签的 uuid，对应公开快照页 /b/[id] 的路由标识 */
+  bookmark_user_uuid?: string
   title: string
   alias_title?: string
   host_url: string

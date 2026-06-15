@@ -71,6 +71,7 @@ export class BookmarkOrchestrator {
     return {
       ...bookmarkWithoutId,
       bookmark_id: ctx.hashIds.encodeId(res.bookmark.id),
+      bookmark_user_uuid: res.uuid,
       content: contentResult.status === 'fulfilled' ? contentResult.value : undefined,
       archived: res.archive_status === 1 ? 'archive' : res.archive_status === 2 ? 'later' : 'inbox',
       starred: res.is_starred ? 'star' : 'unstar',
