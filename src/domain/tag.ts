@@ -130,6 +130,7 @@ export class TagService {
   public async listUserTags(ctx: ContextManager): Promise<BookmarkTag[]> {
     const bmRepo = this.bookmarkRepo
     const res = await bmRepo.getUserTags(ctx.getUserId())
+    res.sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
     return res.map(item => ({
       show_name: item.tag_name,
       name: item.tag_name,
