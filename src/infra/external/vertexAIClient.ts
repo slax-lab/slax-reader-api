@@ -78,7 +78,7 @@ export class VertexAIClient {
     }
 
     if (options?.systemInstruction) {
-      requestConfig.systemInstruction = options.systemInstruction
+      requestConfig.config.systemInstruction = options.systemInstruction
     }
 
     if (config.tools && config.tools.length > 0) {
@@ -159,7 +159,7 @@ export class VertexAIClient {
     }
 
     if (options?.systemInstruction) {
-      requestConfig.systemInstruction = options.systemInstruction
+      requestConfig.config.systemInstruction = options.systemInstruction
     }
 
     if (config.tools && config.tools.length > 0) {

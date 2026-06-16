@@ -3,12 +3,11 @@ import { ToolDefinition } from '../infra/external/vertexAIClient'
 import {
   generateQuestionPrompt,
   systemPrompt,
-  userChatBookmarkSystemPrompt,
-  getUserChatBookmarkUserPrompt,
   generateRelatedTagPrompt,
   generateOverviewTagsPrompt,
   generateOverviewTagsUserPrompt,
-  userChatBookmarkContentPrompt
+  buildChatSystemInstruction,
+  buildChatUserMessage
 } from '../const/prompt'
 import { ContextManager } from '../utils/context'
 import { ContentParser } from '../utils/parser'
@@ -130,6 +129,7 @@ export class AigcService {
 
   /** LLM Google Search Tool */
   public async chatToolGoogleSearch(query: string): Promise<string> {
+    console.log(`Executing Google Search tool with query: ${query}`)
     await this.writeProgress('tool', 'search', query, toolStatus.PROCESSING)
 
     try {
@@ -232,14 +232,15 @@ export class AigcService {
     if (!rawContent) return await this.writeChunk([{ role: 'assistant', content: 'No Content' }])
 
     messages.pop()
-    const systemMessage: Content = { role: 'user', parts: [{ text: userChatBookmarkSystemPrompt }, { text: userChatBookmarkContentPrompt.replace('{article}', rawContent) }] }
-    const userContent = getUserChatBookmarkUserPrompt().replace('{content}', content).replace('{ai_lang}', ctx.get('ai_lang'))
+    const platform = ctx.get('platform') === 'mobile' ? 'mobile' : 'desktop'
+    const systemInstruction = buildChatSystemInstruction(platform, ctx.get('ai_lang'))
+    const userContent = buildChatUserMessage(rawContent, content)
     const quoteMessages: Content[] = quote.map(item => ({
       role: 'user',
       parts: [item.type === 'text' ? { text: item.content } : { inlineData: { data: item.content, mimeType: 'image/png' } }]
     }))
 
-    messages.push(systemMessage, ...quoteMessages, { role: 'user', parts: [{ text: userContent }] })
+    messages.push(...quoteMessages, { role: 'user', parts: [{ text: userContent }] })
     const filter = this.createStopSequenceFilter(AigcService.target, chunk => this.writeChunk([{ role: 'assistant', content: chunk }]))
 
     const toolDefinitions: ToolDefinition[] = [
@@ -282,7 +283,7 @@ export class AigcService {
       await client.chatStream(
         messages,
         {
-          model: 'gemini-3-flash-preview',
+          model: ctx.get('chat_model') || 'gemini-3-flash-preview',
           tools: [
             {
               functionDeclarations: toolDefinitions.map(t => t.declaration)
@@ -291,7 +292,8 @@ export class AigcService {
           thinkingConfig: { thinkingBudget: 2048 }
         },
         {
-          onTextDelta: chunk => filter.process(chunk)
+          onTextDelta: chunk => filter.process(chunk),
+          systemInstruction
         }
       )
     } catch (error) {

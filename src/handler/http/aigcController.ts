@@ -30,7 +30,12 @@ type CompletionsRequest = {
   raw_content?: string
   messages: ChatCompletionMessageParam[]
   quote?: completionQuote[]
+  platform?: 'mobile' | 'desktop'
+  model?: string
 }
+
+const ALLOWED_CHAT_MODELS = ['gemini-3-flash-preview', 'gemini-3.5-flash', 'gemini-3.1-flash-lite']
+const DEFAULT_CHAT_MODEL = 'gemini-3-flash-preview'
 
 @Controller('/v1/aigc')
 export class AigcController {
@@ -111,6 +116,8 @@ export class AigcController {
     ctx.set('country', request.cf?.country || '')
     ctx.set('continent', request.cf?.continent || '')
     ctx.set('ai_lang', user.ai_lang || user.lang?.slice(0, 2) || 'en')
+    ctx.set('platform', req.platform === 'mobile' ? 'mobile' : 'desktop')
+    ctx.set('chat_model', req.model && ALLOWED_CHAT_MODELS.includes(req.model) ? req.model : DEFAULT_CHAT_MODEL)
     ctx.set('bm_id', bmId)
 
     const aiSvc = this.aigcService
