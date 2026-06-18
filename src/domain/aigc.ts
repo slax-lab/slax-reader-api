@@ -28,8 +28,17 @@ export type deltaType = {
 }
 
 export type completionQuote = {
-  type: 'text' | 'image'
+  type: 'text' | 'image' | 'image_base64'
   content: string
+  mimeType?: string
+}
+
+const parseBase64Image = (item: { content: string; mimeType?: string }): { data: string; mimeType: string } | null => {
+  if (!item.content) return null
+  const dataUri = item.content.match(/^data:([^;]+);base64,(.*)$/s)
+
+  if (dataUri) return { mimeType: item.mimeType || dataUri[1], data: dataUri[2] }
+  return { mimeType: item.mimeType || 'image/png', data: item.content }
 }
 
 export enum toolStatus {
@@ -235,10 +244,19 @@ export class AigcService {
     const platform = ctx.get('platform') === 'mobile' ? 'mobile' : 'desktop'
     const systemInstruction = buildChatSystemInstruction(platform, ctx.get('ai_lang'))
     const userContent = buildChatUserMessage(rawContent, content)
-    const quoteMessages: Content[] = quote.map(item => ({
-      role: 'user',
-      parts: [item.type === 'text' ? { text: item.content } : { inlineData: { data: item.content, mimeType: 'image/png' } }]
-    }))
+    const quoteMessages: Content[] = await Promise.all(
+      quote.map(async (item): Promise<Content> => {
+        if (item.type === 'image_base64') {
+          const inlineData = parseBase64Image(item)
+          return { role: 'user', parts: [inlineData ? { inlineData } : { text: item.content }] }
+        }
+        if (item.type === 'image') {
+          const inlineData = await this.fetchImageAsInlineData(item.content)
+          return { role: 'user', parts: [inlineData ? { inlineData } : { text: item.content }] }
+        }
+        return { role: 'user', parts: [{ text: item.content }] }
+      })
+    )
 
     messages.push(...quoteMessages, { role: 'user', parts: [{ text: userContent }] })
     const filter = this.createStopSequenceFilter(AigcService.target, chunk => this.writeChunk([{ role: 'assistant', content: chunk }]))
@@ -304,6 +322,28 @@ export class AigcService {
     await filter.flush()
     await this.writeProgress('assistant', 'chat', undefined, 'completed')
     await this.writeDone()
+  }
+
+  private async fetchImageAsInlineData(url: string): Promise<{ data: string; mimeType: string } | null> {
+    if (url.startsWith('data:')) return parseBase64Image({ content: url })
+
+    try {
+      const resp = await fetch(url)
+      if (!resp.ok) {
+        console.error(`fetch quote image failed: ${resp.status} ${url}`)
+        return null
+      }
+      const mimeType = resp.headers.get('content-type')?.split(';')[0]?.trim() || ''
+      if (!mimeType.startsWith('image/')) {
+        console.error(`quote image unexpected content-type: ${mimeType} ${url}`)
+        return null
+      }
+      const buf = await resp.arrayBuffer()
+      return { data: Buffer.from(buf).toString('base64'), mimeType }
+    } catch (err) {
+      console.error(`fetch quote image error: ${url} ${err}`)
+      return null
+    }
   }
 
   /** LLM Tool: Generate Question */
