@@ -101,6 +101,7 @@ export interface markCommentItem {
   uuid: string
   parent_uid?: string
   root_uid?: string
+  bookmark_user_uuid?: string
 }
 
 @injectable()
@@ -470,7 +471,8 @@ export class MarkService {
           source_id: sourceId,
           approx_source: JSON.parse(mark.approx_source),
           parent_uid: metadata?.parent_id ?? undefined,
-          root_uid: metadata?.root_id ?? undefined
+          root_uid: metadata?.root_id ?? undefined,
+          bookmark_user_uuid: mark.user_bookmark_uuid || undefined
         })
       } catch (e) {
         console.log(`get mark list failed: ${e}, content: ${mark.content}`)
