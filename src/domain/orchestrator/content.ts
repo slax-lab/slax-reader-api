@@ -55,6 +55,7 @@ export class ContentOrchestrator {
       bookmark_uuid: ub.uuid,
       user_id: ctx.hashIds.encodeId(ub.user_id),
       content_key,
+      alias_title: ub.alias_title,
       role: isOwner ? 'owner' : 'visitor'
     }
 
@@ -65,7 +66,6 @@ export class ContentOrchestrator {
       archived: ub.archive_status === 1 ? 'archive' : ub.archive_status === 2 ? 'later' : 'inbox',
       starred: ub.is_starred ? 'star' : 'unstar',
       trashed_at: ub.deleted_at,
-      alias_title: ub.alias_title,
       type: ub.type === 1 ? 'shortcut' : 'article'
     }
   }
