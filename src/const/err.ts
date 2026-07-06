@@ -16,6 +16,7 @@ export enum ErrorName {
   BOOKMARK_NOT_FOUND = 'BOOKMARK_NOT_FOUND',
   BOOKMARK_CONTENT_NOT_FOUND = 'BOOKMARK_CONTENT_NOT_FOUND',
   BLOCK_TARGET_URL = 'BLOCK_TARGET_URL',
+  PROHIBITED_CONTENT = 'PROHIBITED_CONTENT',
   CREATE_BOOKMARK_FAIL = 'CREATE_BOOKMARK_FAIL',
   USER_ID_WRONG = 'USER_ID_WRONG',
   DECODE_ID_ERROR = 'DECODE_ID_ERROR',
@@ -89,6 +90,7 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.TRASH_REVERT_BOOKMARK_FAIL]: '移出垃圾篓失败',
     [ErrorName.BOOKMARK_NOT_FOUND]: '书签未找到',
     [ErrorName.BLOCK_TARGET_URL]: '目标网址被阻止',
+    [ErrorName.PROHIBITED_CONTENT]: '处理失败：内容被禁止',
     [ErrorName.CREATE_BOOKMARK_FAIL]: '创建书签失败',
     [ErrorName.USER_ID_WRONG]: '用户id错误',
     [ErrorName.DECODE_ID_ERROR]: '解码id错误',
@@ -135,6 +137,7 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.TRASH_REVERT_BOOKMARK_FAIL]: 'Revert bookmark failed',
     [ErrorName.BOOKMARK_NOT_FOUND]: 'Bookmark not found',
     [ErrorName.BLOCK_TARGET_URL]: 'Blocked target url',
+    [ErrorName.PROHIBITED_CONTENT]: 'Processing failed: prohibited content',
     [ErrorName.CREATE_BOOKMARK_FAIL]: 'Create bookmark failed',
     [ErrorName.USER_ID_WRONG]: 'User id wrong',
     [ErrorName.DECODE_ID_ERROR]: 'Decode id error',
@@ -190,7 +193,8 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.NOT_FOUND]: 'Recurso no encontrado',
     [ErrorName.UNAUTHORIZED]: 'Acceso no autorizado',
     [ErrorName.SERVER_ERROR]: 'Error interno del servidor',
-    [ErrorName.GOOGLE_SSO_ERROR]: 'Error de Google SSO'
+    [ErrorName.GOOGLE_SSO_ERROR]: 'Error de Google SSO',
+    [ErrorName.PROHIBITED_CONTENT]: 'Error de procesamiento: contenido prohibido'
   }
 }
 
@@ -227,6 +231,7 @@ export const TrashRevertBookmarkFailError = (): MultiLangError => NewError(Error
 export const BookmarkNotFoundError = (): MultiLangError => NewError(ErrorName.BOOKMARK_NOT_FOUND, 404)
 export const BookmarkContentNotFoundError = (): MultiLangError => NewError(ErrorName.BOOKMARK_CONTENT_NOT_FOUND, 404)
 export const BlockTargetUrlError = (): MultiLangError => NewError(ErrorName.BLOCK_TARGET_URL, 400)
+export const ProhibitedContentError = (): MultiLangError => NewError(ErrorName.PROHIBITED_CONTENT, 400)
 export const CreateBookmarkFailError = (): MultiLangError => NewError(ErrorName.CREATE_BOOKMARK_FAIL, 500)
 export const UserIdWrongError = (): MultiLangError => NewError(ErrorName.USER_ID_WRONG, 500)
 export const DecodeIdError = (): MultiLangError => NewError(ErrorName.DECODE_ID_ERROR, 500)
