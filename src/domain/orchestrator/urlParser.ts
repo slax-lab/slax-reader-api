@@ -20,6 +20,7 @@ import { TweetInfo } from '../../const/struct'
 import { TwitterApi } from '../../infra/external/twitterapi'
 import { Hashid } from '../../utils/hashids'
 import { TagService } from '../tag'
+import { isProhibitedContentUrl } from '../../utils/prohibitedContentDetector'
 
 export type PostHandler = (meta: { parseRes: { title: string; textContent: string; byline?: string } }) => Promise<void>
 export type receiveQueueParseMessage = receiveParseMessage<queueParseMessage>
@@ -156,9 +157,13 @@ export class UrlParserHandler {
     }
   }
 
-  async handleTagTask(ctx: ContextManager, info: { bookmarkId: number; ignoreGenerateTag: boolean; userIds: number[] }): Promise<PostHandler> {
+  async handleTagTask(ctx: ContextManager, info: { bookmarkId: number; ignoreGenerateTag: boolean; userIds: number[]; targetUrl?: string }): Promise<PostHandler> {
     return async meta => {
       if (info.ignoreGenerateTag || !info.userIds || info.userIds.length === 0) {
+        return
+      }
+      if (info.targetUrl && isProhibitedContentUrl(info.targetUrl)) {
+        console.log(`bookmark ${info.bookmarkId} url is prohibited content, skip tags and overview generation`)
         return
       }
       // get user setting tags list
@@ -245,7 +250,7 @@ export class UrlParserHandler {
           bookmarkId: info.bookmarkId,
           callbackPayload: info.callbackPayload
         }),
-        await this.handleTagTask(ctx, { bookmarkId: info.bookmarkId, ignoreGenerateTag: info.ignoreGenerateTag, userIds: [info.userId] }),
+        await this.handleTagTask(ctx, { bookmarkId: info.bookmarkId, ignoreGenerateTag: info.ignoreGenerateTag, userIds: [info.userId], targetUrl: info.targetUrl }),
         await this.handleSearchTask(ctx, { bookmarkId: info.bookmarkId })
       ]
 
@@ -276,7 +281,7 @@ export class UrlParserHandler {
           bookmarkId: info.bookmarkId,
           callbackPayload: info.callbackPayload
         }),
-        await this.handleTagTask(ctx, { bookmarkId: info.bookmarkId, ignoreGenerateTag: info.ignoreGenerateTag, userIds: info.retry.userIds || [] })
+        await this.handleTagTask(ctx, { bookmarkId: info.bookmarkId, ignoreGenerateTag: info.ignoreGenerateTag, userIds: info.retry.userIds || [], targetUrl: info.targetUrl })
       ]
 
       await this.parseUrl(ctx, id, info, callbacks)

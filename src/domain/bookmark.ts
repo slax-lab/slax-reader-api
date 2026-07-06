@@ -914,13 +914,13 @@ export class BookmarkService {
   public async getBookmarkTitleContent(
     ctx: ContextManager,
     params: { bmId?: number; shareCode?: string; cbId?: number; title?: string; content?: string; bmUId?: string }
-  ): Promise<{ title: string; content: string; bmId: number }> {
+  ): Promise<{ title: string; content: string; bmId: number; targetUrl: string }> {
     const { bmId, shareCode, cbId, title, content, bmUId } = params
 
     const emptyId = !bmId && !shareCode && !cbId && !bmUId
     if (emptyId && !title && !content) throw ErrorParam()
     if (emptyId && title && content) {
-      return { title, content, bmId: 0 }
+      return { title, content, bmId: 0, targetUrl: '' }
     }
 
     const bookmarkId = await this.getBookmarkId(ctx, { bmId, shareCode, cbId, bmUId })
@@ -935,7 +935,7 @@ export class BookmarkService {
 
     if (!body) throw BookmarkContentNotFoundError()
 
-    return { title: bookmark.title, content: body, bmId: bookmarkId }
+    return { title: bookmark.title, content: body, bmId: bookmarkId, targetUrl: bookmark.target_url }
   }
 
   public async getStreamBookmarkContent(ctx: ContextManager, bookmarkUids: string): Promise<ReadableStream | null> {
