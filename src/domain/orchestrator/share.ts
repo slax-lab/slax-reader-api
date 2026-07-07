@@ -50,6 +50,8 @@ export class ShareOrchestrator {
       this.markService.getBookmarkMarkList(ctx, { id: userBm.id, isShowMarks: share.show_comment && share.show_line })
     ])
     if (!bookmark) throw BookmarkNotFoundError()
+    // 命中内容审核的书签仅 owner 可访问，其余（含匿名）按"不存在"处理
+    if (bookmark.moderation_result > 0 && ctx.getUserId() !== share.user_id) throw BookmarkNotFoundError()
 
     return {
       title: bookmark.title,
@@ -79,6 +81,8 @@ export class ShareOrchestrator {
     ])
 
     if (!bookmark) throw BookmarkNotFoundError()
+    // 命中内容审核的书签仅 owner 可访问，其余（含匿名）按"不存在"处理
+    if (bookmark.moderation_result > 0 && ctx.getUserId() !== share.user_id) throw BookmarkNotFoundError()
 
     const bmContent = await this.bookmarkService.getBookmarkContent(bookmark.content_key)
 
@@ -109,6 +113,10 @@ export class ShareOrchestrator {
     const share = await this.shareService.getBookmarkShareByShareCode(shareCode)
     if (!share || !share.is_enable) throw BookmarkNotFoundError()
 
+    // 命中内容审核的书签仅 owner 可访问，其余（含匿名）按"不存在"处理
+    const bookmark = await this.bookmarkService.getBookmarkById(share.bookmark_id)
+    if (bookmark && bookmark.moderation_result > 0 && ctx.getUserId() !== share.user_id) throw BookmarkNotFoundError()
+
     const userBm = await this.bookmarkService.getUserBookmark(share.bookmark_id, share.user_id)
     if (!userBm) return { mark_list: [], user_list: [] }
     return await this.markService.getBookmarkMarkList(ctx, { id: userBm.id, isShowMarks: share.show_comment && share.show_line })
@@ -120,6 +128,8 @@ export class ShareOrchestrator {
     if (!ub) return empty
 
     if (ub.user_id !== ctx.getUserId()) {
+      // 命中内容审核的书签仅 owner 可访问，非 owner 按"不存在"处理
+      if (ub.bookmark && ub.bookmark.moderation_result > 0) return empty
       const share = await this.bookmarkService.getBookmarkShareByBookmarkId(ub.bookmark_id, ub.user_id)
       const allowed = !share || (share.is_enable && share.allow_comment && share.allow_line)
       if (!allowed) return empty

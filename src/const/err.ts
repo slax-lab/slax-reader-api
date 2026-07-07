@@ -38,6 +38,7 @@ export enum ErrorName {
   NOT_SUBSCRIPTION = 'NOT_SUBSCRIPTION',
   AI_CONTENT_HARMFUL = 'AI_CONTENT_HARMFUL',
   CREATE_BOOKMARK_SHARE_UNIQUE_FAIL = 'CREATE_BOOKMARK_SHARE_UNIQUE_FAIL',
+  SHARE_CONTENT_NOT_SUPPORTED = 'SHARE_CONTENT_NOT_SUPPORTED',
   SHARE_DISABLED = 'SHARE_DISABLED',
   SHARE_CODE_NOT_FOUND = 'SHARE_CODE_NOT_FOUND',
   SHARE_ACTION_NOT_ALLOWED = 'SHARE_ACTION_NOT_ALLOWED',
@@ -91,6 +92,7 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.BOOKMARK_NOT_FOUND]: '书签未找到',
     [ErrorName.BLOCK_TARGET_URL]: '目标网址被阻止',
     [ErrorName.PROHIBITED_CONTENT]: '处理失败：内容被禁止',
+    [ErrorName.SHARE_CONTENT_NOT_SUPPORTED]: '该内容类型不支持分享',
     [ErrorName.CREATE_BOOKMARK_FAIL]: '创建书签失败',
     [ErrorName.USER_ID_WRONG]: '用户id错误',
     [ErrorName.DECODE_ID_ERROR]: '解码id错误',
@@ -138,6 +140,7 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.BOOKMARK_NOT_FOUND]: 'Bookmark not found',
     [ErrorName.BLOCK_TARGET_URL]: 'Blocked target url',
     [ErrorName.PROHIBITED_CONTENT]: 'Processing failed: prohibited content',
+    [ErrorName.SHARE_CONTENT_NOT_SUPPORTED]: 'This type of content cannot be shared',
     [ErrorName.CREATE_BOOKMARK_FAIL]: 'Create bookmark failed',
     [ErrorName.USER_ID_WRONG]: 'User id wrong',
     [ErrorName.DECODE_ID_ERROR]: 'Decode id error',
@@ -194,7 +197,8 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.UNAUTHORIZED]: 'Acceso no autorizado',
     [ErrorName.SERVER_ERROR]: 'Error interno del servidor',
     [ErrorName.GOOGLE_SSO_ERROR]: 'Error de Google SSO',
-    [ErrorName.PROHIBITED_CONTENT]: 'Error de procesamiento: contenido prohibido'
+    [ErrorName.PROHIBITED_CONTENT]: 'Error de procesamiento: contenido prohibido',
+    [ErrorName.SHARE_CONTENT_NOT_SUPPORTED]: 'Este tipo de contenido no se puede compartir'
   }
 }
 
@@ -232,6 +236,7 @@ export const BookmarkNotFoundError = (): MultiLangError => NewError(ErrorName.BO
 export const BookmarkContentNotFoundError = (): MultiLangError => NewError(ErrorName.BOOKMARK_CONTENT_NOT_FOUND, 404)
 export const BlockTargetUrlError = (): MultiLangError => NewError(ErrorName.BLOCK_TARGET_URL, 400)
 export const ProhibitedContentError = (): MultiLangError => NewError(ErrorName.PROHIBITED_CONTENT, 400)
+export const ShareContentNotSupportedError = (): MultiLangError => NewError(ErrorName.SHARE_CONTENT_NOT_SUPPORTED, 400)
 export const CreateBookmarkFailError = (): MultiLangError => NewError(ErrorName.CREATE_BOOKMARK_FAIL, 500)
 export const UserIdWrongError = (): MultiLangError => NewError(ErrorName.USER_ID_WRONG, 500)
 export const DecodeIdError = (): MultiLangError => NewError(ErrorName.DECODE_ID_ERROR, 500)
