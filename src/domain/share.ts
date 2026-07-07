@@ -1,4 +1,4 @@
-import { BookmarkNotFoundError, ErrorParam, ServerError } from '../const/err'
+import { BookmarkNotFoundError, ErrorParam, ServerError, ShareContentNotSupportedError } from '../const/err'
 import { ContextManager } from '../utils/context'
 import { hashMD5 } from '../utils/strings'
 import { BookmarkTag } from './tag'
@@ -103,6 +103,10 @@ export class ShareService {
 
     const bookmark = await this.bookmarkRepo.getUserBookmark(bmId, userId)
     if (!bookmark) throw BookmarkNotFoundError()
+
+    // 命中内容审核（色情/危险内容）的书签不支持分享
+    const bmDetail = await this.bookmarkRepo.getBookmarkById(bmId)
+    if (bmDetail && bmDetail.moderation_result > 0) throw ShareContentNotSupportedError()
 
     const share = await this.bookmarkRepo.getBookmarkShareByBookmarkId(bmId, userId)
 

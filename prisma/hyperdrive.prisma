@@ -15,25 +15,25 @@ model sr_user {
     id   Int    @id @default(autoincrement())
     uuid String @unique @default(dbgenerated("gen_random_uuid()"))
 
-    email         String    @unique
-    name          String    @default("")
-    picture       String    @default("")
-    given_name    String    @default("")
-    family_name   String    @default("")
-    lang          String    @default("")
-    ai_lang       String    @default("")
-    country       String    @default("")
-    city          String    @default("")
-    region        String    @default("")
-    latitude      Float     @default(0)
-    longitude     Float     @default(0)
-    timezone      String    @default("")
-    account       String    @default("")
-    last_login_at DateTime
-    last_login_ip String    @default("")
-    last_read_at  DateTime?
-    invite_code   String    @default("")
-    created_at    DateTime
+    email            String    @unique
+    name             String    @default("")
+    picture          String    @default("")
+    given_name       String    @default("")
+    family_name      String    @default("")
+    lang             String    @default("")
+    ai_lang          String    @default("")
+    country          String    @default("")
+    city             String    @default("")
+    region           String    @default("")
+    latitude         Float     @default(0)
+    longitude        Float     @default(0)
+    timezone         String    @default("")
+    account          String    @default("")
+    last_login_at    DateTime
+    last_login_ip    String    @default("")
+    last_read_at     DateTime?
+    invite_code      String    @default("")
+    created_at       DateTime
     snapshot_sharing Boolean   @default(true)
 
     @@index([account])
@@ -88,6 +88,8 @@ model sr_bookmark {
     byline             String   @default("")
     private_user       Int      @default(0)
     status             String   @default("pending")
+    // 内容审核结果：0-普通内容 1-色情内容 2-极度危险内容
+    moderation_result  Int      @default(0)
     created_at         DateTime
     updated_at         DateTime
     published_at       DateTime
@@ -102,21 +104,21 @@ model sr_user_bookmark {
     id   Int    @id @default(autoincrement())
     uuid String @unique @default(dbgenerated("gen_random_uuid()"))
 
-    user_id        Int       @default(0)
-    bookmark_id    Int       @default(0)
-    is_read        Boolean   @default(false)
-    archive_status Int       @default(0)
-    is_starred     Boolean   @default(false)
-    created_at     DateTime  @default(now())
+    user_id        Int      @default(0)
+    bookmark_id    Int      @default(0)
+    is_read        Boolean  @default(false)
+    archive_status Int      @default(0)
+    is_starred     Boolean  @default(false)
+    created_at     DateTime @default(now())
     updated_at     DateTime
-    alias_title    String    @default("")
+    alias_title    String   @default("")
     // 0- 文章 1- URL快捷方式
-    type           Int       @default(0)
+    type           Int      @default(0)
 
     starred_at  DateTime?
     archived_at DateTime?
 
-    deleted_at     DateTime?
+    deleted_at DateTime?
 
     metadata Json @default("{}")
 

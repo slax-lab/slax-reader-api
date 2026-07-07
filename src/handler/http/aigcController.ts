@@ -9,7 +9,6 @@ import { UserService } from '../../domain/user'
 import { BookmarkService } from '../../domain/bookmark'
 import { RequestUtils } from '../../utils/requestUtils'
 import { convertToGeminiContent } from '../../utils/conversation'
-import { isProhibitedContentUrl } from '../../utils/prohibitedContentDetector'
 import { ProhibitedContentError } from '../../const/err'
 
 type SummaryRequest = {
@@ -76,7 +75,7 @@ export class AigcController {
       }
     }
 
-    const { title, content, bmId, targetUrl } = await this.bookmarkService.getBookmarkTitleContent(ctx, {
+    const { title, content, bmId, moderationResult } = await this.bookmarkService.getBookmarkTitleContent(ctx, {
       bmId: req.bm_id,
       shareCode: req.share_code,
       cbId: req.cb_id,
@@ -84,7 +83,7 @@ export class AigcController {
       content: req.raw_content,
       bmUId: req.bookmark_uid
     })
-    if (targetUrl && isProhibitedContentUrl(targetUrl)) throw ProhibitedContentError()
+    if (moderationResult > 0) throw ProhibitedContentError()
     ctx.execution.waitUntil(
       aiSvc.bookmarkSummary(ctx, content, writable, async result => {
         bmId > 0 && (await this.bookmarkService.saveSummary(ctx, bmId, result.provider, result.response, result.model))
@@ -101,7 +100,7 @@ export class AigcController {
     // TODO 拿到CTX中的user_id进行速率限制
     const req = await RequestUtils.json<CompletionsRequest>(request)
 
-    const [user, { title, content, bmId, targetUrl }] = await Promise.all([
+    const [user, { title, content, bmId, moderationResult }] = await Promise.all([
       this.userService.getUserInfo(ctx),
       this.bookmarkService.getBookmarkTitleContent(ctx, {
         bmId: req.bm_id,
@@ -113,7 +112,7 @@ export class AigcController {
       })
     ])
 
-    if (targetUrl && isProhibitedContentUrl(targetUrl)) throw ProhibitedContentError()
+    if (moderationResult > 0) throw ProhibitedContentError()
 
     // 设置上下文
     ctx.set('req_url', request.url)
