@@ -289,6 +289,7 @@ export class BookmarkRepo {
       where.archive_status = archiveStatus
     } else if (filter === 'starred') {
       where.is_starred = true
+      orderBy = { updated_at: 'desc' }
     } else if (filter === 'trashed') {
       where.deleted_at = { not: null }
       orderBy = { deleted_at: 'desc' }
@@ -491,11 +492,17 @@ export class BookmarkRepo {
   public async countBookmarksByTag(userId: number, tagId: number) {
     const [result] = await this.prismaPg().$queryRaw<[{ exists: boolean }]>`
       SELECT EXISTS (
-        SELECT 1 
-        FROM sr_user_bookmark_tag 
+        SELECT 1
+        FROM sr_user_bookmark_tag
         WHERE user_id = ${userId} AND tag_id = ${tagId} AND is_deleted = false
       ) as "exists"`
     return result.exists
+  }
+
+  public async countStarredBookmarks(userId: number) {
+    return await this.prismaPg().sr_user_bookmark.count({
+      where: { user_id: userId, deleted_at: null, is_starred: true }
+    })
   }
 
   public async deleteUserTag(userId: number, tagId: number) {
@@ -552,6 +559,15 @@ export class BookmarkRepo {
       orderBy: {
         created_at: 'desc'
       }
+    })
+  }
+
+  // 合集列表 snippet 兜底
+  public async listUserBookmarkOverviews(userId: number, bookmarkIds: number[]) {
+    if (bookmarkIds.length === 0) return []
+    return await this.prismaPg().sr_user_bookmark_overview.findMany({
+      where: { user_id: userId, bookmark_id: { in: bookmarkIds } },
+      select: { bookmark_id: true, overview: true }
     })
   }
 

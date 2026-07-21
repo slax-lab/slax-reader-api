@@ -128,6 +128,21 @@ export class MarkRepo {
     return row?.comment ?? ''
   }
 
+  // bookmark_id 实为 user_bookmark id
+  async listByUserBookmarkIds(userBookmarkIds: number[], userId: number) {
+    if (userBookmarkIds.length === 0) return []
+    return await this.prismaPg().sr_bookmark_comment.findMany({
+      where: {
+        bookmark_id: { in: userBookmarkIds },
+        user_id: userId,
+        is_deleted: false,
+        type: { in: [markType.LINE, markType.COMMENT] }
+      },
+      select: { bookmark_id: true, type: true, comment: true, content: true },
+      orderBy: { created_at: 'asc' }
+    })
+  }
+
   async list(userBmId: number) {
     return (
       await this.prismaPg().sr_bookmark_comment.findMany({
