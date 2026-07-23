@@ -289,7 +289,7 @@ export class BookmarkRepo {
       where.archive_status = archiveStatus
     } else if (filter === 'starred') {
       where.is_starred = true
-      orderBy = { updated_at: 'desc' }
+      orderBy = { starred_at: 'desc' }
     } else if (filter === 'trashed') {
       where.deleted_at = { not: null }
       orderBy = { deleted_at: 'desc' }
