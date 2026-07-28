@@ -562,15 +562,6 @@ export class BookmarkRepo {
     })
   }
 
-  // 合集列表 snippet 兜底
-  public async listUserBookmarkOverviews(userId: number, bookmarkIds: number[]) {
-    if (bookmarkIds.length === 0) return []
-    return await this.prismaPg().sr_user_bookmark_overview.findMany({
-      where: { user_id: userId, bookmark_id: { in: bookmarkIds } },
-      select: { bookmark_id: true, overview: true }
-    })
-  }
-
   public async createBookmarkImportTask(userId: number, type: string, objectKey: string, totalCount: number, batchCount: number) {
     return await this.prismaPg().sr_bookmark_import.create({
       data: {
