@@ -279,7 +279,8 @@ export class BookmarkRepo {
 
   public async listUserBookmarks(userId: number, offset: number, limit: number, filter: string) {
     let where: any = { user_id: userId, deleted_at: null }
-    let orderBy: any = { created_at: 'desc' }
+    // id tiebreaker keeps OFFSET pagination stable when the primary key ties
+    let orderBy: any = [{ created_at: 'desc' }, { id: 'desc' }]
 
     if (['read', 'unread'].includes(filter)) {
       where.is_read = filter === 'read'
@@ -287,14 +288,14 @@ export class BookmarkRepo {
       // inbox: 0, archive: 1, later: 2
       const archiveStatus = filter === 'archive' ? 1 : filter === 'later' ? 2 : 0
       where.archive_status = archiveStatus
-      // archive list ordered by archived_at
-      if (filter === 'archive') orderBy = { archived_at: 'desc' }
+      // archive list ordered by archived_at (NULLS LAST so legacy rows sink)
+      if (filter === 'archive') orderBy = [{ archived_at: { sort: 'desc', nulls: 'last' } }, { id: 'desc' }]
     } else if (filter === 'starred') {
       where.is_starred = true
-      orderBy = { starred_at: 'desc' }
+      orderBy = [{ starred_at: { sort: 'desc', nulls: 'last' } }, { id: 'desc' }]
     } else if (filter === 'trashed') {
       where.deleted_at = { not: null }
-      orderBy = { deleted_at: 'desc' }
+      orderBy = [{ deleted_at: 'desc' }, { id: 'desc' }]
     }
 
     return await this.prismaPg().sr_user_bookmark.findMany({
@@ -342,16 +343,18 @@ export class BookmarkRepo {
   }
 
   public async updateBookmarkArchiveStatus(bmId: number, userId: number, status: number) {
+    // archived_at is derived by the BEFORE UPDATE trigger on distinct change; only bump updated_at here
     await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
-      data: { archive_status: status, archived_at: status === 1 ? new Date() : null, updated_at: new Date() }
+      data: { archive_status: status, updated_at: new Date() }
     })
   }
 
   public async updateBookmarkStarStatus(bmId: number, userId: number, status: boolean) {
+    // starred_at is derived by the BEFORE UPDATE trigger on distinct change; only bump updated_at here
     return await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
-      data: { is_starred: status, starred_at: status ? new Date() : null, updated_at: new Date() }
+      data: { is_starred: status, updated_at: new Date() }
     })
   }
 

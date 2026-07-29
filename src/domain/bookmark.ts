@@ -500,7 +500,7 @@ export class BookmarkService {
   public async bookmarkList(ctx: ContextManager, page: number, size: number, filter: string) {
     return (await this.bookmarkRepo.listUserBookmarks(ctx.getUserId(), (page - 1) * size, size, filter))
       .filter(({ bookmark }) => bookmark !== null)
-      .map(({ uuid, bookmark, alias_title, archive_status, is_starred, deleted_at, type }) => {
+      .map(({ uuid, bookmark, alias_title, archive_status, is_starred, deleted_at, type, created_at, updated_at }) => {
         const { private_user, content_md_key, content_key, ...bookmarkWithout } = bookmark!
         return {
           ...bookmarkWithout,
@@ -510,7 +510,10 @@ export class BookmarkService {
           archived: archive_status === 1 ? 'archive' : archive_status === 2 ? 'later' : 'inbox',
           starred: is_starred ? 'star' : 'unstar',
           trashed_at: !!deleted_at ? deleted_at : undefined,
-          type: type === 1 ? 'shortcut' : 'article'
+          type: type === 1 ? 'shortcut' : 'article',
+          // per-user timestamps override the shared bookmark's
+          created_at,
+          updated_at
         }
       })
   }
@@ -527,7 +530,10 @@ export class BookmarkService {
           alias_title: user_bookmark!.alias_title,
           id: ctx.hashIds.encodeId(user_bookmark!.bookmark_id),
           archived: user_bookmark!.archive_status === 1 ? 'archive' : user_bookmark!.archive_status === 2 ? 'later' : 'inbox',
-          starred: user_bookmark!.is_starred ? 'star' : 'unstar'
+          starred: user_bookmark!.is_starred ? 'star' : 'unstar',
+          // per-user timestamps override the shared bookmark's
+          created_at: user_bookmark!.created_at,
+          updated_at: user_bookmark!.updated_at
         }
       })
   }

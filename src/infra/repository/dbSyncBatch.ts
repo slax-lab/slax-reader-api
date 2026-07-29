@@ -153,18 +153,14 @@ export class DBSyncBatchOperation {
     if (operation.type !== 'update_bookmark') return
 
     const data = operation.data as UpdateBookmarkData
-    // Whitelist-pick allowed fields instead of spreading raw client payload
+    // Whitelist-pick allowed fields instead of spreading raw client payload.
+    // starred_at/archived_at are derived by the BEFORE UPDATE trigger on distinct
+    // change (idempotent on replays); do not derive them here.
     const updateData: Record<string, unknown> = { updated_at: new Date() }
     if (data.is_read !== undefined) updateData.is_read = data.is_read
     if (data.alias_title !== undefined) updateData.alias_title = data.alias_title
-    if (data.is_starred !== undefined) {
-      updateData.is_starred = data.is_starred
-      updateData.starred_at = data.is_starred ? new Date() : null
-    }
-    if (data.archive_status !== undefined) {
-      updateData.archive_status = data.archive_status
-      updateData.archived_at = data.archive_status === 1 ? new Date() : null
-    }
+    if (data.is_starred !== undefined) updateData.is_starred = data.is_starred
+    if (data.archive_status !== undefined) updateData.archive_status = data.archive_status
 
     await tx.sr_user_bookmark.update({
       where: { uuid: operation.bookmarkUuid, user_id: operation.userId },
