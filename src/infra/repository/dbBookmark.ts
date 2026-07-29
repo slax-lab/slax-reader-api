@@ -279,7 +279,7 @@ export class BookmarkRepo {
 
   public async listUserBookmarks(userId: number, offset: number, limit: number, filter: string) {
     let where: any = { user_id: userId, deleted_at: null }
-    // id tiebreaker keeps OFFSET pagination stable when the primary key ties
+    // id tiebreaker keeps OFFSET pagination stable
     let orderBy: any = [{ created_at: 'desc' }, { id: 'desc' }]
 
     if (['read', 'unread'].includes(filter)) {
@@ -288,7 +288,7 @@ export class BookmarkRepo {
       // inbox: 0, archive: 1, later: 2
       const archiveStatus = filter === 'archive' ? 1 : filter === 'later' ? 2 : 0
       where.archive_status = archiveStatus
-      // archive list ordered by archived_at (NULLS LAST so legacy rows sink)
+      // archived_at desc, NULLS LAST for legacy rows
       if (filter === 'archive') orderBy = [{ archived_at: { sort: 'desc', nulls: 'last' } }, { id: 'desc' }]
     } else if (filter === 'starred') {
       where.is_starred = true
@@ -343,7 +343,7 @@ export class BookmarkRepo {
   }
 
   public async updateBookmarkArchiveStatus(bmId: number, userId: number, status: number) {
-    // archived_at is derived by the BEFORE UPDATE trigger on distinct change; only bump updated_at here
+    // archived_at derived by BEFORE UPDATE trigger; only bump updated_at
     await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
       data: { archive_status: status, updated_at: new Date() }
@@ -351,7 +351,7 @@ export class BookmarkRepo {
   }
 
   public async updateBookmarkStarStatus(bmId: number, userId: number, status: boolean) {
-    // starred_at is derived by the BEFORE UPDATE trigger on distinct change; only bump updated_at here
+    // starred_at derived by BEFORE UPDATE trigger; only bump updated_at
     return await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
       data: { is_starred: status, updated_at: new Date() }

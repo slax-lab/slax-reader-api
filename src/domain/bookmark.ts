@@ -511,7 +511,6 @@ export class BookmarkService {
           starred: is_starred ? 'star' : 'unstar',
           trashed_at: !!deleted_at ? deleted_at : undefined,
           type: type === 1 ? 'shortcut' : 'article',
-          // per-user timestamps override the shared bookmark's
           created_at,
           updated_at
         }
@@ -531,7 +530,6 @@ export class BookmarkService {
           id: ctx.hashIds.encodeId(user_bookmark!.bookmark_id),
           archived: user_bookmark!.archive_status === 1 ? 'archive' : user_bookmark!.archive_status === 2 ? 'later' : 'inbox',
           starred: user_bookmark!.is_starred ? 'star' : 'unstar',
-          // per-user timestamps override the shared bookmark's
           created_at: user_bookmark!.created_at,
           updated_at: user_bookmark!.updated_at
         }
