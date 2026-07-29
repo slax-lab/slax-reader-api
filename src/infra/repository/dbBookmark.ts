@@ -259,7 +259,7 @@ export class BookmarkRepo {
     return await this.prismaPg().sr_user_bookmark.upsert({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
       create: { user_id: userId, bookmark_id: bmId, created_at: new Date(), updated_at: new Date(), type, archive_status: isArchive ? 1 : 0 },
-      update: { updated_at: new Date() }
+      update: { created_at: new Date(), updated_at: new Date() }
     })
   }
 
@@ -287,6 +287,8 @@ export class BookmarkRepo {
       // inbox: 0, archive: 1, later: 2
       const archiveStatus = filter === 'archive' ? 1 : filter === 'later' ? 2 : 0
       where.archive_status = archiveStatus
+      // archive list ordered by archived_at
+      if (filter === 'archive') orderBy = { archived_at: 'desc' }
     } else if (filter === 'starred') {
       where.is_starred = true
       orderBy = { starred_at: 'desc' }
@@ -342,14 +344,14 @@ export class BookmarkRepo {
   public async updateBookmarkArchiveStatus(bmId: number, userId: number, status: number) {
     await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
-      data: { archive_status: status }
+      data: { archive_status: status, archived_at: status === 1 ? new Date() : null, updated_at: new Date() }
     })
   }
 
   public async updateBookmarkStarStatus(bmId: number, userId: number, status: boolean) {
     return await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
-      data: { is_starred: status }
+      data: { is_starred: status, starred_at: status ? new Date() : null, updated_at: new Date() }
     })
   }
 

@@ -111,6 +111,7 @@ export class DBSyncBatchOperation {
           bookmark_id: bookmark.id,
           deleted_at: null,
           archive_status: isArchive ? 1 : 0,
+          created_at: new Date(),
           updated_at: new Date()
         }
       })
@@ -130,6 +131,7 @@ export class DBSyncBatchOperation {
         update: {
           deleted_at: null,
           archive_status: isArchive ? 1 : 0,
+          created_at: new Date(),
           updated_at: new Date()
         }
       })
@@ -150,7 +152,10 @@ export class DBSyncBatchOperation {
   public async executeUpdateBookmark(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
     if (operation.type !== 'update_bookmark') return
 
-    const updateData = { ...(operation.data as UpdateBookmarkData), updated_at: new Date() }
+    const data = operation.data as UpdateBookmarkData
+    const updateData: Record<string, unknown> = { ...data, updated_at: new Date() }
+    if (data.is_starred !== undefined) updateData.starred_at = data.is_starred ? new Date() : null
+    if (data.archive_status !== undefined) updateData.archived_at = data.archive_status === 1 ? new Date() : null
 
     await tx.sr_user_bookmark.update({
       where: { uuid: operation.bookmarkUuid, user_id: operation.userId },
