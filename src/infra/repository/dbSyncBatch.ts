@@ -153,9 +153,18 @@ export class DBSyncBatchOperation {
     if (operation.type !== 'update_bookmark') return
 
     const data = operation.data as UpdateBookmarkData
-    const updateData: Record<string, unknown> = { ...data, updated_at: new Date() }
-    if (data.is_starred !== undefined) updateData.starred_at = data.is_starred ? new Date() : null
-    if (data.archive_status !== undefined) updateData.archived_at = data.archive_status === 1 ? new Date() : null
+    // Whitelist-pick allowed fields instead of spreading raw client payload
+    const updateData: Record<string, unknown> = { updated_at: new Date() }
+    if (data.is_read !== undefined) updateData.is_read = data.is_read
+    if (data.alias_title !== undefined) updateData.alias_title = data.alias_title
+    if (data.is_starred !== undefined) {
+      updateData.is_starred = data.is_starred
+      updateData.starred_at = data.is_starred ? new Date() : null
+    }
+    if (data.archive_status !== undefined) {
+      updateData.archive_status = data.archive_status
+      updateData.archived_at = data.archive_status === 1 ? new Date() : null
+    }
 
     await tx.sr_user_bookmark.update({
       where: { uuid: operation.bookmarkUuid, user_id: operation.userId },
@@ -238,7 +247,7 @@ export class DBSyncBatchOperation {
 
     await tx.sr_user_bookmark.update({
       where: { uuid: operation.bookmarkUuid, user_id: operation.userId },
-      data: { deleted_at: new Date() }
+      data: { deleted_at: new Date(), updated_at: new Date() }
     })
   }
 

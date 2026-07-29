@@ -362,7 +362,7 @@ export class BookmarkRepo {
   public async updateBookmarkAliasTitle(bmId: number, userId: number, alias_title: string) {
     return await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
-      data: { alias_title }
+      data: { alias_title, updated_at: new Date() }
     })
   }
 
