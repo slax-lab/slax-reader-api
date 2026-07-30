@@ -104,6 +104,7 @@ export class DBSyncBatchOperation {
       throw ShareActionNotAllowedError()
     }
 
+    // re-save bumps created_at (save time, tops inbox); replay may re-top
     if (existingByUuid) {
       await tx.sr_user_bookmark.update({
         where: { uuid: operation.bookmarkUuid, user_id: operation.userId },
@@ -111,6 +112,7 @@ export class DBSyncBatchOperation {
           bookmark_id: bookmark.id,
           deleted_at: null,
           archive_status: isArchive ? 1 : 0,
+          created_at: new Date(),
           updated_at: new Date()
         }
       })
@@ -130,6 +132,7 @@ export class DBSyncBatchOperation {
         update: {
           deleted_at: null,
           archive_status: isArchive ? 1 : 0,
+          created_at: new Date(),
           updated_at: new Date()
         }
       })
