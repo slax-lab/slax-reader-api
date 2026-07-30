@@ -280,8 +280,7 @@ export class BookmarkRepo {
 
   public async listUserBookmarks(userId: number, offset: number, limit: number, filter: string) {
     let where: any = { user_id: userId, deleted_at: null }
-    // id tiebreaker keeps OFFSET pagination stable
-    let orderBy: any = [{ created_at: 'desc' }, { id: 'desc' }]
+    let orderBy: any = { created_at: 'desc' }
 
     if (['read', 'unread'].includes(filter)) {
       where.is_read = filter === 'read'
@@ -290,13 +289,13 @@ export class BookmarkRepo {
       const archiveStatus = filter === 'archive' ? 1 : filter === 'later' ? 2 : 0
       where.archive_status = archiveStatus
       // no nulls (backfill+trigger) → matches index
-      if (filter === 'archive') orderBy = [{ archived_at: 'desc' }, { id: 'desc' }]
+      if (filter === 'archive') orderBy = { archived_at: 'desc' }
     } else if (filter === 'starred') {
       where.is_starred = true
-      orderBy = [{ starred_at: 'desc' }, { id: 'desc' }]
+      orderBy = { starred_at: 'desc' }
     } else if (filter === 'trashed') {
       where.deleted_at = { not: null }
-      orderBy = [{ deleted_at: 'desc' }, { id: 'desc' }]
+      orderBy = { deleted_at: 'desc' }
     }
 
     return await this.prismaPg().sr_user_bookmark.findMany({
