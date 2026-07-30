@@ -256,6 +256,7 @@ export class BookmarkRepo {
   }
 
   public async createBookmarkRelation(userId: number, bmId: number, type: number, isArchive: boolean) {
+    // re-save bumps created_at (save time, tops inbox); replay may re-top
     return await this.prismaPg().sr_user_bookmark.upsert({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
       create: { user_id: userId, bookmark_id: bmId, created_at: new Date(), updated_at: new Date(), type, archive_status: isArchive ? 1 : 0 },
@@ -288,11 +289,11 @@ export class BookmarkRepo {
       // inbox: 0, archive: 1, later: 2
       const archiveStatus = filter === 'archive' ? 1 : filter === 'later' ? 2 : 0
       where.archive_status = archiveStatus
-      // archived_at desc, NULLS LAST for legacy rows
-      if (filter === 'archive') orderBy = [{ archived_at: { sort: 'desc', nulls: 'last' } }, { id: 'desc' }]
+      // no nulls (backfill+trigger) → matches index
+      if (filter === 'archive') orderBy = [{ archived_at: 'desc' }, { id: 'desc' }]
     } else if (filter === 'starred') {
       where.is_starred = true
-      orderBy = [{ starred_at: { sort: 'desc', nulls: 'last' } }, { id: 'desc' }]
+      orderBy = [{ starred_at: 'desc' }, { id: 'desc' }]
     } else if (filter === 'trashed') {
       where.deleted_at = { not: null }
       orderBy = [{ deleted_at: 'desc' }, { id: 'desc' }]
@@ -502,12 +503,6 @@ export class BookmarkRepo {
         WHERE user_id = ${userId} AND tag_id = ${tagId} AND is_deleted = false
       ) as "exists"`
     return result.exists
-  }
-
-  public async countStarredBookmarks(userId: number) {
-    return await this.prismaPg().sr_user_bookmark.count({
-      where: { user_id: userId, deleted_at: null, is_starred: true }
-    })
   }
 
   public async deleteUserTag(userId: number, tagId: number) {

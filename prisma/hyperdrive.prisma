@@ -110,6 +110,7 @@ model sr_user_bookmark {
     archive_status Int      @default(0)
     is_starred     Boolean  @default(false)
     created_at     DateTime @default(now())
+    // bookkeeping/debugging only; not business logic
     updated_at     DateTime
     alias_title    String   @default("")
     // 0- 文章 1- URL快捷方式
