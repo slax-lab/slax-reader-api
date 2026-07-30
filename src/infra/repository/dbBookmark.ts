@@ -343,18 +343,16 @@ export class BookmarkRepo {
   }
 
   public async updateBookmarkArchiveStatus(bmId: number, userId: number, status: number) {
-    // archived_at derived by BEFORE UPDATE trigger; only bump updated_at
     await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
-      data: { archive_status: status, updated_at: new Date() }
+      data: { archive_status: status }
     })
   }
 
   public async updateBookmarkStarStatus(bmId: number, userId: number, status: boolean) {
-    // starred_at derived by BEFORE UPDATE trigger; only bump updated_at
     return await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
-      data: { is_starred: status, updated_at: new Date() }
+      data: { is_starred: status }
     })
   }
 
@@ -365,7 +363,7 @@ export class BookmarkRepo {
   public async updateBookmarkAliasTitle(bmId: number, userId: number, alias_title: string) {
     return await this.prismaPg().sr_user_bookmark.update({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
-      data: { alias_title, updated_at: new Date() }
+      data: { alias_title }
     })
   }
 

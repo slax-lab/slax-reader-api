@@ -153,14 +153,7 @@ export class DBSyncBatchOperation {
   public async executeUpdateBookmark(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
     if (operation.type !== 'update_bookmark') return
 
-    const data = operation.data as UpdateBookmarkData
-    // whitelist allowed fields; don't spread raw client payload
-    // starred_at/archived_at derived by trigger, not set here
-    const updateData: Record<string, unknown> = { updated_at: new Date() }
-    if (data.is_read !== undefined) updateData.is_read = data.is_read
-    if (data.alias_title !== undefined) updateData.alias_title = data.alias_title
-    if (data.is_starred !== undefined) updateData.is_starred = data.is_starred
-    if (data.archive_status !== undefined) updateData.archive_status = data.archive_status
+    const updateData = { ...(operation.data as UpdateBookmarkData), updated_at: new Date() }
 
     await tx.sr_user_bookmark.update({
       where: { uuid: operation.bookmarkUuid, user_id: operation.userId },
@@ -243,7 +236,7 @@ export class DBSyncBatchOperation {
 
     await tx.sr_user_bookmark.update({
       where: { uuid: operation.bookmarkUuid, user_id: operation.userId },
-      data: { deleted_at: new Date(), updated_at: new Date() }
+      data: { deleted_at: new Date() }
     })
   }
 
