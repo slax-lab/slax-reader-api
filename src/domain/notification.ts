@@ -257,25 +257,25 @@ export class NotificationService {
 
   // 被订阅 => 通知Publisher
   public async createSubscribeCollectionNotification(env: Env, options: { ownerId: number; subscriberId: number; collectionName: string; collectionCode: string }) {
-    return await this.createCollectionNotification(env, 'subscribe', options)
+    // return await this.createCollectionNotification(env, 'subscribe', options)
   }
 
   // 取消订阅 => 通知Publisher
   public async createUnsubscribeCollectionNotification(env: Env, options: { ownerId: number; subscriberId: number; collectionCode: string; collectionName: string }) {
-    return await this.createCollectionNotification(env, 'unsubscribe', options)
+    // return await this.createCollectionNotification(env, 'unsubscribe', options)
   }
 
   // 创建通知
   public async createMarkNotifications(env: Env, markInfo: markPOWithId, data: markRequest, userBookmark: any, replyToComment?: markDetailPO) {
-    try {
-      // 评论的话，检查是否为自己评论自己的
-      // 回复的话，检查是否为自己回复自己的
-      if ([markType.COMMENT, markType.ORIGIN_COMMENT].includes(data.type) && userBookmark.user_id === markInfo.user_id) return
-      if (data.type === markType.REPLY && replyToComment?.user_id === markInfo.user_id) return
-      await this.createMarkNotification(env, markInfo, data, userBookmark, replyToComment)
-    } catch (e) {
-      console.error(`create mark notification failed: ${e}`)
-      throw ServerError()
-    }
+    // try {
+    //   // 评论的话，检查是否为自己评论自己的
+    //   // 回复的话，检查是否为自己回复自己的
+    //   if ([markType.COMMENT, markType.ORIGIN_COMMENT].includes(data.type) && userBookmark.user_id === markInfo.user_id) return
+    //   if (data.type === markType.REPLY && replyToComment?.user_id === markInfo.user_id) return
+    //   await this.createMarkNotification(env, markInfo, data, userBookmark, replyToComment)
+    // } catch (e) {
+    //   console.error(`create mark notification failed: ${e}`)
+    //   throw ServerError()
+    // }
   }
 }
