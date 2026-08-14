@@ -13,6 +13,7 @@ export class ContextManager {
   private lang?: string
   public hashIds!: Hashid
   private context: Record<string, any> = {}
+  private platform: 'web' | 'ios' | 'android' | 'extension' | '' = ''
   private cleanupCallbacks: Array<() => Promise<void>> = []
 
   constructor(
@@ -30,6 +31,14 @@ export class ContextManager {
 
   getAll() {
     return this.context
+  }
+
+  setPlatform(platform: 'web' | 'ios' | 'android' | 'extension') {
+    this.platform = platform
+  }
+
+  getPlatform() {
+    return this.platform
   }
 
   setHashIds(hashIds: Hashid) {
