@@ -246,17 +246,6 @@ export class SyncOrchestrator {
   public processUserBookmarkChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
     if (!change.data) return
 
-    // soft delete bookmark
-    if (change.data.hasOwnProperty('deleted_at')) {
-      operations.push({
-        type: 'delete_bookmark',
-        bookmarkUuid: change.id,
-        userId,
-        data: undefined
-      })
-      return
-    }
-
     // create new bookmark
     if (change.op === 'PUT' && change.data.hasOwnProperty('metadata')) {
       const bookmarkData = JSON.parse(change.data['metadata'].replaceAll('\\\\', '')) as SyncChangeUserBookmarkMetadata
@@ -273,6 +262,17 @@ export class SyncOrchestrator {
           isArchive: change.data.archive_status === '1',
           isNewBookmark: true
         }
+      })
+      return
+    }
+
+    // soft delete bookmark
+    if (change.data.hasOwnProperty('deleted_at')) {
+      operations.push({
+        type: 'delete_bookmark',
+        bookmarkUuid: change.id,
+        userId,
+        data: undefined
       })
       return
     }

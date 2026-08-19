@@ -77,7 +77,7 @@ export class DBSyncBatchOperation {
     const { targetUrl, title, thumbnail, description, isArchive, isNewBookmark } = operation.data as CreateBookmarkData
 
     const bookmark = await tx.sr_bookmark.upsert({
-      where: { target_url_private_user: { target_url: targetUrl, private_user: 0 } },
+      where: { target_url_private_user: { target_url: targetUrl, private_user: operation.userId } },
       create: {
         target_url: targetUrl,
         title,
@@ -85,7 +85,7 @@ export class DBSyncBatchOperation {
         content_icon: thumbnail || '',
         content_cover: '',
         description: description || '',
-        private_user: 0,
+        private_user: operation.userId,
         status: 'pending',
         created_at: new Date(),
         updated_at: new Date(),
@@ -137,6 +137,10 @@ export class DBSyncBatchOperation {
         }
       })
     }
+
+    await tx.sr_user_delete_bookmark.deleteMany({
+      where: { user_id: operation.userId, bookmark_id: bookmark.id }
+    })
 
     if (isNewBookmark) {
       return {
@@ -354,9 +358,33 @@ export class DBSyncBatchOperation {
       if (!userBookmark) throw ShareActionNotAllowedError()
     }
 
-    await tx.sr_bookmark_comment.update({
-      where: { uuid: operation.commentUuid },
-      data: { is_deleted: isDeleted, updated_at: new Date() }
+    const isComment = [markType.COMMENT, markType.ORIGIN_COMMENT, markType.REPLY].includes(commentRecord.type)
+    if (!isComment) {
+      await tx.sr_bookmark_comment.deleteMany({ where: { uuid: operation.commentUuid } })
+      return
+    }
+
+    const rootId = commentRecord.root_id > 0 ? commentRecord.root_id : commentRecord.id
+    const liveThreadMember = await tx.sr_bookmark_comment.findFirst({
+      where: {
+        bookmark_id: commentRecord.bookmark_id,
+        root_id: rootId,
+        is_deleted: false,
+        uuid: { not: operation.commentUuid }
+      },
+      select: { id: true }
+    })
+
+    if (liveThreadMember) {
+      await tx.sr_bookmark_comment.update({
+        where: { uuid: operation.commentUuid },
+        data: { is_deleted: isDeleted, updated_at: new Date() }
+      })
+      return
+    }
+
+    await tx.sr_bookmark_comment.deleteMany({
+      where: { bookmark_id: commentRecord.bookmark_id, root_id: rootId }
     })
   }
 }

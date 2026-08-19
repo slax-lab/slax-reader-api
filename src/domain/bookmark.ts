@@ -196,14 +196,14 @@ export class BookmarkService {
     if (urlPolicie.isBlocked()) throw BlockTargetUrlError()
     target_url = processTargetUrl(urlEntity)
 
-    const privateUser = !urlPolicie.isServerParse() ? ctx.getUserId() : 0
+    const privateUser = ctx.getUserId()
     const lastBm = await this.bookmarkRepo.getBookmark(target_url, privateUser)
 
     const bmInfo = await this.createBookmarkBase({
       ctx,
       targetUrl: target_url,
       hostUrl: urlEntity.host,
-      privateUser: !urlPolicie.isServerParse() ? ctx.getUserId() : 0,
+      privateUser,
       type: urlPolicie.isUrlShortcut() ? 1 : 0,
       title: lastBm?.title ?? (urlPolicie.isServerParse() ? target_url : target_title),
       icon: lastBm?.content_icon ?? target_icon,
@@ -244,12 +244,13 @@ export class BookmarkService {
     // 参数处理
     const targetUrl = processTargetUrl(target_url)
 
-    const lastBm = await this.bookmarkRepo.getBookmark(targetUrl, 0)
+    const privateUser = ctx.getUserId()
+    const lastBm = await this.bookmarkRepo.getBookmark(targetUrl, privateUser)
     const bmInfo = await this.createBookmarkBase({
       ctx,
       targetUrl,
       hostUrl: target_url.host,
-      privateUser: 0,
+      privateUser,
       type: urlPolicie.isUrlShortcut() ? 1 : 0,
       title: lastBm?.title ?? item.target_title ?? targetUrl,
       icon: '',
@@ -315,14 +316,15 @@ export class BookmarkService {
 
     // 处理URL
     const targetUrl = processTargetUrl(target_url)
-    const lastBm = await this.bookmarkRepo.getBookmark(targetUrl, 0)
+    const privateUser = ctx.getUserId()
+    const lastBm = await this.bookmarkRepo.getBookmark(targetUrl, privateUser)
 
     // 创建书签
     const bmInfo = await this.createBookmarkBase({
       ctx,
       targetUrl,
       hostUrl: target_url.host,
-      privateUser: urlPolicie.isUrlShortcut() ? ctx.getUserId() : 0,
+      privateUser,
       type: urlPolicie.isUrlShortcut() ? 1 : 0,
       title: lastBm?.title ?? req.target_title ?? targetUrl,
       icon: '',

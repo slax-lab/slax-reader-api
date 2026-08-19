@@ -242,8 +242,8 @@ export class AigcService {
 
     messages.pop()
     const platform = ctx.get('platform') === 'mobile' ? 'mobile' : 'desktop'
-    const systemInstruction = buildChatSystemInstruction(platform, ctx.get('ai_lang'))
-    const userContent = buildChatUserMessage(rawContent, content)
+    const systemInstruction = buildChatSystemInstruction(platform, ctx.get('ai_lang'), rawContent)
+    const userContent = buildChatUserMessage(content)
     const quoteMessages: Content[] = await Promise.all(
       quote.map(async (item): Promise<Content> => {
         if (item.type === 'image_base64') {
@@ -410,7 +410,7 @@ export class AigcService {
             },
             required: ['gist', 'key_takeaways']
           },
-          tags: { type: Type.ARRAY, items: { type: Type.STRING } }
+          tags: { type: Type.ARRAY, items: { type: Type.STRING }, maxItems: '3' }
         },
         required: ['overview', 'tags']
       }

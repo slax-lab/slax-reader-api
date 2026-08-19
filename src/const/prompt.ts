@@ -81,6 +81,12 @@ Begin your response immediately with the answer. Do not include any preamble suc
 {$PLATFORM_RULES}
 
 ---
+**Article the user is currently reading.** It was supplied by the app, not by the user, and is available to you throughout the whole conversation — including every earlier turn. Any analysis of it in your own earlier replies was your own work, drawn from this same text.
+<article>
+{$ARTICLE}
+</article>
+
+---
 **Response Language:**
 {$USER_LANGUAGE}`
 
@@ -96,18 +102,16 @@ export const chatDesktopRules = `**Optimize for desktop reading**:
 - Paragraphs can be thorough — allow depth and nuance when the topic calls for it, without padding
 - Use tables, nested lists, and code blocks where they add clarity`
 
-export function buildChatSystemInstruction(platform: 'mobile' | 'desktop', language: string): string {
+export function buildChatSystemInstruction(platform: 'mobile' | 'desktop', language: string, article: string): string {
   const rules = platform === 'mobile' ? chatMobileRules : chatDesktopRules
-  return chatCorePrompt.replace('{$PLATFORM_RULES}', rules).replace('{$USER_LANGUAGE}', language)
+  return chatCorePrompt
+    .replace('{$PLATFORM_RULES}', rules)
+    .replace('{$USER_LANGUAGE}', language)
+    .replace('{$ARTICLE}', () => article)
 }
 
-export function buildChatUserMessage(article: string, query: string): string {
-  return `**Article to Analyze:**
-<article>
-${article}
-</article>
-
-**User's Request:**
+export function buildChatUserMessage(query: string): string {
+  return `**User's Request:**
 <user_query>
 ${query}
 </user_query>`
@@ -128,12 +132,14 @@ ${content}`
 
 export const generateOverviewTagsUserPrompt = function (userLang: string, tags: string[]) {
   return `## 你需要输出tags
-- 从提供的标签列表中选择2~3个最符合文章内容的标签
+- 从提供的标签列表中选择最符合文章内容的标签，数量可以是0~3个
+- 宁缺毋滥：如果列表中没有与文章核心内容真正匹配的标签，就一个都不选，输出空数组 []。勉强选择一个沾边的标签，比不选择更糟糕
 - 如果存在含义相近的标签，则需要选择最合适的标签，不要选择多个相近的标签
 - 标签必须与文章核心内容高度相关
 - 标签能够准确反映文章的主要特征
 - 选择的标签应该能代表文章的不同维度
 - 标签选择要基于文章实际内容，避免主观臆测
+- 不要因为标签描述的是读者可能的兴趣而选择它，标签必须描述文章本身的内容
 - 生成标签列表时，语言则只能跟随用户的标签列表，不可以擅自翻译
 - 标签的列表：
 ${tags.join(',')}
