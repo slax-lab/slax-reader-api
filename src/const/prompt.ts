@@ -163,7 +163,7 @@ ${tags.join(',')}
     gist: 输出的overview内容,
     key_takeaways: 3~5 条核心要点,
   },
-  tags: [标签1, 标签2, 标签3, 标签4, ...]
+  tags: [标签1, 标签2, 标签3]
 }
 `
 }
