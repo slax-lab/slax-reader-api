@@ -197,6 +197,18 @@ export function getRouter(container: Container) {
     const controller = container.resolve(TagController)
     return await controller.handleCreateTagRequest(ctx, req)
   })
+  router.post('/v1/tag/promote', async (req: Request, ctx: ContextManager) => {
+    const controller = container.resolve(TagController)
+    return await controller.handlePromoteTagRequest(ctx, req)
+  })
+  router.post('/v1/tag/demote', async (req: Request, ctx: ContextManager) => {
+    const controller = container.resolve(TagController)
+    return await controller.handleDemoteTagRequest(ctx, req)
+  })
+  router.post('/v1/tag/delete', async (req: Request, ctx: ContextManager) => {
+    const controller = container.resolve(TagController)
+    return await controller.handleDeleteTagRequest(ctx, req)
+  })
   router.post('/v1/user/login', async (req: Request, ctx: ContextManager) => {
     const controller = container.resolve(UserController)
     return await controller.handleUserLoginRequest(ctx, req)

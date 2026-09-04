@@ -229,7 +229,7 @@ export class TelegramBotService {
       const tag = await this.bookmarkRepo.getUserTagById(userId, tagId)
       if (tag instanceof Error) return { data: [], tagName: '' }
       if (!tag) return { data: [], tagName: '' }
-      resp = await this.bookmarkRepo.listUserBookmarksByTagId(userId, tagId, (page - 1) * size, size)
+      resp = await this.bookmarkRepo.listUserBookmarksByTagIds(userId, [tagId], (page - 1) * size, size)
       tagName = tag.tag_name
     } else {
       resp = await this.bookmarkRepo.listUserBookmarks(userId, (page - 1) * size, size, '')

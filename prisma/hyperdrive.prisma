@@ -140,6 +140,8 @@ model sr_user_bookmark_tag {
     tag_id      Int      @default(0)
     created_at  DateTime @default(now())
     is_deleted  Boolean  @default(false)
+    // who attached this tag: "user" | "ai"; "" for rows created before the column existed
+    source      String   @default("")
 
     bookmark      sr_bookmark?      @relation(fields: [bookmark_id], references: [id])
     user_bookmark sr_user_bookmark? @relation(fields: [user_id, bookmark_id], references: [user_id, bookmark_id])
@@ -169,7 +171,14 @@ model sr_user_tag {
     display    Boolean  @default(true)
     created_at DateTime @default(now())
 
+    // "auto": in the vocabulary but never confirmed by the user
+    // "mine": confirmed by the user, AI picks these first
+    source       String    @default("auto")
+    // last time the user (not AI) attached this tag to a bookmark
+    last_used_at DateTime?
+
     @@unique([user_id, tag_name])
+    @@index([user_id, display, source])
 }
 
 model sr_bookmark_comment {

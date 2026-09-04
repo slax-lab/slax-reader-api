@@ -9,6 +9,7 @@ import {
   buildChatSystemInstruction,
   buildChatUserMessage
 } from '../const/prompt'
+import type { TagVocabularyPrompt } from '../const/prompt'
 import { ContextManager } from '../utils/context'
 import { ContentParser } from '../utils/parser'
 import { inject, injectable } from '../decorators/di'
@@ -388,7 +389,13 @@ export class AigcService {
   }
 
   // Generate tags from user tags
-  public async generateOverviewTags(ctx: ContextManager, bmTitle: string, bmContent: string, byline: string, userTags: string[]): Promise<MixTagsOverviewResult> {
+  public async generateOverviewTags(
+    ctx: ContextManager,
+    bmTitle: string,
+    bmContent: string,
+    byline: string,
+    userTags: string[] | TagVocabularyPrompt
+  ): Promise<MixTagsOverviewResult> {
     const userLang = ctx.get('ai_lang') || 'EN'
 
     const contents: Content[] = [

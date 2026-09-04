@@ -62,10 +62,13 @@ export class DBSyncBatchOperation {
         tag_name: tagName,
         display: true,
         created_at: new Date(),
-        uuid: tagUuid
+        uuid: tagUuid,
+        // only users create tags through sync, so the word is theirs
+        source: 'mine'
       },
       update: {
-        display: true
+        display: true,
+        source: 'mine'
       }
     })
   }
@@ -179,38 +182,44 @@ export class DBSyncBatchOperation {
         WHERE bookmark_id = (SELECT bookmark_id from sr_user_bookmark where uuid = ${bookmarkUuid})
         AND tag_id IN (SELECT id FROM sr_user_tag WHERE uuid in (${Prisma.join(tagsToDelete.map(uuid => Prisma.sql`${uuid}`))})) AND user_id = ${userId}`
 
+      // an auto tag with no live link left is hidden; a "mine" tag stays even at zero
       await tx.$executeRaw`
         UPDATE sr_user_tag t
         SET display = false
         WHERE t.uuid IN (${Prisma.join(tagsToDelete.map(uuid => Prisma.sql`${uuid}`))})
+          AND t.user_id = ${userId}
+          AND t.source = 'auto'
           AND NOT EXISTS (
             SELECT 1 
             FROM sr_user_bookmark_tag bt
             WHERE bt.tag_id = t.id 
+              AND bt.user_id = t.user_id
               AND bt.is_deleted = false
           );`
     }
 
     if (tagsToAdd.length > 0) {
       await tx.$executeRaw`
-        INSERT INTO sr_user_bookmark_tag(user_id, bookmark_id, tag_id, tag_name, is_deleted, created_at)
+        INSERT INTO sr_user_bookmark_tag(user_id, bookmark_id, tag_id, tag_name, is_deleted, created_at, source)
         SELECT 
           ${userId}, 
           (SELECT bookmark_id FROM sr_user_bookmark WHERE uuid = ${bookmarkUuid} AND user_id = ${userId}),
           ut.id,
           ut.tag_name,
           false,
-          ${new Date()}
+          ${new Date()},
+          'user'
         FROM sr_user_tag ut
         WHERE ut.user_id = ${userId}
           AND ut.uuid IN (${Prisma.join(tagsToAdd.map(uuid => Prisma.sql`${uuid}`))})
         ON CONFLICT(user_id, bookmark_id, tag_id) 
-        DO UPDATE SET is_deleted = false
+        DO UPDATE SET is_deleted = false, source = 'user'
       `
 
+      // sync writes are user actions: show the word again and bump recency
       await tx.$executeRaw`
         UPDATE sr_user_tag 
-        SET display = true
+        SET display = true, last_used_at = NOW()
         WHERE uuid IN (${Prisma.join(tagsToAdd.map(uuid => Prisma.sql`${uuid}`))})
           AND user_id = ${userId}
       `
