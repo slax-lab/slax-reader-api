@@ -1,5 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 
+vi.mock('@prisma/client', () => ({
+  Prisma: { join: vi.fn(), sql: vi.fn() },
+  PrismaClient: class {}
+}))
+
+vi.mock('@prisma/hyperdrive-client', () => ({
+  PrismaClient: class {}
+}))
+
 import { BookmarkService } from '../src/domain/bookmark'
 import { BookmarkRepo, queueStatus } from '../src/infra/repository/dbBookmark'
 
