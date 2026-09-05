@@ -255,12 +255,20 @@ export class BookmarkRepo {
     })
   }
 
-  public async createBookmarkRelation(userId: number, bmId: number, type: number, isArchive: boolean) {
+  public async createBookmarkRelation(userId: number, bmId: number, type: number, isArchive: boolean, importMetadata?: { savedAt?: Date; starred: boolean }) {
     // re-save bumps created_at (save time, tops inbox); replay may re-top
     return await this.prismaPg().sr_user_bookmark.upsert({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
-      create: { user_id: userId, bookmark_id: bmId, created_at: new Date(), updated_at: new Date(), type, archive_status: isArchive ? 1 : 0 },
-      update: { created_at: new Date(), updated_at: new Date() }
+      create: {
+        user_id: userId,
+        bookmark_id: bmId,
+        created_at: importMetadata?.savedAt ?? new Date(),
+        updated_at: new Date(),
+        type,
+        archive_status: isArchive ? 1 : 0,
+        is_starred: importMetadata?.starred ?? false
+      },
+      update: importMetadata ? {} : { created_at: new Date(), updated_at: new Date() }
     })
   }
 

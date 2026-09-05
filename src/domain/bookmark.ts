@@ -76,6 +76,9 @@ export interface addBookmarkReq {
 }
 
 export interface addUrlBookmarkReq {
+  saved_at?: string
+  is_starred?: boolean
+  import_only?: boolean
   target_url: string
   target_title?: string
   thumbnail?: string
@@ -120,6 +123,7 @@ export class BookmarkService {
     description?: string
     siteName?: string
     isArchive?: boolean
+    importMetadata?: { savedAt?: Date; starred: boolean }
   }) {
     if (options.type === 1) {
       const urlEntity = new URL(options.targetUrl)
@@ -154,7 +158,7 @@ export class BookmarkService {
 
     const [_, relation] = await Promise.all([
       this.bookmarkSearchRepo.upsertUserBookmark(options.ctx.getUserId(), bmInfo.id),
-      this.bookmarkRepo.createBookmarkRelation(options.ctx.getUserId(), bmInfo.id, options.type, options.isArchive || false)
+      this.bookmarkRepo.createBookmarkRelation(options.ctx.getUserId(), bmInfo.id, options.type, options.isArchive || false, options.importMetadata)
     ])
 
     if (relation.deleted_at) {
@@ -164,12 +168,13 @@ export class BookmarkService {
     if (relation) {
       // 在数据库中增加收藏添加记录
       try {
-        await this.bookmarkRepo.createBookmarkChangeLog(options.ctx.getUserId(), options.targetUrl, relation.bookmark_id, 'add', relation.created_at)
+        const changeTime = options.importMetadata ? new Date() : relation.created_at
+        await this.bookmarkRepo.createBookmarkChangeLog(options.ctx.getUserId(), options.targetUrl, relation.bookmark_id, 'add', changeTime)
         options.ctx.execution.waitUntil(
           this.notifyMessage.sendBookmarkChange(options.ctx.env, {
             user_id: options.ctx.getUserId(),
             bookmark_id: options.ctx.hashIds.encodeId(relation.bookmark_id),
-            created_at: relation.created_at,
+            created_at: changeTime,
             target_url: options.targetUrl,
             action: 'add'
           })
