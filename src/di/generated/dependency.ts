@@ -23,11 +23,11 @@ import { ReportRepo } from '../../infra/repository/dbReport'
 import { BookmarkService } from '../../domain/bookmark'
 import { TagService } from '../../domain/tag'
 import { MarkService } from '../../domain/mark'
+import { UserService } from '../../domain/user'
 import { ImportService } from '../../domain/import'
 import { UrlParserHandler } from '../../domain/orchestrator/urlParser'
 import { NotificationService } from '../../domain/notification'
 import { ShareService } from '../../domain/share'
-import { UserService } from '../../domain/user'
 import { DBSyncBatchOperation } from '../../infra/repository/dbSyncBatch'
 import { QueueClient } from '../../infra/queue/queueClient'
 import { AigcService } from '../../domain/aigc'
@@ -39,6 +39,7 @@ import { ShareOrchestrator } from '../../domain/orchestrator/share'
 import { SyncOrchestrator } from '../../domain/orchestrator/sync'
 import { ImportOrchestrator } from '../../domain/orchestrator/import'
 import { EmailService } from '../../domain/email'
+import { ContentOrchestrator } from '../../domain/orchestrator/content'
 import { BookmarkJob } from '../../handler/cron/bookmarkJob'
 import { BookmarkConsumer } from '../../handler/queue/bookmarkConsumer'
 import { BucketClient } from '../../infra/repository/bucketClient'
@@ -122,6 +123,11 @@ container.register(UserService, {
 
 container.register(BookmarkOrchestrator, {
   useFactory: container => new BookmarkOrchestrator(container.resolve(BookmarkService), container.resolve(TagService), container.resolve(MarkService))
+})
+
+container.register(ContentOrchestrator, {
+  useFactory: container =>
+    new ContentOrchestrator(container.resolve(BookmarkService), container.resolve(UserService), container.resolve(TagService), container.resolve(MarkService))
 })
 
 container.register(ImportOrchestrator, {

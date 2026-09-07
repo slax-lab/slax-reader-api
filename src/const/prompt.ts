@@ -130,7 +130,15 @@ ${byline}
 ${content}`
 }
 
-export const generateOverviewTagsUserPrompt = function (userLang: string, tags: string[]) {
+export interface TagVocabularyPrompt {
+  /** confirmed by the user: pick these first */
+  mine: string[]
+  /** in the vocabulary but never confirmed */
+  auto: string[]
+}
+
+export const generateOverviewTagsUserPrompt = function (userLang: string, tags: string[] | TagVocabularyPrompt) {
+  const vocabulary: TagVocabularyPrompt = Array.isArray(tags) ? { mine: [], auto: tags } : tags
   return `## 你需要输出tags
 - 从提供的标签列表中选择最符合文章内容的标签，数量可以是0~3个
 - 宁缺毋滥：如果列表中没有与文章核心内容真正匹配的标签，就一个都不选，输出空数组 []。勉强选择一个沾边的标签，比不选择更糟糕
@@ -141,8 +149,10 @@ export const generateOverviewTagsUserPrompt = function (userLang: string, tags: 
 - 标签选择要基于文章实际内容，避免主观臆测
 - 不要因为标签描述的是读者可能的兴趣而选择它，标签必须描述文章本身的内容
 - 生成标签列表时，语言则只能跟随用户的标签列表，不可以擅自翻译
-- 标签的列表：
-${tags.join(',')}
+- 我的标签（能对上就必须优先用）：
+${vocabulary.mine.join(',')}
+- 备选标签（我的标签都对不上时才用）：
+${vocabulary.auto.join(',')}
 
 ## 你需要输出overview
 - 概述文章的核心主题和主要内容，overview的内容包括

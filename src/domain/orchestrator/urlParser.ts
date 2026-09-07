@@ -1,3 +1,4 @@
+import { groupVocabulary, pickTagsForBookmark } from '../../utils/tags'
 import { inject, injectable } from '../../decorators/di'
 import { ContextManager } from '../../utils/context'
 import { BookmarkService } from '../bookmark'
@@ -166,21 +167,21 @@ export class UrlParserHandler {
         console.log(`bookmark ${info.bookmarkId} url is prohibited content, skip tags and overview generation`)
         return
       }
-      // get user setting tags list
-      const userTags = (await this.tagService.listUserTags(ctx)).map(item => item.name)
+      // the live vocabulary, split so the prompt can prefer the user's own words
+      const vocabulary = await this.tagService.listUserTags(ctx)
       const { overview, key_takeaways, tags } = await this.aigcService.generateOverviewTags(
         ctx,
         meta.parseRes.title || '',
         meta.parseRes.textContent,
         meta.parseRes.byline || '',
-        userTags
+        groupVocabulary(vocabulary)
       )
 
       if (overview.length > 0) {
         await Promise.all(info.userIds.map(userId => this.bookmarkService.createBookmarkOverview(userId, info.bookmarkId, '', JSON.stringify({ overview, key_takeaways }))))
       }
 
-      const filteredTags = tags.filter(tag => userTags.includes(tag))
+      const filteredTags = pickTagsForBookmark(tags, vocabulary).map(t => t.name)
 
       await Promise.all(info.userIds.map(userId => this.bookmarkService.tagBookmark(ctx, userId, info.bookmarkId, filteredTags)))
     }
