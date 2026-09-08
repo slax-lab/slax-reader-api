@@ -451,4 +451,12 @@ export class SearchService {
       throw e
     }
   }
+
+  /**
+   * 同步清除搜索缓存
+   */
+  public async clearSearchCache(ctx: ContextManager, userId: number) {
+    await Promise.all([ctx.env.KV.delete(`search:valid_bm_ids:${userId}`), ctx.env.KV.delete(`search:bm_shard:${userId}`), ctx.env.KV.delete(`search:bm_rows:${userId}`)])
+    console.log(`[cache] cleared search cache for user ${userId}`)
+  }
 }
