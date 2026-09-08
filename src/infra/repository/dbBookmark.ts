@@ -32,6 +32,9 @@ export enum bookmarkFetchRetryStatus {
   SUCCESS = 'success'
 }
 
+export type UserTagSource = 'auto' | 'mine'
+export type BookmarkTagSource = 'user' | 'ai' | ''
+
 export interface bookmarkPO {
   bookmark_id?: number
   title: string
@@ -255,12 +258,20 @@ export class BookmarkRepo {
     })
   }
 
-  public async createBookmarkRelation(userId: number, bmId: number, type: number, isArchive: boolean) {
+  public async createBookmarkRelation(userId: number, bmId: number, type: number, isArchive: boolean, importMetadata?: { savedAt?: Date; starred: boolean }) {
     // re-save bumps created_at (save time, tops inbox); replay may re-top
     return await this.prismaPg().sr_user_bookmark.upsert({
       where: { user_id_bookmark_id: { user_id: userId, bookmark_id: bmId } },
-      create: { user_id: userId, bookmark_id: bmId, created_at: new Date(), updated_at: new Date(), type, archive_status: isArchive ? 1 : 0 },
-      update: { created_at: new Date(), updated_at: new Date() }
+      create: {
+        user_id: userId,
+        bookmark_id: bmId,
+        created_at: importMetadata?.savedAt ?? new Date(),
+        updated_at: new Date(),
+        type,
+        archive_status: isArchive ? 1 : 0,
+        is_starred: importMetadata?.starred ?? false
+      },
+      update: importMetadata ? {} : { created_at: new Date(), updated_at: new Date() }
     })
   }
 
@@ -296,33 +307,84 @@ export class BookmarkRepo {
     } else if (filter === 'trashed') {
       where.deleted_at = { not: null }
       orderBy = { deleted_at: 'desc' }
+    } else if (filter === 'untagged') {
+      return await this.listUntaggedUserBookmarks(userId, offset, limit)
     }
 
     return await this.prismaPg().sr_user_bookmark.findMany({
       where,
       skip: offset,
       take: limit,
-      include: {
-        bookmark: true
-      },
+      include: this.userBookmarkListInclude(),
       orderBy
     })
   }
 
-  public async listUserBookmarksByTagId(userId: number, tagId: number, offset: number, limit: number) {
-    return await this.prismaPg().sr_user_bookmark_tag.findMany({
+  /** list rows carry the live tag links so the list UI can draw chips without a second round trip */
+  private userBookmarkListInclude() {
+    return {
+      bookmark: true,
+      sr_user_bookmark_tag: { where: { is_deleted: false }, orderBy: { created_at: 'asc' as const } }
+    }
+  }
+
+  /**
+   * Bookmarks that carry every tag in tagIds (intersection).
+   * Uses metadata.tags (uuid array kept by trigger_tag_uuid_update) with jsonb containment,
+   * so one query serves n = 1 and n > 1 alike.
+   */
+  public async listUserBookmarksByTagIds(userId: number, tagIds: number[], offset: number, limit: number) {
+    if (tagIds.length < 1) return []
+    const tags = await this.prismaPg().sr_user_tag.findMany({ where: { id: { in: tagIds }, user_id: userId }, select: { uuid: true } })
+    if (tags.length !== tagIds.length) return []
+
+    return await this.prismaPg().sr_user_bookmark.findMany({
       where: {
         user_id: userId,
-        tag_id: tagId,
-        is_deleted: false
+        deleted_at: null,
+        metadata: { path: ['tags'], array_contains: tags.map(t => t.uuid) }
       },
       skip: offset,
       take: limit,
-      include: {
-        user_bookmark: true,
-        bookmark: true
-      }
+      include: this.userBookmarkListInclude(),
+      orderBy: { created_at: 'desc' }
     })
+  }
+
+  /** Bookmarks with no live tag. Raw SQL so rows whose metadata lacks a tags array still count as untagged. */
+  public async listUntaggedUserBookmarks(userId: number, offset: number, limit: number) {
+    const rows = await this.prismaPg().$queryRaw<{ id: number }[]>`
+      SELECT id FROM sr_user_bookmark
+      WHERE user_id = ${userId} AND deleted_at IS NULL
+        AND (jsonb_typeof(metadata->'tags') IS DISTINCT FROM 'array' OR metadata->'tags' = '[]'::jsonb)
+      ORDER BY created_at DESC
+      LIMIT ${limit} OFFSET ${offset}`
+    if (rows.length < 1) return []
+
+    return await this.prismaPg().sr_user_bookmark.findMany({
+      where: { id: { in: rows.map(r => r.id) } },
+      include: this.userBookmarkListInclude(),
+      orderBy: { created_at: 'desc' }
+    })
+  }
+
+  /**
+   * For the "+" picker on the multi-tag filter page: tags that still appear inside the
+   * intersection of `uuids`, with how many bookmarks each one would leave.
+   */
+  public async countTagsWithinBookmarks(userId: number, uuids: string[], excludeTagIds: number[]) {
+    if (uuids.length < 1) return []
+    const exclude = excludeTagIds.length > 0 ? Prisma.sql`AND bt.tag_id NOT IN (${Prisma.join(excludeTagIds)})` : Prisma.empty
+    return await this.prismaPg().$queryRaw<{ tag_id: number; count: number }[]>`
+      SELECT bt.tag_id, COUNT(DISTINCT bt.bookmark_id)::int AS count
+      FROM sr_user_bookmark_tag bt
+      JOIN sr_user_bookmark ub ON ub.bookmark_id = bt.bookmark_id AND ub.user_id = bt.user_id
+      WHERE bt.user_id = ${userId}
+        AND bt.is_deleted = false
+        AND ub.deleted_at IS NULL
+        AND ub.metadata->'tags' @> ${JSON.stringify(uuids)}::jsonb
+        ${exclude}
+      GROUP BY bt.tag_id`
   }
 
   public async updateBookmark(bmId: number, info: bookmarkParsePO) {
@@ -438,7 +500,11 @@ export class BookmarkRepo {
     })
   }
 
-  public async createUserTag(userId: number, tag: string) {
+  /**
+   * A tag the user typed is "mine". If the name already exists as an auto tag,
+   * the user has just claimed it: same row, same links, source flips to mine.
+   */
+  public async createUserTag(userId: number, tag: string, source: UserTagSource = 'mine') {
     if (!tag) return
     return this.prismaPg().sr_user_tag.upsert({
       where: {
@@ -451,11 +517,11 @@ export class BookmarkRepo {
         user_id: userId,
         tag_name: tag,
         created_at: new Date(),
-        display: true
+        display: true,
+        source
       },
-      update: {
-        display: true
-      }
+      // an auto write (e.g. import) never demotes a tag the user already claimed
+      update: source === 'mine' ? { display: true, source } : { display: true }
     })
   }
 
@@ -466,29 +532,58 @@ export class BookmarkRepo {
         user_id: userId,
         tag_name: tag,
         created_at: new Date(),
-        display: true
-      }))
+        display: true,
+        source: 'mine'
+      })),
+      skipDuplicates: true
     })
   }
 
   public async updateUserTagDisplay(userId: number, tagId: number, display: boolean) {
     return await this.prismaPg().sr_user_tag.update({
       where: { id: tagId, user_id: userId },
-      data: { display: true }
+      data: { display }
     })
   }
 
-  public async createBookmarkTag(bmId: number, userId: number, tagId: number, tagName: string) {
+  public async updateUserTagSource(userId: number, tagId: number, source: UserTagSource) {
+    return await this.prismaPg().sr_user_tag.update({
+      where: { id: tagId, user_id: userId },
+      data: { source }
+    })
+  }
+
+  /** the user just attached these tags by hand; AI attachments never call this */
+  public async touchUserTagsLastUsed(userId: number, tagIds: number[]) {
+    if (tagIds.length < 1) return 0
+    return await this.prismaPg().sr_user_tag.updateMany({
+      where: { id: { in: tagIds }, user_id: userId },
+      data: { last_used_at: new Date() }
+    })
+  }
+
+  public async createBookmarkTag(bmId: number, userId: number, tagId: number, tagName: string, source: BookmarkTagSource) {
     return await this.prismaPg().sr_user_bookmark_tag.upsert({
       where: { bookmark_id_user_id_tag_id: { bookmark_id: bmId, user_id: userId, tag_id: tagId } },
-      create: { user_id: userId, bookmark_id: bmId, tag_id: tagId, tag_name: tagName, created_at: new Date() },
-      update: {}
+      create: { user_id: userId, bookmark_id: bmId, tag_id: tagId, tag_name: tagName, created_at: new Date(), source },
+      // a link soft-deleted through PowerSync comes back alive when re-added over HTTP
+      update: { is_deleted: false, source }
     })
   }
 
+  /** soft delete, same tombstone the PowerSync path writes; the metadata trigger handles both */
   public async deleteBookmarkTag(bookmarkId: number, userId: number, tagId: number) {
-    return await this.prismaPg().sr_user_bookmark_tag.delete({
-      where: { bookmark_id_user_id_tag_id: { bookmark_id: bookmarkId, user_id: userId, tag_id: tagId } }
+    return await this.prismaPg().sr_user_bookmark_tag.updateMany({
+      where: { bookmark_id: bookmarkId, user_id: userId, tag_id: tagId },
+      data: { is_deleted: true }
+    })
+  }
+
+  /** the tags page "delete": detach from every bookmark */
+  public async softDeleteBookmarkTagsByTag(userId: number, tagId: number) {
+    return await this.prismaPg().sr_user_bookmark_tag.updateMany({
+      where: { tag_id: tagId, user_id: userId, is_deleted: false },
+      data: { is_deleted: true }
     })
   }
 
@@ -510,12 +605,30 @@ export class BookmarkRepo {
     return await this.prismaPg().sr_user_bookmark_tag.findMany({ where: { bookmark_id: bookmarkId, user_id: userId, is_deleted: false } })
   }
 
+  /** the live vocabulary, mine first by recency. Serves both the tags page and the AI picker */
   public async getUserTags(userId: number) {
-    return await this.prismaPg().sr_user_tag.findMany({ where: { user_id: userId } })
+    return await this.prismaPg().sr_user_tag.findMany({
+      where: { user_id: userId, display: true },
+      orderBy: [{ last_used_at: { sort: 'desc', nulls: 'last' } }, { created_at: 'desc' }]
+    })
   }
 
   public async getUserTagById(userId: number, tagId: number) {
     return await this.prismaPg().sr_user_tag.findFirst({ where: { id: tagId, user_id: userId } })
+  }
+
+  public async getUserTagByUuid(userId: number, uuid: string) {
+    return await this.prismaPg().sr_user_tag.findFirst({ where: { uuid, user_id: userId } })
+  }
+
+  public async getUserTagsByIds(userId: number, tagIds: number[]) {
+    if (tagIds.length < 1) return []
+    return await this.prismaPg().sr_user_tag.findMany({ where: { id: { in: tagIds }, user_id: userId } })
+  }
+
+  /** case-insensitive exact match; caller normalizes whitespace and width first */
+  public async findUserTagByName(userId: number, tagName: string) {
+    return await this.prismaPg().sr_user_tag.findFirst({ where: { user_id: userId, tag_name: { equals: tagName, mode: 'insensitive' } } })
   }
 
   public async updateUserTag(userId: number, tagId: number, tagName: string) {
@@ -749,28 +862,45 @@ export class BookmarkRepo {
     return res as bookmarkActionChangePO[]
   }
 
-  // 批量upsert
-  public async upsertBookmarkTags(bmId: number, userId: number, tags: { id: number; tag_name: string }[]) {
+  /**
+   * 批量贴标签。删除是软删，所以用户再贴要把 is_deleted 翻回来；
+   * AI 贴的遇到已有行（含用户删过的）一律不动，尊重用户的移除。
+   */
+  public async upsertBookmarkTags(bmId: number, userId: number, tags: { id: number; tag_name: string }[], source: BookmarkTagSource = 'ai') {
+    if (tags.length < 1) return 0
     const tagIds = tags.map(t => t.id)
     const tagNames = tags.map(t => t.tag_name)
+    const onConflict = source === 'user' ? Prisma.sql`DO UPDATE SET is_deleted = false, source = 'user'` : Prisma.sql`DO NOTHING`
 
     return await this.prismaPg().$executeRaw`
-      INSERT INTO sr_user_bookmark_tag(user_id, bookmark_id, tag_id, tag_name, created_at)
-      SELECT ${userId}, ${bmId}, tag_id, tag_name, NOW()
+      INSERT INTO sr_user_bookmark_tag(user_id, bookmark_id, tag_id, tag_name, created_at, source)
+      SELECT ${userId}, ${bmId}, tag_id, tag_name, NOW(), ${source}
       FROM UNNEST(${tagIds}::int[], ${tagNames}::text[]) AS t(tag_id, tag_name)
-      ON CONFLICT(user_id, bookmark_id, tag_id) DO NOTHING;
+      ON CONFLICT(user_id, bookmark_id, tag_id) ${onConflict};
     `
   }
 
-  // 批量插入且更新display接口
-  public async updateUserTagsDisplay(userId: number, names: string[]) {
-    return await this.prismaPg().$queryRaw<{ id: number; tag_name: string }[]>`
-      INSERT INTO sr_user_tag(user_id, tag_name, display)
-      SELECT ${userId}, tag_name, true
+  /** the live vocabulary rows for these names; misses and hidden words are dropped. AI paths use this, never an upsert */
+  public async getUserTagsByNames(userId: number, names: string[]) {
+    if (names.length < 1) return []
+    return await this.prismaPg().sr_user_tag.findMany({ where: { user_id: userId, display: true, tag_name: { in: names } } })
+  }
+
+  /**
+   * User path: resolve names to ids in one round trip, creating missing words and showing
+   * hidden ones again. `createSource` says what a brand-new word is: a word the user typed is
+   * "mine", an imported word is "auto". With revive=false the conflict branch leaves display alone
+   * (kept for callers that only need ids; AI paths should use getUserTagsByNames instead).
+   */
+  public async updateUserTagsDisplay(userId: number, names: string[], revive = false, createSource: UserTagSource = 'mine') {
+    if (names.length < 1) return []
+    return await this.prismaPg().$queryRaw<{ id: number; tag_name: string; source: string }[]>`
+      INSERT INTO sr_user_tag(user_id, tag_name, display, source)
+      SELECT ${userId}, tag_name, true, ${createSource}
       FROM UNNEST(${names}::text[]) AS tag_name
       ON CONFLICT(user_id, tag_name) 
-      DO UPDATE SET display = true
-      RETURNING id, tag_name;
+      DO UPDATE SET display = CASE WHEN ${revive} THEN true ELSE sr_user_tag.display END
+      RETURNING id, tag_name, source;
     `
   }
 }

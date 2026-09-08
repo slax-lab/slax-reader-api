@@ -1,3 +1,4 @@
+import { decodeIdList } from './tagController'
 import { Failed, Successed } from '../../utils/responseUtils'
 import { ContextManager } from '../../utils/context'
 import { BookmarkChangesSyncTooOldError, ErrorConnectionParam, ErrorParam } from '../../const/err'
@@ -114,17 +115,18 @@ export class BookmarkController {
    */
   @Get('/list')
   public async handleUserGetBookmarksRequest(ctx: ContextManager, request: Request) {
-    const params = await RequestUtils.query<{ page: number; size: number; filter?: string; topic_id?: number; collection_id?: number }>(request)
+    const params = await RequestUtils.query<{ page: number; size: number; filter?: string; topic_id?: number; topic_ids?: string; collection_id?: number }>(request)
     if (params.page < 1 || params.size < 1 || params.page === undefined || params.size === undefined) {
       return Failed(ErrorParam())
     }
 
     let res: bookmarkPO[] = []
     if (params.filter === 'topics') {
-      params.topic_id = ctx.hashIds.decodeId(params.topic_id || 0)
-      if (params.topic_id < 1) return Failed(ErrorParam())
+      // topic_ids=a,b filters by intersection; topic_id kept for older clients
+      const topicIds = decodeIdList(ctx, params.topic_ids || params.topic_id)
+      if (topicIds.length < 1) return Failed(ErrorParam())
 
-      res = await this.bookmarkService.bookmarkListByTopic(ctx, Number(params.page), Number(params.size), params.topic_id)
+      res = await this.bookmarkService.bookmarkListByTopics(ctx, Number(params.page), Number(params.size), topicIds)
     } else {
       res = await this.bookmarkService.bookmarkList(ctx, Number(params.page), Number(params.size), params.filter || 'all')
     }
@@ -267,13 +269,13 @@ export class BookmarkController {
    */
   @Post('/add_tag')
   public async handleUserBookmarkAddTagRequest(ctx: ContextManager, request: Request) {
-    const req = await RequestUtils.json<{ bookmark_id: number; tag_name?: string; tag_id?: number }>(request)
-    if (!req || !req.bookmark_id) return Failed(ErrorParam())
+    const req = await RequestUtils.json<{ bookmark_id?: number; bookmark_uid?: string; tag_name?: string; tag_id?: number }>(request)
+    if (!req || (!req.bookmark_id && !req.bookmark_uid)) return Failed(ErrorParam())
 
-    req.bookmark_id = ctx.hashIds.decodeId(req.bookmark_id)
-    if (!req.bookmark_id) return Failed(ErrorParam())
+    const bookmarkId = await this.bookmarkService.getBookmarkId(ctx, { bmId: req.bookmark_id, bmUId: req.bookmark_uid })
+    if (!bookmarkId) return Failed(ErrorParam())
 
-    const res = await this.tagService.addBookmarkTag(ctx, req.bookmark_id, req.tag_name, req.tag_id)
+    const res = await this.tagService.addBookmarkTag(ctx, bookmarkId, req.tag_name, req.tag_id)
     return Successed(res)
   }
 
@@ -282,13 +284,13 @@ export class BookmarkController {
    */
   @Post('/add_tags')
   public async handleUserBookmarkAddTagsRequest(ctx: ContextManager, request: Request) {
-    const req = await RequestUtils.json<{ bookmark_id: number; tags: { name: string; id: number }[] }>(request)
-    if (!req || !req.bookmark_id || !req.tags || !req.tags.length) return Failed(ErrorParam())
+    const req = await RequestUtils.json<{ bookmark_id?: number; bookmark_uid?: string; tags: { name: string; id?: number }[] }>(request)
+    if (!req || (!req.bookmark_id && !req.bookmark_uid) || !req.tags || !req.tags.length) return Failed(ErrorParam())
 
-    req.bookmark_id = ctx.hashIds.decodeId(req.bookmark_id)
-    if (!req.bookmark_id) return Failed(ErrorParam())
+    const bookmarkId = await this.bookmarkService.getBookmarkId(ctx, { bmId: req.bookmark_id, bmUId: req.bookmark_uid })
+    if (!bookmarkId) return Failed(ErrorParam())
 
-    const res = await this.tagService.addBookmarkTags(ctx, req.bookmark_id, req.tags)
+    const res = await this.tagService.addBookmarkTags(ctx, bookmarkId, req.tags)
     return Successed(res)
   }
 

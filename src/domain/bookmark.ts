@@ -16,6 +16,9 @@ import { MarkRepo } from '../infra/repository/dbMark'
 import { UserRepo } from '../infra/repository/dbUser'
 import type { bookmarkParsePO, bookmarkPO } from '../infra/repository/dbBookmark'
 import { SearchService } from './search'
+import type { Prisma } from '@prisma/hyperdrive-client'
+
+type UserBookmarkListRow = Prisma.sr_user_bookmarkGetPayload<{ include: { bookmark: true; sr_user_bookmark_tag: true } }>
 import { MultiLangError } from '../utils/multiLangError'
 import { authToken } from '../middleware/auth'
 import { randomUUID } from 'crypto'
@@ -77,6 +80,9 @@ export interface addBookmarkReq {
 }
 
 export interface addUrlBookmarkReq {
+  saved_at?: string
+  is_starred?: boolean
+  import_only?: boolean
   target_url: string
   target_title?: string
   thumbnail?: string
@@ -122,6 +128,7 @@ export class BookmarkService {
     description?: string
     siteName?: string
     isArchive?: boolean
+    importMetadata?: { savedAt?: Date; starred: boolean }
   }) {
     if (options.type === 1) {
       const urlEntity = new URL(options.targetUrl)
@@ -156,7 +163,7 @@ export class BookmarkService {
 
     const [_, relation] = await Promise.all([
       this.bookmarkSearchRepo.upsertUserBookmark(options.ctx.getUserId(), bmInfo.id),
-      this.bookmarkRepo.createBookmarkRelation(options.ctx.getUserId(), bmInfo.id, options.type, options.isArchive || false)
+      this.bookmarkRepo.createBookmarkRelation(options.ctx.getUserId(), bmInfo.id, options.type, options.isArchive || false, options.importMetadata)
     ])
 
     if (relation.deleted_at) {
@@ -166,12 +173,13 @@ export class BookmarkService {
     if (relation) {
       // 在数据库中增加收藏添加记录
       try {
-        await this.bookmarkRepo.createBookmarkChangeLog(options.ctx.getUserId(), options.targetUrl, relation.bookmark_id, 'add', relation.created_at)
+        const changeTime = options.importMetadata ? new Date() : relation.created_at
+        await this.bookmarkRepo.createBookmarkChangeLog(options.ctx.getUserId(), options.targetUrl, relation.bookmark_id, 'add', changeTime)
         options.ctx.execution.waitUntil(
           this.notifyMessage.sendBookmarkChange(options.ctx.env, {
             user_id: options.ctx.getUserId(),
             bookmark_id: options.ctx.hashIds.encodeId(relation.bookmark_id),
-            created_at: relation.created_at,
+            created_at: changeTime,
             target_url: options.targetUrl,
             action: 'add'
           })
@@ -268,12 +276,12 @@ export class BookmarkService {
       return null
     }
 
-    // 创建标签
+    // 创建标签：导入来的词进自动标签，用户在标签页确认后才算我的标签
     for (const tag of item.tags) {
-      const tagRes = await this.bookmarkRepo.createUserTag(ctx.getUserId(), tag)
+      const tagRes = await this.bookmarkRepo.createUserTag(ctx.getUserId(), tag, 'auto')
       console.log(`create tag: ${JSON.stringify(tagRes)}`)
       if (!tagRes) continue
-      await this.bookmarkRepo.createBookmarkTag(bmInfo.id, ctx.getUserId(), tagRes.id, tag)
+      await this.bookmarkRepo.createBookmarkTag(bmInfo.id, ctx.getUserId(), tagRes.id, tag, 'user')
     }
 
     return {
@@ -508,11 +516,11 @@ export class BookmarkService {
     }
   }
 
-  /** 获取收藏列表 */
-  public async bookmarkList(ctx: ContextManager, page: number, size: number, filter: string) {
-    return (await this.bookmarkRepo.listUserBookmarks(ctx.getUserId(), (page - 1) * size, size, filter))
+  /** one list row for the client: bookmark fields + user state + live tag chips */
+  private mapUserBookmarkRows(ctx: ContextManager, rows: UserBookmarkListRow[]) {
+    return rows
       .filter(({ bookmark }) => bookmark !== null)
-      .map(({ uuid, bookmark, alias_title, archive_status, is_starred, deleted_at, type, created_at, updated_at }) => {
+      .map(({ uuid, bookmark, alias_title, archive_status, is_starred, deleted_at, type, created_at, updated_at, sr_user_bookmark_tag }) => {
         const { private_user, content_md_key, content_key, ...bookmarkWithout } = bookmark!
         return {
           ...bookmarkWithout,
@@ -524,28 +532,30 @@ export class BookmarkService {
           trashed_at: !!deleted_at ? deleted_at : undefined,
           type: type === 1 ? 'shortcut' : 'article',
           created_at,
-          updated_at
+          updated_at,
+          tags: (sr_user_bookmark_tag || []).map(t => ({
+            id: ctx.hashIds.encodeId(t.tag_id),
+            name: t.tag_name,
+            show_name: t.tag_name,
+            added_by: t.source
+          }))
         }
       })
   }
 
-  /** 根据标签ID获取收藏列表 */
+  /** 获取收藏列表 */
+  public async bookmarkList(ctx: ContextManager, page: number, size: number, filter: string) {
+    return this.mapUserBookmarkRows(ctx, await this.bookmarkRepo.listUserBookmarks(ctx.getUserId(), (page - 1) * size, size, filter))
+  }
+
+  /** 按标签交集获取收藏列表 */
+  public async bookmarkListByTopics(ctx: ContextManager, page: number, size: number, tagIds: number[]): Promise<bookmarkPO[]> {
+    return this.mapUserBookmarkRows(ctx, await this.bookmarkRepo.listUserBookmarksByTagIds(ctx.getUserId(), tagIds, (page - 1) * size, size))
+  }
+
+  /** 根据标签ID获取收藏列表（单标签，保留给旧调用方） */
   public async bookmarkListByTopic(ctx: ContextManager, page: number, size: number, tagId: number): Promise<bookmarkPO[]> {
-    return (await this.bookmarkRepo.listUserBookmarksByTagId(ctx.getUserId(), tagId, (page - 1) * size, size))
-      .filter(({ bookmark }) => bookmark !== null)
-      .map(({ user_bookmark, bookmark }) => {
-        const { private_user, content_md_key, content_key, ...bookmarkWithout } = bookmark!
-        return {
-          ...bookmarkWithout!,
-          bookmark_user_uuid: user_bookmark!.uuid,
-          alias_title: user_bookmark!.alias_title,
-          id: ctx.hashIds.encodeId(user_bookmark!.bookmark_id),
-          archived: user_bookmark!.archive_status === 1 ? 'archive' : user_bookmark!.archive_status === 2 ? 'later' : 'inbox',
-          starred: user_bookmark!.is_starred ? 'star' : 'unstar',
-          created_at: user_bookmark!.created_at,
-          updated_at: user_bookmark!.updated_at
-        }
-      })
+    return this.bookmarkListByTopics(ctx, page, size, [tagId])
   }
 
   public async getBookmarkContent(bmKey: string) {
@@ -645,15 +655,17 @@ export class BookmarkService {
     return 0
   }
 
-  /** 书签添加标签 */
+  /**
+   * AI attaches vocabulary words to a bookmark. Names are resolved without touching
+   * ownership or display, links are written with source "ai", last_used_at stays put.
+   */
   public async tagBookmark(ctx: ContextManager, userId: number, bmId: number, tags: string[]) {
-    const bookmarkRepo = this.bookmarkRepo
-
-    for (const tag of tags) {
-      const repoTag = await bookmarkRepo.createUserTag(userId, tag)
-      if (!repoTag) continue
-      await bookmarkRepo.createBookmarkTag(bmId, userId, repoTag.id, repoTag.tag_name)
-    }
+    if (tags.length < 1) return
+    // a plain lookup: the bookmark may belong to several users and a name that is not in
+    // this user's live vocabulary must be dropped, never created
+    const rows = await this.bookmarkRepo.getUserTagsByNames(userId, tags)
+    if (rows.length < 1) return
+    await this.bookmarkRepo.upsertBookmarkTags(bmId, userId, rows, 'ai')
   }
 
   /** 创建书签概述 */
