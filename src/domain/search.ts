@@ -59,6 +59,7 @@ export class SearchService {
 
     let shardList: bookmarkShardPO[] = []
     let rowIds: bookmarkRowPO[] = []
+    let validBookmarkIds: number[] = []
 
     const getShardData = async () => {
       const shardStr = await ctx.env.KV.get(`search:bm_shard:${userId}`)
@@ -80,21 +81,31 @@ export class SearchService {
       }
     }
 
-    await Promise.allSettled([getShardData(), getRowData()])
+    const getValidIds = async () => {
+      const validStr = await ctx.env.KV.get(`search:valid_bm_ids:${userId}`)
+      if (!validStr) {
+        const validBms = await this.bookmarkRepo.getUserBookmarkIds(userId)
+        validBookmarkIds = validBms.map(item => item.bookmark_id)
+        await ctx.env.KV.put(`search:valid_bm_ids:${userId}`, JSON.stringify(validBookmarkIds), { expirationTtl: 60 * 5 })
+      } else {
+        validBookmarkIds = JSON.parse(validStr) as number[]
+      }
+    }
 
-    // const shardList = shardStr ? JSON.parse(shardStr) : []
-    // const rowIds = rowStr ? JSON.parse(rowStr) : []
+    await Promise.allSettled([getShardData(), getRowData(), getValidIds()])
 
-    // const [shardRes, rowRes] = await Promise.allSettled([bmDB.getBookmarkVectorShard(userId), searchDB.getUserBookmarkRawIds(userId)])
-    // const shardList = shardRes.status === 'fulfilled' ? shardRes.value : []
-    // const rowIds = rowRes.status === 'fulfilled' ? rowRes.value : []
+    // 创建有效书签ID集合，用于过滤回收站书签
+    const validBookmarkSet = new Set(validBookmarkIds)
 
     const bmMap = new Map<number, { shardIdx: number; rowId: number }>()
 
     shardList.forEach(item => {
-      bmMap.set(item.bookmark_id, { shardIdx: item.bucket_idx, rowId: 0 })
+      if (validBookmarkSet.has(item.bookmark_id)) {
+        bmMap.set(item.bookmark_id, { shardIdx: item.bucket_idx, rowId: 0 })
+      }
     })
     rowIds.forEach(item => {
+      if (!validBookmarkSet.has(item.bookmark_id)) return // 过滤掉回收站书签
       const existing = bmMap.get(item.bookmark_id)
       if (existing) {
         existing.rowId = item.id
@@ -439,5 +450,13 @@ export class SearchService {
       console.log(e, 'semanticNormalize error')
       throw e
     }
+  }
+
+  /**
+   * 同步清除搜索缓存
+   */
+  public async clearSearchCache(ctx: ContextManager, userId: number) {
+    await Promise.all([ctx.env.KV.delete(`search:valid_bm_ids:${userId}`), ctx.env.KV.delete(`search:bm_shard:${userId}`), ctx.env.KV.delete(`search:bm_rows:${userId}`)])
+    console.log(`[cache] cleared search cache for user ${userId}`)
   }
 }

@@ -801,7 +801,7 @@ export class BookmarkRepo {
 
     try {
       return await this.prismaPg().$queryRaw<bookmarkShardPO[]>`SELECT id, vs.bookmark_id, vs.bucket_idx, vs.created_at FROM sr_bookmark_vector_shard vs
-      INNER JOIN (SELECT bookmark_id FROM sr_user_bookmark WHERE user_id = ${userId}) ub on vs.bookmark_id = ub.bookmark_id`
+      INNER JOIN (SELECT bookmark_id FROM sr_user_bookmark WHERE user_id = ${userId} AND deleted_at IS NULL) ub on vs.bookmark_id = ub.bookmark_id`
     } catch (e) {
       console.log(e, 'getBookmarkVectorShard error')
       return []
@@ -809,7 +809,7 @@ export class BookmarkRepo {
   }
 
   public async getUserBookmarkIds(userId: number) {
-    return await this.prismaPg().sr_user_bookmark.findMany({ where: { user_id: userId }, select: { bookmark_id: true } })
+    return await this.prismaPg().sr_user_bookmark.findMany({ where: { user_id: userId, deleted_at: null }, select: { bookmark_id: true } })
   }
 
   public async getAllBookmarkChanges(userId: number) {
