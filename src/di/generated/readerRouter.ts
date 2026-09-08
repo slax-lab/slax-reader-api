@@ -29,6 +29,10 @@ export function getRouter(container: Container) {
     const controller = container.resolve(AigcController)
     return await controller.handleCompletionsRequest(ctx, req)
   })
+  router.get('/v1/bookmark/export', async (req: Request, ctx: ContextManager) => {
+    const controller = container.resolve(BookmarkController)
+    return await controller.handleUserExportBookmarksRequest(ctx, req)
+  })
   router.post('/v1/bookmark/add', async (req: Request, ctx: ContextManager) => {
     const controller = container.resolve(BookmarkController)
     return await controller.handleUserAddBookmarkRequest(ctx, req)

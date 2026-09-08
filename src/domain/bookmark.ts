@@ -25,6 +25,22 @@ import { selectDORegion } from '../utils/location'
 import { NotificationMessage } from '../infra/message/notification'
 import { Hashid } from '../utils/hashids'
 
+export interface BookmarkExportItem {
+  url: string
+  title: string
+  tags: { name: string; source: string }[]
+  saved_at: string
+  is_read: boolean
+  is_archived: boolean
+  is_starred: boolean
+  type: 'article' | 'shortcut'
+}
+
+export interface BookmarkExportResponse {
+  items: BookmarkExportItem[]
+  next_cursor: string | null
+}
+
 export interface BookmarkDetailResp {
   bookmark_id?: number
   bookmark_user_uuid?: string
@@ -504,6 +520,56 @@ export class BookmarkService {
       bookmark_id: !!res?.bookmark_id ? ctx.hashIds.encodeId(res.bookmark_id) : 0,
       parse_type: police.getParserType()
     }
+  }
+
+  public async exportBookmarks(ctx: ContextManager, cursor: string | null): Promise<BookmarkExportResponse> {
+    const userId = ctx.getUserId()
+    let afterId = 0
+    let upperId: number
+    if (cursor !== null) {
+      try {
+        if (cursor.length > 256 || !/^[A-Za-z0-9_-]+$/.test(cursor)) throw new Error('Invalid cursor')
+        const decoded = JSON.parse(atob(cursor.replace(/-/g, '+').replace(/_/g, '/')))
+        if (
+          decoded.v !== 1 ||
+          decoded.user !== userId ||
+          !Number.isSafeInteger(decoded.after) ||
+          !Number.isSafeInteger(decoded.upper) ||
+          decoded.after < 1 ||
+          decoded.upper < decoded.after
+        )
+          throw new Error('Invalid cursor')
+        afterId = decoded.after
+        upperId = decoded.upper
+      } catch {
+        throw ErrorParam()
+      }
+    } else {
+      upperId = await this.bookmarkRepo.getExportUpperId(userId)
+    }
+
+    if (upperId === 0) return { items: [], next_cursor: null }
+    const rows = await this.bookmarkRepo.listExportBookmarks(userId, afterId, upperId)
+    const page = rows.slice(0, 500)
+    if (page.some(row => !row.bookmark)) throw new Error('Saved link has no bookmark record')
+    const items: BookmarkExportItem[] = page.map(row => ({
+      url: row.bookmark!.target_url,
+      title: row.alias_title || row.bookmark!.title || row.bookmark!.target_url,
+      tags: row.sr_user_bookmark_tag.map(tag => ({ name: tag.tag_name, source: tag.source })),
+      saved_at: row.created_at.toISOString(),
+      is_read: row.is_read,
+      is_archived: row.archive_status === 1,
+      is_starred: row.is_starred,
+      type: row.type === 1 ? 'shortcut' : 'article'
+    }))
+    const next_cursor =
+      rows.length > 500
+        ? btoa(JSON.stringify({ v: 1, user: userId, after: page[page.length - 1].id, upper: upperId }))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '')
+        : null
+    return { items, next_cursor }
   }
 
   /** one list row for the client: bookmark fields + user state + live tag chips */
