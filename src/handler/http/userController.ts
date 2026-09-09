@@ -10,13 +10,15 @@ import { inject } from '../../decorators/di'
 import { BookmarkService } from '../../domain/bookmark'
 import { NotificationService } from '../../domain/notification'
 import { UserService } from '../../domain/user'
+import { LabService } from '../../domain/lab'
 
 @Controller('/v1/user')
 export class UserController {
   constructor(
     @inject(UserService) private userService: UserService,
     @inject(BookmarkService) private bookmarkService: BookmarkService,
-    @inject(NotificationService) private notificationService: NotificationService
+    @inject(NotificationService) private notificationService: NotificationService,
+    @inject(LabService) private labService: LabService
   ) {}
 
   /**
@@ -114,6 +116,15 @@ export class UserController {
 
     const res = await this.userService.enableUserSetting(ctx, req.key, false)
     return Successed(res)
+  }
+
+  /**
+   * 实验室功能列表（含当前用户的开关状态）
+   */
+  @Get('/labs')
+  public async handleUserLabsRequest(ctx: ContextManager, request: Request) {
+    const features = await this.labService.listForUser(ctx.getUserId())
+    return Successed({ features })
   }
 
   /**

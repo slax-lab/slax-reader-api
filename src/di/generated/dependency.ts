@@ -19,7 +19,9 @@ import { VectorizeRepo } from '../../infra/repository/dbVectorize'
 import { MarkRepo } from '../../infra/repository/dbMark'
 import { UserRepo } from '../../infra/repository/dbUser'
 import { NotificationMessage } from '../../infra/message/notification'
+import { LabRepo } from '../../infra/repository/dbLab'
 import { ReportRepo } from '../../infra/repository/dbReport'
+import { LabService } from '../../domain/lab'
 import { BookmarkService } from '../../domain/bookmark'
 import { TagService } from '../../domain/tag'
 import { MarkService } from '../../domain/mark'
@@ -88,6 +90,10 @@ container.register(ImportService, {
     )
 })
 
+container.register(LabService, {
+  useFactory: container => new LabService(container.resolve(LabRepo))
+})
+
 container.register(MarkService, {
   useFactory: container => new MarkService(container.resolve(BookmarkRepo), container.resolve(MarkRepo), container.resolve(UserRepo))
 })
@@ -117,7 +123,8 @@ container.register(UserService, {
     new UserService(
       container.resolve(UserRepo),
       lazy(() => container.resolve(BucketClient)),
-      container.resolve(ReportRepo)
+      container.resolve(ReportRepo),
+      container.resolve(LabService)
     )
 })
 
@@ -204,6 +211,10 @@ container.register(BookmarkSearchRepo, {
   useFactory: container => new BookmarkSearchRepo(lazy(() => container.resolve(PRISIMA_FULLTEXT_CLIENT)))
 })
 
+container.register(LabRepo, {
+  useFactory: container => new LabRepo(lazy(() => container.resolve(PRISIMA_HYPERDRIVE_CLIENT)))
+})
+
 container.register(MarkRepo, {
   useFactory: container =>
     new MarkRepo(
@@ -285,7 +296,8 @@ container.register(TagController, {
 })
 
 container.register(UserController, {
-  useFactory: container => new UserController(container.resolve(UserService), container.resolve(BookmarkService), container.resolve(NotificationService))
+  useFactory: container =>
+    new UserController(container.resolve(UserService), container.resolve(BookmarkService), container.resolve(NotificationService), container.resolve(LabService))
 })
 
 container.register(DatabaseRegistry, {

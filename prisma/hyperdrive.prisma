@@ -332,3 +332,17 @@ model sr_user_bookmark_overview {
 
     @@index([bookmark_id, user_id])
 }
+
+// Per-user switches for Labs features. One row per (user, feature); no row means off.
+// created_at = first time the user touched the switch, updated_at = last change.
+model sr_user_lab_feature {
+    id         Int      @id @default(autoincrement())
+    user_id    Int
+    feature    String
+    enabled    Boolean  @default(false)
+    created_at DateTime @default(now())
+    updated_at DateTime @updatedAt
+
+    @@unique([user_id, feature])
+    @@index([feature, enabled])
+}

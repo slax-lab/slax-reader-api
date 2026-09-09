@@ -245,6 +245,10 @@ export function getRouter(container: Container) {
     const controller = container.resolve(UserController)
     return await controller.handleDisableUserSettingRequest(ctx, req)
   })
+  router.get('/v1/user/labs', async (req: Request, ctx: ContextManager) => {
+    const controller = container.resolve(UserController)
+    return await controller.handleUserLabsRequest(ctx, req)
+  })
   router.get('/v1/user/userinfo', async (req: Request, ctx: ContextManager) => {
     const controller = container.resolve(UserController)
     return await controller.handleUserInfoRequest(ctx, req)
