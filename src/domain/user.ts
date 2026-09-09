@@ -12,6 +12,7 @@ import type { LazyInstance } from '../decorators/lazy'
 import { UserRepo } from '../infra/repository/dbUser'
 import { BucketClient } from '../infra/repository/bucketClient'
 import { ReportRepo } from '../infra/repository/dbReport'
+import { LabService } from './lab'
 
 export interface userShareCollectInfo {
   show_name: string
@@ -107,7 +108,8 @@ export class UserService {
   constructor(
     @inject(UserRepo) private userRepo: UserRepo,
     @inject(BucketClient) private bucketClient: LazyInstance<BucketClient>,
-    @inject(ReportRepo) private reportRepo: ReportRepo
+    @inject(ReportRepo) private reportRepo: ReportRepo,
+    @inject(LabService) private labService: LabService
   ) {}
 
   /**
@@ -334,6 +336,12 @@ export class UserService {
    */
   public async enableUserSetting(ctx: ContextManager, setting: string, enable: boolean): Promise<string | userShareCollectInfo> {
     // const user = await this.userRepo.getInfoByUserId(ctx.getUserId())
+
+    // Labs switches share this endpoint: key "lab:<feature>"
+    if (setting.startsWith('lab:')) {
+      await this.labService.setEnabled(ctx.getUserId(), setting.slice(4), enable)
+      return 'ok'
+    }
 
     if (setting === 'mail_collect' && !enable) {
       await this.userRepo.unbindPlatform(ctx.getUserId(), platformBindType.EMAIL)

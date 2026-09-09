@@ -72,7 +72,8 @@ export enum ErrorName {
   IMPORT_OTHER_TIMEOUT = 'IMPORT_OTHER_TIMEOUT',
   BOOKMARK_OVERVIEW_CONTENT_ERROR = 'BOOKMARK_OVERVIEW_CONTENT_ERROR',
   SYNC_TABLE_RULE_ERROR = 'SYNC_TABLE_RULE_ERROR',
-  SYNC_TABLE_TAG_NAME_ERROR = 'SYNC_TABLE_TAG_NAME_ERROR'
+  SYNC_TABLE_TAG_NAME_ERROR = 'SYNC_TABLE_TAG_NAME_ERROR',
+  LAB_FEATURE_DISABLED = 'LAB_FEATURE_DISABLED'
 }
 
 const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = {
@@ -91,6 +92,7 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.TRASH_REVERT_BOOKMARK_FAIL]: '移出垃圾篓失败',
     [ErrorName.BOOKMARK_NOT_FOUND]: '书签未找到',
     [ErrorName.BLOCK_TARGET_URL]: '目标网址被阻止',
+    [ErrorName.LAB_FEATURE_DISABLED]: '{feature}还在实验室里，请到设置页打开后再保存',
     [ErrorName.PROHIBITED_CONTENT]: '处理失败：内容被禁止',
     [ErrorName.SHARE_CONTENT_NOT_SUPPORTED]: '该内容类型不支持分享',
     [ErrorName.CREATE_BOOKMARK_FAIL]: '创建书签失败',
@@ -139,6 +141,7 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.TRASH_REVERT_BOOKMARK_FAIL]: 'Revert bookmark failed',
     [ErrorName.BOOKMARK_NOT_FOUND]: 'Bookmark not found',
     [ErrorName.BLOCK_TARGET_URL]: 'Blocked target url',
+    [ErrorName.LAB_FEATURE_DISABLED]: '{feature} are still in Labs. Turn it on in Settings, then save again',
     [ErrorName.PROHIBITED_CONTENT]: 'Processing failed: prohibited content',
     [ErrorName.SHARE_CONTENT_NOT_SUPPORTED]: 'This type of content cannot be shared',
     [ErrorName.CREATE_BOOKMARK_FAIL]: 'Create bookmark failed',
@@ -198,6 +201,7 @@ const translations: { [key in Language]: Partial<Record<ErrorName, string>> } = 
     [ErrorName.SERVER_ERROR]: 'Error interno del servidor',
     [ErrorName.GOOGLE_SSO_ERROR]: 'Error de Google SSO',
     [ErrorName.PROHIBITED_CONTENT]: 'Error de procesamiento: contenido prohibido',
+    [ErrorName.LAB_FEATURE_DISABLED]: '{feature} todavía están en el Laboratorio. Actívalo en Ajustes y vuelve a guardar',
     [ErrorName.SHARE_CONTENT_NOT_SUPPORTED]: 'Este tipo de contenido no se puede compartir'
   }
 }
@@ -292,3 +296,11 @@ export const ImportOtherTimeoutError = (): MultiLangError => NewError(ErrorName.
 export const BookmarkOverviewContentError = (): MultiLangError => NewError(ErrorName.BOOKMARK_OVERVIEW_CONTENT_ERROR, 500)
 export const SyncTableRuleError = (): MultiLangError => NewError(ErrorName.SYNC_TABLE_RULE_ERROR, 400)
 export const SyncTableTagNameError = (): MultiLangError => NewError(ErrorName.SYNC_TABLE_TAG_NAME_ERROR, 400)
+/** Message carries the feature's display name so clients can show it as-is. */
+export const LabFeatureDisabledError = (featureName: { [lang in Language]?: string }): MultiLangError => {
+  const messages = loadErrorMessages(ErrorName.LAB_FEATURE_DISABLED)
+  for (const lang of Object.keys(messages) as Language[]) {
+    messages[lang] = (messages[lang] || '').replace('{feature}', featureName[lang] || featureName.en || '')
+  }
+  return new MultiLangError(ErrorName.LAB_FEATURE_DISABLED, 400, messages)
+}
