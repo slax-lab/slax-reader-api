@@ -289,6 +289,38 @@ export class BookmarkRepo {
     })
   }
 
+  public async getExportUpperId(userId: number): Promise<number> {
+    const row = await this.prismaPg().sr_user_bookmark.findFirst({
+      where: { user_id: userId, deleted_at: null },
+      orderBy: { id: 'desc' },
+      select: { id: true }
+    })
+    return row?.id ?? 0
+  }
+
+  public async listExportBookmarks(userId: number, afterId: number, upperId: number) {
+    return this.prismaPg().sr_user_bookmark.findMany({
+      where: { user_id: userId, deleted_at: null, id: { gt: afterId, lte: upperId } },
+      orderBy: { id: 'asc' },
+      take: 501,
+      select: {
+        id: true,
+        alias_title: true,
+        created_at: true,
+        is_read: true,
+        archive_status: true,
+        is_starred: true,
+        type: true,
+        bookmark: { select: { target_url: true, title: true } },
+        sr_user_bookmark_tag: {
+          where: { user_id: userId, is_deleted: false },
+          orderBy: { id: 'asc' },
+          select: { tag_name: true, source: true }
+        }
+      }
+    })
+  }
+
   public async listUserBookmarks(userId: number, offset: number, limit: number, filter: string) {
     let where: any = { user_id: userId, deleted_at: null }
     let orderBy: any = { created_at: 'desc' }
