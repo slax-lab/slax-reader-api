@@ -27,6 +27,14 @@ export class BookmarkController {
     @inject(UrlParserHandler) private urlParserHandler: UrlParserHandler
   ) {}
 
+  @Get('/export')
+  public async handleUserExportBookmarksRequest(ctx: ContextManager, request: Request) {
+    const cursor = new URL(request.url).searchParams.get('cursor')
+    const response = Successed(await this.bookmarkService.exportBookmarks(ctx, cursor))
+    response.headers.set('Cache-Control', 'private, no-store')
+    return response
+  }
+
   /**
    * 新增收藏
    */
