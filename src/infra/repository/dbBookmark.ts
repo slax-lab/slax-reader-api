@@ -321,9 +321,16 @@ export class BookmarkRepo {
     })
   }
 
-  public async listUserBookmarks(userId: number, offset: number, limit: number, filter: string) {
+  public async listUserBookmarks(userId: number, offset: number, limit: number, filter: string, source?: string) {
     let where: any = { user_id: userId, deleted_at: null }
     let orderBy: any = { created_at: 'desc' }
+
+    const sourceDomain = this.normalizeSourceDomain(source)
+    if (sourceDomain) {
+      where.bookmark = {
+        host_url: { in: [sourceDomain, `https://${sourceDomain}`, `http://${sourceDomain}`] }
+      }
+    }
 
     if (['read', 'unread'].includes(filter)) {
       where.is_read = filter === 'read'
@@ -350,6 +357,17 @@ export class BookmarkRepo {
       include: this.userBookmarkListInclude(),
       orderBy
     })
+  }
+
+  private normalizeSourceDomain(value?: string | null) {
+    const source = value?.trim()
+    if (!source) return ''
+    try {
+      const url = new URL(/^https?:\/\//i.test(source) ? source : `https://${source}`)
+      return url.hostname.toLowerCase().replace(/\.$/, '')
+    } catch {
+      return ''
+    }
   }
 
   /** list rows carry the live tag links so the list UI can draw chips without a second round trip */

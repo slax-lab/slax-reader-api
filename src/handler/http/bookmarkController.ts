@@ -123,7 +123,15 @@ export class BookmarkController {
    */
   @Get('/list')
   public async handleUserGetBookmarksRequest(ctx: ContextManager, request: Request) {
-    const params = await RequestUtils.query<{ page: number; size: number; filter?: string; topic_id?: number; topic_ids?: string; collection_id?: number }>(request)
+    const params = await RequestUtils.query<{
+      page: number
+      size: number
+      filter?: string
+      topic_id?: number
+      topic_ids?: string
+      collection_id?: number
+      source?: string
+    }>(request)
     if (params.page < 1 || params.size < 1 || params.page === undefined || params.size === undefined) {
       return Failed(ErrorParam())
     }
@@ -136,7 +144,7 @@ export class BookmarkController {
 
       res = await this.bookmarkService.bookmarkListByTopics(ctx, Number(params.page), Number(params.size), topicIds)
     } else {
-      res = await this.bookmarkService.bookmarkList(ctx, Number(params.page), Number(params.size), params.filter || 'all')
+      res = await this.bookmarkService.bookmarkList(ctx, Number(params.page), Number(params.size), params.filter || 'all', params.source)
     }
 
     return Successed(res)

@@ -610,8 +610,8 @@ export class BookmarkService {
   }
 
   /** 获取收藏列表 */
-  public async bookmarkList(ctx: ContextManager, page: number, size: number, filter: string) {
-    return this.mapUserBookmarkRows(ctx, await this.bookmarkRepo.listUserBookmarks(ctx.getUserId(), (page - 1) * size, size, filter))
+  public async bookmarkList(ctx: ContextManager, page: number, size: number, filter: string, source?: string) {
+    return this.mapUserBookmarkRows(ctx, await this.bookmarkRepo.listUserBookmarks(ctx.getUserId(), (page - 1) * size, size, filter, source))
   }
 
   /** 按标签交集获取收藏列表 */
