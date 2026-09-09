@@ -46,7 +46,8 @@ describe('bookmark import metadata', () => {
         createBookmarkChangeLog
       },
       bookmarkSearchRepo: { upsertUserBookmark: vi.fn() },
-      notifyMessage: { sendBookmarkChange }
+      notifyMessage: { sendBookmarkChange },
+      searchService: { clearSearchCache: vi.fn() }
     })
     const ctx = {
       env: {},

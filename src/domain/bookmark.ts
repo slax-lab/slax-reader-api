@@ -18,6 +18,7 @@ import type { bookmarkParsePO, bookmarkPO } from '../infra/repository/dbBookmark
 import type { Prisma } from '@prisma/hyperdrive-client'
 
 type UserBookmarkListRow = Prisma.sr_user_bookmarkGetPayload<{ include: { bookmark: true; sr_user_bookmark_tag: true } }>
+import { SearchService } from './search'
 import { MultiLangError } from '../utils/multiLangError'
 import { authToken } from '../middleware/auth'
 import { randomUUID } from 'crypto'
@@ -127,7 +128,8 @@ export class BookmarkService {
     @inject(MarkRepo) private markRepo: MarkRepo,
     @inject(UserRepo) private userRepo: UserRepo,
     @inject(QueueClient) private queue: LazyInstance<QueueClient>,
-    @inject(NotificationMessage) private notifyMessage: NotificationMessage
+    @inject(NotificationMessage) private notifyMessage: NotificationMessage,
+    @inject(SearchService) private searchService: SearchService
   ) {}
 
   public async createBookmarkBase(options: {
@@ -202,6 +204,8 @@ export class BookmarkService {
         console.error('create bookmark change log error:', e)
       }
     }
+
+    await this.searchService.clearSearchCache(options.ctx, options.ctx.getUserId())
 
     return bmInfo
   }
@@ -479,6 +483,8 @@ export class BookmarkService {
 
     ctx.execution.waitUntil(Promise.allSettled([deleteBookmarkContentTry(), deleteBookmarkShareTry()]))
 
+    await this.searchService.clearSearchCache(ctx, userId)
+
     return 'ok'
   }
 
@@ -489,6 +495,8 @@ export class BookmarkService {
 
     await Promise.allSettled([bmRepo.updateBookmarkDeleteAt(bmId, userId, true), bmRepo.updateBookmarkShareIsEnable(bmId, userId, false)])
 
+    await this.searchService.clearSearchCache(ctx, userId)
+
     return 'ok'
   }
 
@@ -497,6 +505,8 @@ export class BookmarkService {
     const bmRepo = this.bookmarkRepo
 
     await Promise.allSettled([bmRepo.updateBookmarkDeleteAt(bmId, ctx.getUserId(), false), bmRepo.updateBookmarkArchiveStatus(bmId, ctx.getUserId(), 0)])
+
+    await this.searchService.clearSearchCache(ctx, ctx.getUserId())
 
     return 'ok'
   }
@@ -600,8 +610,8 @@ export class BookmarkService {
   }
 
   /** 获取收藏列表 */
-  public async bookmarkList(ctx: ContextManager, page: number, size: number, filter: string) {
-    return this.mapUserBookmarkRows(ctx, await this.bookmarkRepo.listUserBookmarks(ctx.getUserId(), (page - 1) * size, size, filter))
+  public async bookmarkList(ctx: ContextManager, page: number, size: number, filter: string, source?: string) {
+    return this.mapUserBookmarkRows(ctx, await this.bookmarkRepo.listUserBookmarks(ctx.getUserId(), (page - 1) * size, size, filter, source))
   }
 
   /** 按标签交集获取收藏列表 */

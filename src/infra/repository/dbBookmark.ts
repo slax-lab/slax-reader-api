@@ -321,9 +321,16 @@ export class BookmarkRepo {
     })
   }
 
-  public async listUserBookmarks(userId: number, offset: number, limit: number, filter: string) {
+  public async listUserBookmarks(userId: number, offset: number, limit: number, filter: string, source?: string) {
     let where: any = { user_id: userId, deleted_at: null }
     let orderBy: any = { created_at: 'desc' }
+
+    const sourceDomain = this.normalizeSourceDomain(source)
+    if (sourceDomain) {
+      where.bookmark = {
+        host_url: { in: [sourceDomain, `https://${sourceDomain}`, `http://${sourceDomain}`] }
+      }
+    }
 
     if (['read', 'unread'].includes(filter)) {
       where.is_read = filter === 'read'
@@ -350,6 +357,17 @@ export class BookmarkRepo {
       include: this.userBookmarkListInclude(),
       orderBy
     })
+  }
+
+  private normalizeSourceDomain(value?: string | null) {
+    const source = value?.trim()
+    if (!source) return ''
+    try {
+      const url = new URL(/^https?:\/\//i.test(source) ? source : `https://${source}`)
+      return url.hostname.toLowerCase().replace(/\.$/, '')
+    } catch {
+      return ''
+    }
   }
 
   /** list rows carry the live tag links so the list UI can draw chips without a second round trip */
@@ -833,7 +851,7 @@ export class BookmarkRepo {
 
     try {
       return await this.prismaPg().$queryRaw<bookmarkShardPO[]>`SELECT id, vs.bookmark_id, vs.bucket_idx, vs.created_at FROM sr_bookmark_vector_shard vs
-      INNER JOIN (SELECT bookmark_id FROM sr_user_bookmark WHERE user_id = ${userId}) ub on vs.bookmark_id = ub.bookmark_id`
+      INNER JOIN (SELECT bookmark_id FROM sr_user_bookmark WHERE user_id = ${userId} AND deleted_at IS NULL) ub on vs.bookmark_id = ub.bookmark_id`
     } catch (e) {
       console.log(e, 'getBookmarkVectorShard error')
       return []
@@ -841,7 +859,7 @@ export class BookmarkRepo {
   }
 
   public async getUserBookmarkIds(userId: number) {
-    return await this.prismaPg().sr_user_bookmark.findMany({ where: { user_id: userId }, select: { bookmark_id: true } })
+    return await this.prismaPg().sr_user_bookmark.findMany({ where: { user_id: userId, deleted_at: null }, select: { bookmark_id: true } })
   }
 
   public async getAllBookmarkChanges(userId: number) {
