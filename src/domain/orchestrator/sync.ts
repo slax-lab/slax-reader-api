@@ -7,6 +7,7 @@ import { DBSyncBatchOperation } from '../../infra/repository/dbSyncBatch'
 import { QueueClient, queueRetryParseMessage, callbackType } from '../../infra/queue/queueClient'
 import { parserType, URLPolicie } from '../../utils/urlPolicie'
 import { markType } from '../../infra/repository/dbMark'
+import { SearchService } from '../search'
 
 export type SyncExecOperation = 'PUT' | 'PATCH' | 'DELETE'
 
@@ -98,6 +99,7 @@ export type OrderedSyncOperation =
   | SyncOperation<'update_tags', UpdateTagsData, string>
   | SyncOperation<'update_share', UpdateShareData, string>
   | SyncOperation<'delete_bookmark', undefined, string>
+  | SyncOperation<'restore_bookmark', undefined, string>
   | CommentSyncOperation<'create_comment', CreateCommentData, string>
   | CommentSyncOperation<'delete_comment', DeleteCommentData, string>
 
@@ -131,7 +133,8 @@ export class SyncOrchestrator {
   constructor(
     @inject(UserService) private userService: UserService,
     @inject(DBSyncBatchOperation) private dbSyncBatch: DBSyncBatchOperation,
-    @inject(QueueClient) private queueClient: QueueClient
+    @inject(QueueClient) private queueClient: QueueClient,
+    @inject(SearchService) protected searchService: SearchService
   ) {}
 
   /** sign token */
@@ -177,6 +180,11 @@ export class SyncOrchestrator {
     const result = await this.dbSyncBatch.executeOrderedOperations(orderedOperations)
     for (const newBookmark of result) {
       await this.sendRetryParseEvent(ctx, newBookmark)
+    }
+
+    // 同步删除/恢复需补清缓存
+    if (orderedOperations.some(op => op.type === 'delete_bookmark' || op.type === 'restore_bookmark')) {
+      await this.searchService.clearSearchCache(ctx, userId)
     }
   }
 
@@ -266,10 +274,11 @@ export class SyncOrchestrator {
       return
     }
 
-    // soft delete bookmark
+    // soft delete/restore
     if (change.data.hasOwnProperty('deleted_at')) {
+      const isRestore = !change.data['deleted_at']
       operations.push({
-        type: 'delete_bookmark',
+        type: isRestore ? 'restore_bookmark' : 'delete_bookmark',
         bookmarkUuid: change.id,
         userId,
         data: undefined

@@ -34,6 +34,7 @@ export class DBSyncBatchOperation {
       update_tags: this.executeUpdateTags,
       update_share: this.executeUpdateShare,
       delete_bookmark: this.executeDeleteBookmark,
+      restore_bookmark: this.executeRestoreBookmark,
       create_comment: this.executeCreateComment,
       delete_comment: this.executeDeleteComment
     }
@@ -250,6 +251,16 @@ export class DBSyncBatchOperation {
     await tx.sr_user_bookmark.update({
       where: { uuid: operation.bookmarkUuid, user_id: operation.userId },
       data: { deleted_at: new Date() }
+    })
+  }
+
+  /** restore bookmark */
+  public async executeRestoreBookmark(tx: prismaTx, operation: OrderedSyncOperation): Promise<void> {
+    if (operation.type !== 'restore_bookmark') return
+
+    await tx.sr_user_bookmark.update({
+      where: { uuid: operation.bookmarkUuid, user_id: operation.userId },
+      data: { deleted_at: null, archive_status: 0 }
     })
   }
 
