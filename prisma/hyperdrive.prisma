@@ -346,3 +346,52 @@ model sr_user_lab_feature {
     @@unique([user_id, feature])
     @@index([feature, enabled])
 }
+
+// Derived AI article for a YouTube video. Captions and articles are R2 objects under
+// youtube/canonical/; this row only carries pointers, versions, status and the eligibility result.
+// One row per (video_id, source_hash, prompt_version), shared by every bookmark of that video:
+// the caption source hash changes whenever the captions change, so an old article can never be
+// published over new captions. Visibility is decided by the bookmark, never by this row.
+model sr_youtube_article {
+    id               Int       @id @default(autoincrement())
+    video_id         String
+    caption_key      String?
+    caption_text_key String?
+    caption_language String?
+    caption_kind     String?
+    source_hash      String
+    eligibility_json Json?
+    status           String    @default("pending")
+    article_key      String?
+    article_text_key String?
+    model            String?
+    prompt_version   String
+    schema_version   Int       @default(1)
+    quality_json     Json?
+    retry_count      Int       @default(0)
+    lease_until      DateTime?
+    next_retry_at    DateTime?
+    error_message    String?
+    created_at       DateTime  @default(now())
+    updated_at       DateTime  @updatedAt
+    started_at       DateTime?
+    completed_at     DateTime?
+
+    @@unique([video_id, source_hash, prompt_version])
+    @@index([status, next_retry_at])
+}
+
+// Which caption version a bookmark saw when it was crawled. One row per bookmark (bookmarks are
+// per user here). Deleted with the bookmark; canonical rows with no refs left are swept.
+model sr_youtube_article_ref {
+    id          Int      @id @default(autoincrement())
+    bookmark_id Int      @unique
+    user_id     Int
+    video_id    String
+    source_hash String
+    created_at  DateTime @default(now())
+    updated_at  DateTime @updatedAt
+
+    @@index([video_id, source_hash])
+    @@index([user_id])
+}
