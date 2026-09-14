@@ -1,6 +1,7 @@
 import { container, injectable } from '../../decorators/di'
 import { ContextManager } from '../../utils/context'
 import { parserType } from '../../utils/urlPolicie'
+import type { EventRequestContext } from '../../utils/eventContext'
 
 export enum callbackType {
   NOT_CALLBACK = 0,
@@ -19,6 +20,7 @@ export interface parseMessage {
 }
 
 export interface importBookmarkMessage {
+  eventContext?: EventRequestContext
   type: string
   id: number
   data: any[]

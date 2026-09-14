@@ -4,6 +4,7 @@ import { ContextManager } from '../../utils/context'
 import { UserService } from '../user'
 import { SignJWT } from 'jose'
 import { DBSyncBatchOperation } from '../../infra/repository/dbSyncBatch'
+import type { SyncCommitObserver } from '../../infra/repository/dbSyncBatch'
 import { QueueClient, queueRetryParseMessage, callbackType } from '../../infra/queue/queueClient'
 import { parserType, URLPolicie } from '../../utils/urlPolicie'
 import { markType } from '../../infra/repository/dbMark'
@@ -177,7 +178,8 @@ export class SyncOrchestrator {
       }
     }
 
-    const result = await this.dbSyncBatch.executeOrderedOperations(orderedOperations)
+    const observer = this.syncCommitObserver(ctx)
+    const result = observer ? await this.dbSyncBatch.executeOrderedOperations(orderedOperations, observer) : await this.dbSyncBatch.executeOrderedOperations(orderedOperations)
     for (const newBookmark of result) {
       await this.sendRetryParseEvent(ctx, newBookmark)
     }
@@ -186,6 +188,10 @@ export class SyncOrchestrator {
     if (orderedOperations.some(op => op.type === 'delete_bookmark' || op.type === 'restore_bookmark')) {
       await this.searchService.clearSearchCache(ctx, userId)
     }
+  }
+
+  protected syncCommitObserver(_ctx: ContextManager): SyncCommitObserver | undefined {
+    return undefined
   }
 
   public processUserBookmarkCommentChange(change: SyncChangeItem, userId: number, operations: OrderedSyncOperation[]) {
