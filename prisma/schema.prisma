@@ -33,6 +33,16 @@ model slax_user {
   @@index([invite_code])
 }
 
+model user_device_alias {
+  device_id   String
+  user_id     Int
+  bound_at    DateTime @default(now())
+  bind_source String
+
+  @@unique([device_id, user_id])
+  @@index([user_id, bound_at])
+}
+
 model slax_bookmark {
   id                     Int                      @id @default(autoincrement())
   title                  String                   @default("")

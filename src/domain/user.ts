@@ -1,4 +1,5 @@
 import { ContextManager } from '../utils/context'
+import { resolveDeviceId } from '../utils/eventContext'
 import { Auth } from '../utils/jwt'
 import { NeedCreateUsernameError, RegisterUserError, SaveReportError, UnauthorizedError, UserNotFoundError } from '../const/err'
 import { platformBindType, userInfoPO } from '../infra/repository/dbUser'
@@ -210,6 +211,8 @@ export class UserService {
 
     // await new KVClient(env.KV).delete.USER_INFO(regInfo.id)
 
+    this.bindRequestDevice(ctx, request, regInfo.id, isFirstRegister ? 'signup' : 'login')
+
     return {
       token,
       user_id: signUserId.toString(),
@@ -218,6 +221,12 @@ export class UserService {
       uuid: regInfo.uuid,
       login_type: req.type || 'unknown'
     }
+  }
+
+  public bindRequestDevice(ctx: ContextManager, request: Request, userId: number, source: 'signup' | 'login') {
+    const deviceId = resolveDeviceId(request)
+    if (!deviceId || !Number.isInteger(userId) || userId < 1) return
+    ctx.execution.waitUntil(this.userRepo.bindUserDeviceAlias(deviceId, userId, source).catch(error => console.error('[events] failed to bind user device:', error)))
   }
 
   /**

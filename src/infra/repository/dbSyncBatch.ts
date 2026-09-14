@@ -18,15 +18,36 @@ import { markType } from './dbMark'
 export type prismaTx = Omit<HyperdrivePrismaClient<Prisma.PrismaClientOptions>, '$connect' | '$disconnect' | '$on' | '$transaction' | '$extends'>
 export type executeFunction = (tx: prismaTx, operation: OrderedSyncOperation) => Promise<{ bookmarkId: number; targetUrl: string; userId: number } | null | void>
 
+export interface SyncEntitySnapshot {
+  uuid: string
+  user_id: number
+  type: number
+  user_bookmark_uuid?: string
+  archive_status?: number
+  is_starred?: boolean
+  deleted_at?: Date | null
+  is_deleted?: boolean
+  bookmark?: { target_url: string }
+}
+
+export interface CommittedSyncMutation {
+  operation: OrderedSyncOperation
+  before: SyncEntitySnapshot | null
+  after: SyncEntitySnapshot | null
+}
+
+export type SyncCommitObserver = (mutations: CommittedSyncMutation[], committedAt: string) => Promise<void> | void
+
 @injectable()
 export class DBSyncBatchOperation {
   constructor(@inject(PRISIMA_HYPERDRIVE_CLIENT) public prismaHyperdrive: LazyInstance<HyperdrivePrismaClient>) {}
 
   /** execute */
-  public async executeOrderedOperations(operations: OrderedSyncOperation[]): Promise<{ bookmarkId: number; targetUrl: string; userId: number }[]> {
+  public async executeOrderedOperations(operations: OrderedSyncOperation[], observer?: SyncCommitObserver): Promise<{ bookmarkId: number; targetUrl: string; userId: number }[]> {
     if (operations.length === 0) return []
 
     const newBookmarks: { bookmarkId: number; targetUrl: string; userId: number }[] = []
+    const mutations: CommittedSyncMutation[] = []
     const executeMap: Record<string, executeFunction> = {
       create_tag: this.executeCreateTag,
       create_bookmark: this.executeCreateBookmark,
@@ -41,12 +62,42 @@ export class DBSyncBatchOperation {
 
     await this.prismaHyperdrive().$transaction(async tx => {
       for (const operation of operations) {
+        const before = observer ? await this.eventSnapshot(tx, operation) : null
         const result = await executeMap[operation.type].bind(this)(tx, operation)
         if (result) newBookmarks.push(result)
+        if (observer) {
+          const after = await this.eventSnapshot(tx, operation)
+          if (before || after) mutations.push({ operation, before, after })
+        }
       }
     })
 
+    // A rolled-back batch never reaches this observer. Telemetry cannot fail an already-committed sync.
+    if (observer) {
+      try {
+        await observer(mutations, new Date().toISOString())
+      } catch (error) {
+        console.error('[events] sync observer failed:', error)
+      }
+    }
+
     return newBookmarks
+  }
+
+  private async eventSnapshot(tx: prismaTx, operation: OrderedSyncOperation): Promise<SyncEntitySnapshot | null> {
+    if (['create_bookmark', 'update_bookmark', 'delete_bookmark'].includes(operation.type) && 'bookmarkUuid' in operation) {
+      return tx.sr_user_bookmark.findFirst({
+        where: { uuid: operation.bookmarkUuid, user_id: operation.userId },
+        select: { uuid: true, user_id: true, type: true, archive_status: true, is_starred: true, deleted_at: true, bookmark: { select: { target_url: true } } }
+      })
+    }
+    if (operation.type === 'create_comment' || operation.type === 'delete_comment') {
+      return tx.sr_bookmark_comment.findFirst({
+        where: { uuid: operation.commentUuid, user_id: operation.userId },
+        select: { uuid: true, user_id: true, user_bookmark_uuid: true, type: true, is_deleted: true }
+      })
+    }
+    return null
   }
 
   /** create tag */

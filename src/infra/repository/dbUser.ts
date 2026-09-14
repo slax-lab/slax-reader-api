@@ -76,6 +76,20 @@ export class UserRepo {
     @inject(PRISIMA_HYPERDRIVE_CLIENT) private prismaPg: LazyInstance<HyperdrivePrismaClient>
   ) {}
 
+  public async bindUserDeviceAlias(deviceId: string, userId: number, bindSource: 'signup' | 'login') {
+    if (!deviceId || userId < 1) return
+    await this.prisma().user_device_alias.upsert({
+      where: { device_id_user_id: { device_id: deviceId, user_id: userId } },
+      create: {
+        device_id: deviceId,
+        user_id: userId,
+        bind_source: bindSource,
+        bound_at: new Date()
+      },
+      update: {}
+    })
+  }
+
   public async getInfoByEmail(email: string): Promise<userInfoPO | null> {
     if (!email) return null
     let res = await this.prismaPg().sr_user.findFirst({ where: { email: email } })
