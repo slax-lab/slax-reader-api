@@ -14,7 +14,7 @@ export class URLPolicie {
     'https://(r|reader).slax.(dev|com)/s/[a-zA-Z0-9]+': parserType.URL_SHORTCUT
   }
   private hostRegexRule: Record<string, parserType> = {
-    '(.*.||)(dafahao|minghui|dongtaiwang|epochtimes|ntdtv|falundafa|wujieliulan|slax).(org|com|net|dev)': parserType.BLOCK_PARSE,
+    '(.*.||)(dafahao|minghui|dongtaiwang|epochtimes|ntdtv|falundafa|wujieliulan).(org|com|net|dev)': parserType.BLOCK_PARSE,
     '(x|twitter).com': parserType.SERVER_FETCH_PARSE
   }
 
