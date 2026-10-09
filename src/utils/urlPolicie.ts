@@ -15,7 +15,9 @@ export class URLPolicie {
   }
   private hostRegexRule: Record<string, parserType> = {
     '(.*.||)(dafahao|minghui|dongtaiwang|epochtimes|ntdtv|falundafa|wujieliulan).(org|com|net|dev)': parserType.BLOCK_PARSE,
-    '(x|twitter).com': parserType.SERVER_FETCH_PARSE
+    '(x|twitter).com': parserType.SERVER_FETCH_PARSE,
+    'r.slax.(dev|com)': parserType.BLOCK_PARSE,
+    'r-beta.slax.(dev|com)': parserType.BLOCK_PARSE
   }
 
   constructor(
